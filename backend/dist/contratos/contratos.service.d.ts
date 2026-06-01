@@ -1,0 +1,32 @@
+import { DataSource, Repository } from 'typeorm';
+import { ContratoEscrow } from './entities/contrato-escrow.entity';
+import { Message } from '../chats/entities/message.entity';
+import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
+import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
+import { ChatGateway } from '../chats/chats.gateway';
+import { AdminService } from '../admin/admin.service';
+import { StripeService } from '../stripe/stripe.service';
+import { User } from '../users/entities/user.entity';
+import { AcceptProposalDto } from './dto/accept-proposal.dto';
+import { SubmitDeliverablesDto } from './dto/submit-deliverables.dto';
+import { DisputeDto } from './dto/dispute.dto';
+export declare class ContratosService {
+    private readonly contratosRepo;
+    private readonly messagesRepo;
+    private readonly empresasRepo;
+    private readonly influencersRepo;
+    private readonly chatGateway;
+    private readonly adminService;
+    private readonly stripeService;
+    private readonly dataSource;
+    constructor(contratosRepo: Repository<ContratoEscrow>, messagesRepo: Repository<Message>, empresasRepo: Repository<EmpresaProfile>, influencersRepo: Repository<InfluencerProfile>, chatGateway: ChatGateway, adminService: AdminService, stripeService: StripeService, dataSource: DataSource);
+    acceptProposal(user: User, dto: AcceptProposalDto): Promise<ContratoEscrow>;
+    fundContract(user: User, contratoId: number, stripeChargeId?: string): Promise<ContratoEscrow>;
+    submitDeliverables(user: User, contratoId: number, dto: SubmitDeliverablesDto): Promise<ContratoEscrow>;
+    approveAndRelease(user: User, contratoId: number, stripeTransferId?: string): Promise<ContratoEscrow>;
+    initiateDispute(user: User, contratoId: number, dto: DisputeDto): Promise<ContratoEscrow>;
+    listMyContratos(user: User): Promise<ContratoEscrow[]>;
+    findOne(user: User, contratoId: number): Promise<ContratoEscrow>;
+    private findAndAuthorize;
+    private assertIsParticipant;
+}
