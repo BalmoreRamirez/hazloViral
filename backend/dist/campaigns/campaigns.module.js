@@ -10,13 +10,19 @@ exports.CampaignsModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const campaign_brief_entity_1 = require("./entities/campaign-brief.entity");
+const empresa_profile_entity_1 = require("../empresas/entities/empresa-profile.entity");
+const campaigns_service_1 = require("./campaigns.service");
+const campaigns_controller_1 = require("./campaigns.controller");
+const auth_module_1 = require("../auth/auth.module");
 let CampaignsModule = class CampaignsModule {
 };
 exports.CampaignsModule = CampaignsModule;
 exports.CampaignsModule = CampaignsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([campaign_brief_entity_1.CampaignBrief])],
-        exports: [typeorm_1.TypeOrmModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([campaign_brief_entity_1.CampaignBrief, empresa_profile_entity_1.EmpresaProfile]), auth_module_1.AuthModule],
+        controllers: [campaigns_controller_1.CampaignsController],
+        providers: [campaigns_service_1.CampaignsService],
+        exports: [typeorm_1.TypeOrmModule, campaigns_service_1.CampaignsService],
     })
 ], CampaignsModule);
 //# sourceMappingURL=campaigns.module.js.map

@@ -7,8 +7,10 @@ import { User } from '../users/entities/user.entity';
 import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
 import { ContratoEscrow } from '../contratos/entities/contrato-escrow.entity';
+import { Message } from '../chats/entities/message.entity';
+import { ChatGateway } from '../chats/chats.gateway';
 import { CreditsService } from '../credits/credits.service';
-import { ContratoStatus } from '../common/enums';
+import { ContratoStatus, ProposalStatus } from '../common/enums';
 
 // Con module:nodenext + Stripe v22 (export=), el tipo instancia es ReturnType del constructor
 type StripeInstance = ReturnType<typeof StripeLib>;
@@ -25,6 +27,8 @@ export class StripeService {
     @InjectRepository(EmpresaProfile) private readonly empresasRepo: Repository<EmpresaProfile>,
     @InjectRepository(InfluencerProfile) private readonly influencersRepo: Repository<InfluencerProfile>,
     @InjectRepository(ContratoEscrow) private readonly contratosRepo: Repository<ContratoEscrow>,
+    @InjectRepository(Message) private readonly messagesRepo: Repository<Message>,
+    private readonly chatGateway: ChatGateway,
     private readonly creditsService: CreditsService,
   ) {
     this.stripe = new StripeLib(config.get<string>('STRIPE_SECRET_KEY')!);
@@ -229,6 +233,24 @@ export class StripeService {
         if (session.payment_intent) contrato.stripe_charge_id = String(session.payment_intent);
         await this.contratosRepo.save(contrato);
         this.logger.log(`Contrato ${contrato_id} fondeado en custodia vía webhook`);
+
+        // Actualizar proposal_status = 'funded' en el mensaje vinculado al contrato
+        const msg = await this.messagesRepo.findOne({
+          where: { contrato_id: contrato.id, is_proposal: true },
+        });
+        if (msg) {
+          msg.proposal_status = ProposalStatus.FUNDED;
+          await this.messagesRepo.save(msg);
+        }
+
+        // Emitir WS contract_funded al chat (claude.md §5.2 Fase 2)
+        // Notifica al influencer que puede comenzar a trabajar
+        this.chatGateway.server
+          .to(`chat-${contrato.chat_id}`)
+          .emit('contract_funded', {
+            contrato_id: contrato.id,
+            message: 'El pago está en custodia. Puedes comenzar a trabajar de forma segura.',
+          });
       }
     }
   }

@@ -10,13 +10,18 @@ exports.EmpresasModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const empresa_profile_entity_1 = require("./entities/empresa-profile.entity");
+const empresas_service_1 = require("./empresas.service");
+const empresas_controller_1 = require("./empresas.controller");
+const auth_module_1 = require("../auth/auth.module");
 let EmpresasModule = class EmpresasModule {
 };
 exports.EmpresasModule = EmpresasModule;
 exports.EmpresasModule = EmpresasModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([empresa_profile_entity_1.EmpresaProfile])],
-        exports: [typeorm_1.TypeOrmModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([empresa_profile_entity_1.EmpresaProfile]), auth_module_1.AuthModule],
+        controllers: [empresas_controller_1.EmpresasController],
+        providers: [empresas_service_1.EmpresasService],
+        exports: [typeorm_1.TypeOrmModule, empresas_service_1.EmpresasService],
     })
 ], EmpresasModule);
 //# sourceMappingURL=empresas.module.js.map

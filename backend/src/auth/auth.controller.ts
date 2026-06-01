@@ -1,8 +1,9 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterEmpresaDto } from './dto/register-empresa.dto';
 import { RegisterInfluencerDto } from './dto/register-influencer.dto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GetUser } from '../common/decorators/get-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -31,5 +32,13 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@GetUser() user: User) {
     return user;
+  }
+
+  /** PATCH /api/auth/password — cambiar contraseña (todos los roles) */
+  @Patch('password')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changePassword(@GetUser() user: User, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(user.id, dto.current_password, dto.new_password);
   }
 }

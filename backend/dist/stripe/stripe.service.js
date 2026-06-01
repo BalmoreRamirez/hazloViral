@@ -26,6 +26,8 @@ const user_entity_1 = require("../users/entities/user.entity");
 const empresa_profile_entity_1 = require("../empresas/entities/empresa-profile.entity");
 const influencer_profile_entity_1 = require("../influencers/entities/influencer-profile.entity");
 const contrato_escrow_entity_1 = require("../contratos/entities/contrato-escrow.entity");
+const message_entity_1 = require("../chats/entities/message.entity");
+const chats_gateway_1 = require("../chats/chats.gateway");
 const credits_service_1 = require("../credits/credits.service");
 const enums_1 = require("../common/enums");
 let StripeService = StripeService_1 = class StripeService {
@@ -34,16 +36,20 @@ let StripeService = StripeService_1 = class StripeService {
     empresasRepo;
     influencersRepo;
     contratosRepo;
+    messagesRepo;
+    chatGateway;
     creditsService;
     stripe;
     logger = new common_1.Logger(StripeService_1.name);
     frontendUrl;
-    constructor(config, usersRepo, empresasRepo, influencersRepo, contratosRepo, creditsService) {
+    constructor(config, usersRepo, empresasRepo, influencersRepo, contratosRepo, messagesRepo, chatGateway, creditsService) {
         this.config = config;
         this.usersRepo = usersRepo;
         this.empresasRepo = empresasRepo;
         this.influencersRepo = influencersRepo;
         this.contratosRepo = contratosRepo;
+        this.messagesRepo = messagesRepo;
+        this.chatGateway = chatGateway;
         this.creditsService = creditsService;
         this.stripe = new stripe_1.default(config.get('STRIPE_SECRET_KEY'));
         this.frontendUrl = config.get('FRONTEND_URL', 'http://localhost:5173');
@@ -214,6 +220,19 @@ let StripeService = StripeService_1 = class StripeService {
                     contrato.stripe_charge_id = String(session.payment_intent);
                 await this.contratosRepo.save(contrato);
                 this.logger.log(`Contrato ${contrato_id} fondeado en custodia vía webhook`);
+                const msg = await this.messagesRepo.findOne({
+                    where: { contrato_id: contrato.id, is_proposal: true },
+                });
+                if (msg) {
+                    msg.proposal_status = enums_1.ProposalStatus.FUNDED;
+                    await this.messagesRepo.save(msg);
+                }
+                this.chatGateway.server
+                    .to(`chat-${contrato.chat_id}`)
+                    .emit('contract_funded', {
+                    contrato_id: contrato.id,
+                    message: 'El pago está en custodia. Puedes comenzar a trabajar de forma segura.',
+                });
             }
         }
     }
@@ -245,11 +264,14 @@ exports.StripeService = StripeService = StripeService_1 = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(empresa_profile_entity_1.EmpresaProfile)),
     __param(3, (0, typeorm_1.InjectRepository)(influencer_profile_entity_1.InfluencerProfile)),
     __param(4, (0, typeorm_1.InjectRepository)(contrato_escrow_entity_1.ContratoEscrow)),
+    __param(5, (0, typeorm_1.InjectRepository)(message_entity_1.Message)),
     __metadata("design:paramtypes", [config_1.ConfigService,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
+        typeorm_2.Repository,
+        chats_gateway_1.ChatGateway,
         credits_service_1.CreditsService])
 ], StripeService);
 //# sourceMappingURL=stripe.service.js.map

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -117,6 +118,19 @@ export class AuthService {
     }
 
     return { user: this.sanitize(user), token: this.sign(user) };
+  }
+
+  // ─── Cambio de contraseña ────────────────────────────────────────────────────
+  async changePassword(userId: number, currentPwd: string, newPwd: string): Promise<void> {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId },
+      select: { id: true, email: true, password: true, role: true, is_active: true },
+    });
+    if (!user) throw new NotFoundException('Usuario no encontrado.');
+    const valid = await bcrypt.compare(currentPwd, user.password);
+    if (!valid) throw new UnauthorizedException('La contraseña actual es incorrecta.');
+    user.password = await bcrypt.hash(newPwd, 10);
+    await this.usersRepo.save(user);
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────

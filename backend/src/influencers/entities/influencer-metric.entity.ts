@@ -2,6 +2,7 @@ import {
   Column,
   Entity,
   Index,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -20,6 +21,7 @@ export class InfluencerMetric {
   @ManyToOne(() => InfluencerProfile, (profile) => profile.metrics, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'influencer_id' })
   influencer: InfluencerProfile;
 
   @Column({ length: 50 })

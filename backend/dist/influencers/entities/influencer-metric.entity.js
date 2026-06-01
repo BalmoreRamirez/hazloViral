@@ -35,6 +35,7 @@ __decorate([
     (0, typeorm_1.ManyToOne)(() => influencer_profile_entity_1.InfluencerProfile, (profile) => profile.metrics, {
         onDelete: 'CASCADE',
     }),
+    (0, typeorm_1.JoinColumn)({ name: 'influencer_id' }),
     __metadata("design:type", influencer_profile_entity_1.InfluencerProfile)
 ], InfluencerMetric.prototype, "influencer", void 0);
 __decorate([

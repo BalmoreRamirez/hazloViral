@@ -42,6 +42,7 @@ export declare class AuthService {
         user: Omit<User, "password">;
         token: string;
     }>;
+    changePassword(userId: number, currentPwd: string, newPwd: string): Promise<void>;
     private assertEmailFree;
     private calcularEsMenor;
     private sign;

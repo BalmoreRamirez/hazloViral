@@ -15,17 +15,20 @@ const user_entity_1 = require("../users/entities/user.entity");
 const empresa_profile_entity_1 = require("../empresas/entities/empresa-profile.entity");
 const influencer_profile_entity_1 = require("../influencers/entities/influencer-profile.entity");
 const contrato_escrow_entity_1 = require("../contratos/entities/contrato-escrow.entity");
+const message_entity_1 = require("../chats/entities/message.entity");
 const credits_module_1 = require("../credits/credits.module");
 const auth_module_1 = require("../auth/auth.module");
+const chats_module_1 = require("../chats/chats.module");
 let StripeModule = class StripeModule {
 };
 exports.StripeModule = StripeModule;
 exports.StripeModule = StripeModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, empresa_profile_entity_1.EmpresaProfile, influencer_profile_entity_1.InfluencerProfile, contrato_escrow_entity_1.ContratoEscrow]),
+            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, empresa_profile_entity_1.EmpresaProfile, influencer_profile_entity_1.InfluencerProfile, contrato_escrow_entity_1.ContratoEscrow, message_entity_1.Message]),
             credits_module_1.CreditsModule,
             auth_module_1.AuthModule,
+            chats_module_1.ChatsModule,
         ],
         controllers: [stripe_controller_1.StripeController],
         providers: [stripe_service_1.StripeService],

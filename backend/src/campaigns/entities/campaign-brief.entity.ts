@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -17,9 +18,8 @@ export class CampaignBrief {
   @Column()
   empresa_id: number;
 
-  @ManyToOne(() => EmpresaProfile, (empresa) => empresa.briefs, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => EmpresaProfile, (empresa) => empresa.briefs, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'empresa_id' })
   empresa: EmpresaProfile;
 
   @Column({ length: 255 })

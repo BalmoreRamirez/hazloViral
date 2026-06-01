@@ -36,9 +36,8 @@ __decorate([
     __metadata("design:type", Number)
 ], CampaignBrief.prototype, "empresa_id", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => empresa_profile_entity_1.EmpresaProfile, (empresa) => empresa.briefs, {
-        onDelete: 'CASCADE',
-    }),
+    (0, typeorm_1.ManyToOne)(() => empresa_profile_entity_1.EmpresaProfile, (empresa) => empresa.briefs, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.JoinColumn)({ name: 'empresa_id' }),
     __metadata("design:type", empresa_profile_entity_1.EmpresaProfile)
 ], CampaignBrief.prototype, "empresa", void 0);
 __decorate([

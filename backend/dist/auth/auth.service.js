@@ -135,6 +135,19 @@ let AuthService = class AuthService {
         }
         return { user: this.sanitize(user), token: this.sign(user) };
     }
+    async changePassword(userId, currentPwd, newPwd) {
+        const user = await this.usersRepo.findOne({
+            where: { id: userId },
+            select: { id: true, email: true, password: true, role: true, is_active: true },
+        });
+        if (!user)
+            throw new common_1.NotFoundException('Usuario no encontrado.');
+        const valid = await bcrypt.compare(currentPwd, user.password);
+        if (!valid)
+            throw new common_1.UnauthorizedException('La contraseña actual es incorrecta.');
+        user.password = await bcrypt.hash(newPwd, 10);
+        await this.usersRepo.save(user);
+    }
     async assertEmailFree(email) {
         const exists = await this.usersRepo.existsBy({ email });
         if (exists)

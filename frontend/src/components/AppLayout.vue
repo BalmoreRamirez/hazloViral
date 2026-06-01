@@ -34,10 +34,19 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
         <nav class="hidden sm:flex items-center gap-1 ml-6">
           <RouterLink to="/dashboard" :class="navLinkClass">Dashboard</RouterLink>
 
-          <!-- Links para empresa / influencer -->
-          <template v-if="!isAdmin">
-            <RouterLink to="/chats"     :class="navLinkClass">Chats</RouterLink>
-            <RouterLink to="/contratos" :class="navLinkClass">Contratos</RouterLink>
+          <!-- Links para empresa -->
+          <template v-if="user?.role === 'empresa'">
+            <RouterLink to="/influencers"    :class="navLinkClass">🔍 Buscar</RouterLink>
+            <RouterLink to="/chats"          :class="navLinkClass">Chats</RouterLink>
+            <RouterLink to="/contratos"      :class="navLinkClass">Contratos</RouterLink>
+            <RouterLink to="/perfil/empresa" :class="navLinkClass">Mi perfil</RouterLink>
+          </template>
+
+          <!-- Links para influencer -->
+          <template v-else-if="user?.role === 'influencer'">
+            <RouterLink to="/chats"              :class="navLinkClass">Chats</RouterLink>
+            <RouterLink to="/contratos"          :class="navLinkClass">Contratos</RouterLink>
+            <RouterLink to="/perfil/influencer"  :class="navLinkClass">Mi perfil</RouterLink>
           </template>
 
           <!-- Link exclusivo admin -->

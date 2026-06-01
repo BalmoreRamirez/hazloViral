@@ -113,6 +113,15 @@ export class ContratosService {
     if (stripeChargeId) contrato.stripe_charge_id = stripeChargeId;
     const saved = await this.contratosRepo.save(contrato);
 
+    // Actualizar proposal_status = 'funded' en el mensaje de propuesta vinculado
+    const msg = await this.messagesRepo.findOne({
+      where: { contrato_id: saved.id, is_proposal: true },
+    });
+    if (msg) {
+      msg.proposal_status = ProposalStatus.FUNDED;
+      await this.messagesRepo.save(msg);
+    }
+
     // Notificar al influencer que puede comenzar a trabajar (claude.md §5.2 Fase 2)
     this.chatGateway.server.to(`chat-${contrato.chat_id}`).emit('contract_funded', {
       contrato_id: saved.id,

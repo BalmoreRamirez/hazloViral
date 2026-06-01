@@ -11,13 +11,18 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const influencer_profile_entity_1 = require("./entities/influencer-profile.entity");
 const influencer_metric_entity_1 = require("./entities/influencer-metric.entity");
+const influencers_service_1 = require("./influencers.service");
+const influencers_controller_1 = require("./influencers.controller");
+const auth_module_1 = require("../auth/auth.module");
 let InfluencersModule = class InfluencersModule {
 };
 exports.InfluencersModule = InfluencersModule;
 exports.InfluencersModule = InfluencersModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([influencer_profile_entity_1.InfluencerProfile, influencer_metric_entity_1.InfluencerMetric])],
-        exports: [typeorm_1.TypeOrmModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([influencer_profile_entity_1.InfluencerProfile, influencer_metric_entity_1.InfluencerMetric]), auth_module_1.AuthModule],
+        controllers: [influencers_controller_1.InfluencersController],
+        providers: [influencers_service_1.InfluencersService],
+        exports: [typeorm_1.TypeOrmModule, influencers_service_1.InfluencersService],
     })
 ], InfluencersModule);
 //# sourceMappingURL=influencers.module.js.map

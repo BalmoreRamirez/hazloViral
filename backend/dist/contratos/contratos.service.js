@@ -93,6 +93,13 @@ let ContratosService = class ContratosService {
         if (stripeChargeId)
             contrato.stripe_charge_id = stripeChargeId;
         const saved = await this.contratosRepo.save(contrato);
+        const msg = await this.messagesRepo.findOne({
+            where: { contrato_id: saved.id, is_proposal: true },
+        });
+        if (msg) {
+            msg.proposal_status = enums_1.ProposalStatus.FUNDED;
+            await this.messagesRepo.save(msg);
+        }
         this.chatGateway.server.to(`chat-${contrato.chat_id}`).emit('contract_funded', {
             contrato_id: saved.id,
             message: 'El pago está en custodia. Puedes comenzar a trabajar.',

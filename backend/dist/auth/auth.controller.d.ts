@@ -2,6 +2,7 @@ import { AuthService } from './auth.service';
 import { RegisterEmpresaDto } from './dto/register-empresa.dto';
 import { RegisterInfluencerDto } from './dto/register-influencer.dto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { User } from '../users/entities/user.entity';
 export declare class AuthController {
     private readonly authService;
@@ -39,4 +40,5 @@ export declare class AuthController {
         token: string;
     }>;
     me(user: User): User;
+    changePassword(user: User, dto: ChangePasswordDto): Promise<void>;
 }
