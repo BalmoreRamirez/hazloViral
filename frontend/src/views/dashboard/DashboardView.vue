@@ -68,10 +68,15 @@ const STATUS_LABEL: Record<string, string> = {
           </div>
           <div class="card flex flex-col gap-2">
             <p class="text-xs text-navy/50 uppercase tracking-wide font-semibold">Recargar</p>
-            <button @click="creditsStore.recharge(rechargeAmt)" class="btn-primary text-sm">
-              + ${{ rechargeAmt }} créditos
+            <button @click="creditsStore.recharge(rechargeAmt)"
+              :disabled="creditsStore.recharging"
+              class="btn-primary text-sm">
+              {{ creditsStore.recharging ? 'Procesando…' : `+ $${rechargeAmt} créditos` }}
             </button>
-            <p class="text-xs text-navy/40">Pago seguro con Stripe</p>
+            <p v-if="creditsStore.rechargeError" class="text-xs text-coral">
+              {{ creditsStore.rechargeError }}
+            </p>
+            <p v-else class="text-xs text-navy/40">Pago seguro con Stripe</p>
           </div>
         </div>
       </template>

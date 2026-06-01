@@ -10,13 +10,23 @@ exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const global_setting_entity_1 = require("./entities/global-setting.entity");
+const contrato_escrow_entity_1 = require("../contratos/entities/contrato-escrow.entity");
+const user_entity_1 = require("../users/entities/user.entity");
+const empresa_profile_entity_1 = require("../empresas/entities/empresa-profile.entity");
+const influencer_profile_entity_1 = require("../influencers/entities/influencer-profile.entity");
 const admin_service_1 = require("./admin.service");
+const admin_controller_1 = require("./admin.controller");
+const auth_module_1 = require("../auth/auth.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
 exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([global_setting_entity_1.GlobalSetting])],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([global_setting_entity_1.GlobalSetting, contrato_escrow_entity_1.ContratoEscrow, user_entity_1.User, empresa_profile_entity_1.EmpresaProfile, influencer_profile_entity_1.InfluencerProfile]),
+            auth_module_1.AuthModule,
+        ],
+        controllers: [admin_controller_1.AdminController],
         providers: [admin_service_1.AdminService],
         exports: [admin_service_1.AdminService],
     })

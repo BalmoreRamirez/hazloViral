@@ -107,9 +107,15 @@ function formatTime(dt: string) {
       <!-- Alerta saldo bajo -->
       <div v-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral">
         ⚠️ {{ blockMsg }}
-        <button v-if="isEmpresa" @click="creditsStore.recharge(10)" class="ml-2 underline font-semibold">
-          Recargar $10
+        <button v-if="isEmpresa"
+          @click="creditsStore.recharge(10)"
+          :disabled="creditsStore.recharging"
+          class="ml-2 underline font-semibold disabled:opacity-50">
+          {{ creditsStore.recharging ? 'Procesando…' : 'Recargar $10' }}
         </button>
+        <span v-if="creditsStore.rechargeError" class="block mt-1 text-xs">
+          {{ creditsStore.rechargeError }}
+        </span>
       </div>
 
       <!-- Mensajes -->

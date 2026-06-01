@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { StripeExceptionFilter } from './common/filters/stripe-exception.filter';
 
 async function bootstrap() {
   // rawBody:true es requerido para verificar la firma del webhook de Stripe
@@ -8,7 +9,11 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors({ origin: 'http://localhost:5173', credentials: true });
+  app.useGlobalFilters(new StripeExceptionFilter());
+  app.enableCors({
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    credentials: true,
+  });
 
   const port = process.env.APP_PORT ?? 3000;
   await app.listen(port);

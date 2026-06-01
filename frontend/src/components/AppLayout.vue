@@ -4,13 +4,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
 import { computed, onMounted } from 'vue'
 
-const router      = useRouter()
-const authStore   = useAuthStore()
+const router       = useRouter()
+const authStore    = useAuthStore()
 const creditsStore = useCreditsStore()
 
-const user     = computed(() => authStore.user)
-const balance  = computed(() => creditsStore.balance)
-const isLow    = computed(() => balance.value && !balance.value.is_above_threshold)
+const user    = computed(() => authStore.user)
+const balance = computed(() => creditsStore.balance)
+const isLow   = computed(() => balance.value && !balance.value.is_above_threshold)
+const isAdmin = computed(() => user.value?.role === 'admin')
 
 onMounted(async () => {
   if (authStore.isEmpresa) await creditsStore.fetchBalance()
@@ -20,6 +21,8 @@ function logout() {
   authStore.logout()
   router.push('/login')
 }
+
+const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-white hover:bg-white/10 transition-colors [&.router-link-active]:text-white [&.router-link-active]:bg-white/10'
 </script>
 
 <template>
@@ -29,9 +32,18 @@ function logout() {
       <div class="flex items-center gap-3">
         <span class="text-violet font-display font-bold text-xl tracking-tight">hazloViral</span>
         <nav class="hidden sm:flex items-center gap-1 ml-6">
-          <RouterLink to="/dashboard" class="px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-white hover:bg-white/10 transition-colors [&.router-link-active]:text-white [&.router-link-active]:bg-white/10">Dashboard</RouterLink>
-          <RouterLink to="/chats"     class="px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-white hover:bg-white/10 transition-colors [&.router-link-active]:text-white [&.router-link-active]:bg-white/10">Chats</RouterLink>
-          <RouterLink to="/contratos" class="px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-white hover:bg-white/10 transition-colors [&.router-link-active]:text-white [&.router-link-active]:bg-white/10">Contratos</RouterLink>
+          <RouterLink to="/dashboard" :class="navLinkClass">Dashboard</RouterLink>
+
+          <!-- Links para empresa / influencer -->
+          <template v-if="!isAdmin">
+            <RouterLink to="/chats"     :class="navLinkClass">Chats</RouterLink>
+            <RouterLink to="/contratos" :class="navLinkClass">Contratos</RouterLink>
+          </template>
+
+          <!-- Link exclusivo admin -->
+          <RouterLink v-if="isAdmin" to="/admin" :class="navLinkClass">
+            ⚙️ Admin
+          </RouterLink>
         </nav>
       </div>
 
@@ -40,8 +52,7 @@ function logout() {
         <template v-if="authStore.isEmpresa && balance">
           <RouterLink to="/dashboard" class="flex items-center gap-2 text-sm">
             <span :class="isLow ? 'text-coral font-semibold' : 'text-slate/80'">
-              {{ isLow ? '⚠️' : '💰' }}
-              {{ balance.balance_creditos.toFixed(2) }} cr.
+              {{ isLow ? '⚠️' : '💰' }} {{ balance.balance_creditos.toFixed(2) }} cr.
             </span>
           </RouterLink>
         </template>
@@ -56,7 +67,7 @@ function logout() {
       </div>
     </header>
 
-    <!-- Alert de saldo bajo (claude.md §5.1) -->
+    <!-- Alerta saldo bajo (claude.md §5.1) -->
     <div v-if="isLow" class="bg-coral/10 border-b border-coral/30 px-6 py-2 flex items-center justify-between">
       <p class="text-coral text-sm font-medium">
         ⚠️ Saldo bajo el umbral mínimo ({{ balance?.deficit.toFixed(2) }} cr. de déficit).
@@ -70,4 +81,3 @@ function logout() {
     </main>
   </div>
 </template>
-

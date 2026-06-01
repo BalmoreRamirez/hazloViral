@@ -28,10 +28,23 @@ export const useCreditsStore = defineStore('credits', () => {
     balance.value = data
   }
 
+  const rechargeError = ref<string | null>(null)
+  const recharging    = ref(false)
+
   async function recharge(amountUsd: number) {
-    const { url } = await creditsApi.createCheckout(amountUsd)
-    window.location.href = url
+    rechargeError.value = null
+    recharging.value    = true
+    try {
+      const { url } = await creditsApi.createCheckout(amountUsd)
+      window.location.href = url
+    } catch (e: any) {
+      rechargeError.value =
+        e.response?.data?.message ??
+        'Error al iniciar el pago. Intenta de nuevo.'
+    } finally {
+      recharging.value = false
+    }
   }
 
-  return { balance, loading, fetchBalance, updateFromSocket, recharge }
+  return { balance, loading, recharging, rechargeError, fetchBalance, updateFromSocket, recharge }
 })

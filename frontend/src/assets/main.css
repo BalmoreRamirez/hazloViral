@@ -1,49 +1,153 @@
+/*
+ * ─── hazloViral — Sistema de Diseño "Corporate-Pop" (claude.md §3) ───────────
+ *
+ * Orden de capas: PrimeVue queda entre base y utilities de Tailwind,
+ * garantizando que las clases utilitarias siempre ganen en especificidad.
+ */
+
+/* Declaración de orden de capas CSS (debe ir ANTES del @import de Tailwind) */
+@layer tailwind-base, primevue, tailwind-utilities;
+
 @import "tailwindcss";
 
-/* ─── Sistema de diseño hazloViral (claude.md §3) ─────────────────────────── */
-@theme {
-  --color-navy:   #0F172A;
-  --color-violet: #7C3AED;
-  --color-coral:  #F43F5E;
-  --color-slate:  #F8FAFC;
+/*
+ * Paleta oficial (claude.md §3.1):
+ *   Primary   Deep Navy   #0F172A  — fondos, nav, textos ejecutivos
+ *   Accent    Violet      #7C3AED  — CTAs, botones principales, énfasis
+ *   Alert     Coral       #F43F5E  — alertas urgentes, saldo bajo, disputas
+ *   Surface   Slate       #F8FAFC  — fondos de tarjetas, contenedores internos
+ *
+ * Tipografía (claude.md §3.2):
+ *   Body/Data   → Inter / Plus Jakarta Sans
+ *   Titles/UI   → Lexend / Clash Display
+ */
 
+/* ─── Tokens de diseño vía @theme (Tailwind v4) ──────────────────────────── */
+@theme {
+  /* Paleta principal */
+  --color-navy:         #0F172A;
+  --color-navy-light:   #1E293B;
+  --color-navy-lighter: #334155;
+
+  --color-violet:       #7C3AED;
+  --color-violet-light: #A78BFA;
+  --color-violet-dark:  #5B21B6;
+
+  --color-coral:        #F43F5E;
+  --color-coral-light:  #FDA4AF;
+  --color-coral-dark:   #BE123C;
+
+  --color-slate:        #F8FAFC;
+  --color-slate-dark:   #E2E8F0;
+
+  /* Tipografía */
   --font-body:    'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-display: 'Lexend', 'Clash Display', system-ui, sans-serif;
+
+  /* Sombras personalizadas */
+  --shadow-card: 0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06);
+  --shadow-card-hover: 0 4px 12px 0 rgb(15 23 42 / 0.12);
 }
 
+/* ─── Base ────────────────────────────────────────────────────────────────── */
 @layer base {
-  * { box-sizing: border-box; }
-  html { font-family: var(--font-body); }
-  h1, h2, h3, h4 { font-family: var(--font-display); }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--color-navy);
+  }
+
   body { @apply bg-slate text-navy; margin: 0; }
   #app { min-height: 100vh; }
+
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-navy/20 rounded-full; }
 }
 
+/* ─── Componentes ────────────────────────────────────────────────────────── */
 @layer components {
+
+  /* Botones */
   .btn-primary {
-    @apply bg-violet text-white px-4 py-2 rounded-lg font-semibold
-           hover:bg-violet/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2
+           bg-violet text-white px-4 py-2 rounded-lg font-semibold text-sm
+           hover:bg-violet-dark transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet/50;
   }
-  .btn-danger  {
-    @apply bg-coral text-white px-4 py-2 rounded-lg font-semibold
-           hover:bg-coral/90 transition-colors;
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-violet/10 text-violet px-4 py-2 rounded-lg font-semibold text-sm
+           hover:bg-violet/20 transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2
+           bg-coral text-white px-4 py-2 rounded-lg font-semibold text-sm
+           hover:bg-coral-dark transition-all duration-150;
   }
   .btn-ghost {
-    @apply border border-navy/20 text-navy px-4 py-2 rounded-lg font-semibold
-           hover:bg-navy/5 transition-colors;
+    @apply inline-flex items-center justify-center gap-2
+           border border-navy/20 text-navy px-4 py-2 rounded-lg font-semibold text-sm
+           hover:bg-navy/5 transition-all duration-150;
   }
+
+  /* Cards */
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-navy/10 p-5;
+    @apply bg-white rounded-xl border border-navy/10 p-5;
+    box-shadow: var(--shadow-card);
   }
+  .card-flat {
+    @apply bg-white rounded-xl border border-navy/10 p-5;
+  }
+
+  /* Formulario */
   .input {
-    @apply w-full border border-navy/20 rounded-lg px-3 py-2 text-sm
-           focus:outline-none focus:ring-2 focus:ring-violet/40 bg-white;
+    @apply w-full border border-navy/20 rounded-lg px-3 py-2 text-sm bg-white
+           transition-shadow duration-150
+           focus:outline-none focus:ring-2 focus:ring-violet/30 focus:border-violet/50;
   }
-  .label {
-    @apply text-sm font-medium text-navy/70 mb-1 block;
+  .label  { @apply text-sm font-medium text-navy/70 mb-1 block; }
+  .field  { @apply flex flex-col gap-1; }
+
+  /* Badges — estilos completos inline (Tailwind v4: no @apply de clases propias) */
+  .badge {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium;
   }
-  .badge-active   { @apply inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full; }
-  .badge-warning  { @apply inline-flex items-center gap-1 bg-coral/10 text-coral text-xs px-2 py-0.5 rounded-full; }
-  .badge-info     { @apply inline-flex items-center gap-1 bg-violet/10 text-violet text-xs px-2 py-0.5 rounded-full; }
-  .badge-muted    { @apply inline-flex items-center gap-1 bg-navy/10 text-navy/60 text-xs px-2 py-0.5 rounded-full; }
+  .badge-active  {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+           bg-green-100 text-green-700;
+  }
+  .badge-warning {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+           bg-coral/10 text-coral;
+  }
+  .badge-info {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+           bg-violet/10 text-violet;
+  }
+  .badge-muted {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+           bg-navy/10 text-navy/60;
+  }
+  .badge-dark {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+           bg-navy text-white;
+  }
+
+  /* Página auth centrada */
+  .auth-page { @apply min-h-screen bg-navy flex items-center justify-center p-4; }
+  .auth-card { @apply w-full max-w-md bg-white rounded-xl border border-navy/10 p-8; }
+
+  /* Divisor */
+  .divider { @apply w-full h-px bg-navy/10 my-4; }
 }
