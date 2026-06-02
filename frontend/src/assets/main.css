@@ -1,51 +1,47 @@
 /*
- * ─── hazloViral — Sistema de Diseño "Corporate-Pop" (claude.md §3) ───────────
+ * hazloViral — Sistema de Diseño "Corporate-Pop" (claude.md §3)
  *
- * Orden de capas: PrimeVue queda entre base y utilities de Tailwind,
- * garantizando que las clases utilitarias siempre ganen en especificidad.
+ * Arquitectura CSS:
+ *   1. @config  → tailwind.config.js  (paleta oficial en JS para tooling/IDE)
+ *   2. @theme   → variables CSS nativas en :root (requerido por Tailwind v4 en dev)
+ *   3. Layers   → tailwind-base → primevue → tailwind-utilities
+ *      (las utilities de Tailwind siempre ganan en especificidad)
  */
 
-/* Declaración de orden de capas CSS (debe ir ANTES del @import de Tailwind) */
+/* ── 1. Orden de capas CSS (debe ir ANTES de todo) ───────────────────────── */
 @layer tailwind-base, primevue, tailwind-utilities;
 
+/* ── 2. Config JS (colores/fuentes oficiales en formato v3 para IDE/tooling) */
+@config "../../tailwind.config.js";
+
+/* ── 3. Tailwind core ────────────────────────────────────────────────────── */
 @import "tailwindcss";
 
-/*
- * Paleta oficial (claude.md §3.1):
- *   Primary   Deep Navy   #0F172A  — fondos, nav, textos ejecutivos
- *   Accent    Violet      #7C3AED  — CTAs, botones principales, énfasis
- *   Alert     Coral       #F43F5E  — alertas urgentes, saldo bajo, disputas
- *   Surface   Slate       #F8FAFC  — fondos de tarjetas, contenedores internos
- *
- * Tipografía (claude.md §3.2):
- *   Body/Data   → Inter / Plus Jakarta Sans
- *   Titles/UI   → Lexend / Clash Display
- */
-
-/* ─── Tokens de diseño vía @theme (Tailwind v4) ──────────────────────────── */
+/* ── 4. @theme: variables CSS nativas requeridas por Tailwind v4 en dev ──── */
+/*    Tailwind v4 usa var(--color-*) en dev; sin @theme quedarían undefined   */
 @theme {
-  /* Paleta principal */
-  --color-navy:         #0F172A;
+  /* Paleta oficial (claude.md §3.1) */
+  --color-navy:         #0F172A;   /* fondos principales, nav, textos ejecutivos */
   --color-navy-light:   #1E293B;
   --color-navy-lighter: #334155;
 
-  --color-violet:       #7C3AED;
+  --color-violet:       #7C3AED;   /* CTAs, "Iniciar Chat", "Recargar" */
   --color-violet-light: #A78BFA;
   --color-violet-dark:  #5B21B6;
 
-  --color-coral:        #F43F5E;
+  --color-coral:        #F43F5E;   /* alertas urgentes, saldo bajo, disputas */
   --color-coral-light:  #FDA4AF;
   --color-coral-dark:   #BE123C;
 
-  --color-slate:        #F8FAFC;
+  --color-slate:        #F8FAFC;   /* fondo de tarjetas, contenedores */
   --color-slate-dark:   #E2E8F0;
 
-  /* Tipografía */
+  /* Tipografía (claude.md §3.2) */
   --font-body:    'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-display: 'Lexend', 'Clash Display', system-ui, sans-serif;
 
-  /* Sombras personalizadas */
-  --shadow-card: 0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06);
+  /* Sombras */
+  --shadow-card:       0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06);
   --shadow-card-hover: 0 4px 12px 0 rgb(15 23 42 / 0.12);
 }
 
@@ -76,7 +72,6 @@
 /* ─── Componentes ────────────────────────────────────────────────────────── */
 @layer components {
 
-  /* Botones */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
            bg-violet text-white px-4 py-2 rounded-lg font-semibold text-sm
@@ -101,53 +96,28 @@
            hover:bg-navy/5 transition-all duration-150;
   }
 
-  /* Cards */
   .card {
     @apply bg-white rounded-xl border border-navy/10 p-5;
     box-shadow: var(--shadow-card);
+    transition: box-shadow 0.15s ease;
   }
-  .card-flat {
-    @apply bg-white rounded-xl border border-navy/10 p-5;
-  }
+  .card:hover { box-shadow: var(--shadow-card-hover); }
 
-  /* Formulario */
   .input {
     @apply w-full border border-navy/20 rounded-lg px-3 py-2 text-sm bg-white
-           transition-shadow duration-150
-           focus:outline-none focus:ring-2 focus:ring-violet/30 focus:border-violet/50;
+           focus:outline-none focus:ring-2 focus:ring-violet/30 focus:border-violet/50
+           transition-shadow duration-150;
   }
   .label  { @apply text-sm font-medium text-navy/70 mb-1 block; }
   .field  { @apply flex flex-col gap-1; }
 
-  /* Badges — estilos completos inline (Tailwind v4: no @apply de clases propias) */
-  .badge {
-    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium;
-  }
-  .badge-active  {
-    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
-           bg-green-100 text-green-700;
-  }
-  .badge-warning {
-    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
-           bg-coral/10 text-coral;
-  }
-  .badge-info {
-    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
-           bg-violet/10 text-violet;
-  }
-  .badge-muted {
-    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
-           bg-navy/10 text-navy/60;
-  }
-  .badge-dark {
-    @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
-           bg-navy text-white;
-  }
+  .badge-active  { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700; }
+  .badge-warning { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-coral/10 text-coral; }
+  .badge-info    { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-violet/10 text-violet; }
+  .badge-muted   { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-navy/10 text-navy/60; }
+  .badge-dark    { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-navy text-white; }
 
-  /* Página auth centrada */
   .auth-page { @apply min-h-screen bg-navy flex items-center justify-center p-4; }
   .auth-card { @apply w-full max-w-md bg-white rounded-xl border border-navy/10 p-8; }
-
-  /* Divisor */
-  .divider { @apply w-full h-px bg-navy/10 my-4; }
+  .divider   { @apply w-full h-px bg-navy/10 my-4; }
 }
