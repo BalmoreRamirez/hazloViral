@@ -1,0 +1,13 @@
+claude.md
+
+# General Node/JS artifacts
+node_modules/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+
+# Editor and OS files
+.DS_Store
+.vscode/
+.idea/
