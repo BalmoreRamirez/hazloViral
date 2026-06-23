@@ -1,23 +1,51 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsPositive,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
-class EvidenciaItem {
+class ArchivoItem {
+  @IsString()
+  @IsNotEmpty()
+  url: string;
+
+  @IsString()
+  @IsIn(['video', 'imagen', 'banner', 'documento'])
+  tipo_archivo: 'video' | 'imagen' | 'banner' | 'documento';
+
+  @IsString()
+  @IsNotEmpty()
+  nombre: string;
+
+  @IsInt()
+  @IsPositive()
+  size_bytes: number;
+}
+
+class EntregableItem {
   @IsString()
   @IsNotEmpty()
   tipo: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   descripcion: string;
 
-  @IsString()
-  @IsNotEmpty()
-  url: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ArchivoItem)
+  archivos: ArchivoItem[];
 }
 
 export class SubmitDeliverablesDto {
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => EvidenciaItem)
-  evidencias: EvidenciaItem[];
+  @Type(() => EntregableItem)
+  entregables: EntregableItem[];
 }

@@ -15,4 +15,12 @@ export class RegisterEmpresaDto {
   @IsOptional()
   @IsUrl()
   sitio_web?: string;
+
+  @IsOptional()
+  @IsString()
+  pais?: string;
+
+  @IsOptional()
+  @IsString()
+  direccion?: string;
 }

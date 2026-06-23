@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { useChatStore } from '@/stores/chat'
@@ -62,13 +62,13 @@ async function openChat() {
             class="py-4 flex items-center justify-between cursor-pointer hover:bg-slate rounded-lg -mx-5 px-5 transition-colors">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center text-violet font-bold">
-                {{ chat.id }}
+                {{ (authStore.isEmpresa ? chat.influencer?.nombre_artistico : chat.empresa?.nombre_comercial)?.[0]?.toUpperCase() ?? '?' }}
               </div>
               <div>
                 <p class="font-semibold text-sm text-navy">
                   <span v-if="authStore.isEmpresa && chat.influencer">{{ chat.influencer.nombre_artistico }}</span>
                   <span v-else-if="chat.empresa">{{ chat.empresa.nombre_comercial }}</span>
-                  <span v-else>Chat #{{ chat.id }}</span>
+                  <span v-else>Sin nombre</span>
                 </p>
                 <p class="text-xs text-navy/40">
                   {{ new Date(chat.created_at).toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' }) }}

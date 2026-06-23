@@ -4,7 +4,41 @@ import 'primeicons/primeicons.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'
-import Aura from '@primeuix/themes/aura'   // ← paquete correcto para v4.5+
+import Aura from '@primeuix/themes/aura'
+import { definePreset } from '@primeuix/themes'
+
+const HazloViralPreset = definePreset(Aura, {
+  semantic: {
+    primary: {
+      50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+      400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+      800: '#5b21b6', 900: '#4c1d95', 950: '#2e1065',
+    },
+    formField: {
+      borderRadius: '0.5rem',
+      focusRing: {
+        width: '2px',
+        style: 'solid',
+        color: 'rgba(124,58,237,0.3)',
+        offset: '0px',
+        shadow: 'none',
+      },
+    },
+    colorScheme: {
+      light: {
+        primary: {
+          color: '{primary.600}',
+          hoverColor: '{primary.500}',
+          activeColor: '{primary.400}',
+        },
+        formField: {
+          borderColor: 'rgba(15,23,42,0.2)',
+          hoverBorderColor: 'rgba(15,23,42,0.4)',
+        },
+      },
+    },
+  },
+})
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
@@ -35,7 +69,7 @@ app.use(router)
 // ── PrimeVue con tema Aura ────────────────────────────────────────────────────
 app.use(PrimeVue, {
   theme: {
-    preset: Aura,
+    preset: HazloViralPreset,
     options: {
       darkModeSelector: '.dark',
       cssLayer: {

@@ -5,6 +5,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -12,11 +13,7 @@ import { ContratoStatus } from '../../common/enums';
 import { Chat } from '../../chats/entities/chat.entity';
 import { EmpresaProfile } from '../../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../../influencers/entities/influencer-profile.entity';
-
-export interface Entregable {
-  tipo: string;
-  descripcion: string;
-}
+import type { EntregableConArchivos, PublicationLink } from '../../common/types';
 
 @Entity('contratos_escrow')
 @Index('idx_contratos_status', ['status'])
@@ -51,11 +48,23 @@ export class ContratoEscrow {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
   comision_plataforma: number;
 
+  @Column({ nullable: true, length: 500 })
+  contrato_pdf_url: string;
+
   @Column({ type: 'jsonb' })
-  entregables: Entregable[];
+  entregables: EntregableConArchivos[];
 
   @Column({ type: 'date' })
   fecha_limite_entrega: string;
+
+  @Column({ type: 'int', default: 0 })
+  revision_round: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  publication_links: PublicationLink[];
+
+  @Column({ type: 'text', nullable: true })
+  motivo_incumplimiento: string;
 
   @Column({ type: 'enum', enum: ContratoStatus, default: ContratoStatus.PENDING_PAYMENT })
   status: ContratoStatus;
@@ -65,6 +74,12 @@ export class ContratoEscrow {
 
   @Column({ nullable: true, length: 255 })
   stripe_transfer_id: string;
+
+  @OneToMany('ContratoRevisionRound', 'contrato')
+  revision_rounds: any[];
+
+  @OneToMany('ContratoAuditLog', 'contrato')
+  audit_logs: any[];
 
   @CreateDateColumn()
   created_at: Date;

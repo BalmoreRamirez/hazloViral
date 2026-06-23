@@ -29,6 +29,12 @@ export class EmpresaProfile {
   @Column({ nullable: true, length: 255 })
   sitio_web: string;
 
+  @Column({ nullable: true, length: 100 })
+  pais: string;
+
+  @Column({ nullable: true, length: 255 })
+  direccion: string;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 10.0 })
   balance_creditos: number;
 

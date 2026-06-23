@@ -47,7 +47,9 @@ export class AuthService {
       const profile = new EmpresaProfile();
       profile.user_id = user.id;
       profile.nombre_comercial = dto.nombre_comercial;
-      if (dto.sitio_web) profile.sitio_web = dto.sitio_web;
+      if (dto.sitio_web)  profile.sitio_web  = dto.sitio_web;
+      if (dto.pais)       profile.pais       = dto.pais;
+      if (dto.direccion)  profile.direccion  = dto.direccion;
       profile.balance_creditos = WELCOME_BONUS; // §5.1 Bono de bienvenida
       profile.umbral_creditos = 5.0;
       await manager.save(profile);
@@ -88,8 +90,9 @@ export class AuthService {
       const profile = new InfluencerProfile();
       profile.user_id = user.id;
       profile.nombre_artistico = dto.nombre_artistico;
-      if (dto.bio) profile.bio = dto.bio;
+      if (dto.bio)       profile.bio       = dto.bio;
       if (dto.ubicacion) profile.ubicacion = dto.ubicacion;
+      if (dto.direccion) profile.direccion = dto.direccion;
       profile.tarifa_base = dto.tarifa_base ?? 0;
       profile.fecha_nacimiento = dto.fecha_nacimiento;
       profile.tutor_nombre = esMenor ? (dto.tutor_nombre ?? '') : '';

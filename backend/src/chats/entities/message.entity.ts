@@ -13,7 +13,7 @@ import { User } from '../../users/entities/user.entity';
 import { CampaignBrief } from '../../campaigns/entities/campaign-brief.entity';
 import { ContratoEscrow } from '../../contratos/entities/contrato-escrow.entity';
 
-import type { ProposalData } from '../../common/types';
+import type { ProposalData, ContraofertaData } from '../../common/types';
 
 @Entity('messages')
 @Index('idx_messages_chat_id', ['chat_id', 'created_at'])
@@ -60,6 +60,9 @@ export class Message {
 
   @Column({ type: 'jsonb', nullable: true })
   proposal_data: ProposalData;
+
+  @Column({ type: 'jsonb', nullable: true })
+  contraoferta_data: ContraofertaData;
 
   @Column({ type: 'enum', enum: ProposalStatus, nullable: true })
   proposal_status: ProposalStatus;

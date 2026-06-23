@@ -20,6 +20,13 @@ const filters = ref({
 
 const REDES = ['', 'TikTok', 'Instagram', 'YouTube', 'Twitter', 'Facebook', 'Twitch']
 
+const PAISES = [
+  'Argentina','Bolivia','Brasil','Chile','Colombia','Costa Rica','Cuba',
+  'Ecuador','El Salvador','España','Estados Unidos','Guatemala','Honduras',
+  'México','Nicaragua','Panamá','Paraguay','Perú','Puerto Rico',
+  'República Dominicana','Uruguay','Venezuela','Otro',
+]
+
 async function search() {
   loading.value = true
   page.value    = 1
@@ -74,7 +81,9 @@ const REDES_ICON: Record<string, string> = {
           </div>
           <div class="field">
             <label class="label">Ubicación</label>
-            <input v-model="filters.ubicacion" class="input" placeholder="Bogotá…" @keyup.enter="search" />
+            <Select v-model="filters.ubicacion" :options="PAISES" filter
+              placeholder="Todos los países" showClear class="w-full"
+              @change="search" />
           </div>
           <div class="field">
             <label class="label">Min. seguidores</label>

@@ -116,20 +116,20 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
           <div v-for="d in adminStore.disputes" :key="d.id" class="border border-coral/20 rounded-xl p-4 space-y-3">
             <div class="flex items-start justify-between">
               <div>
-                <p class="font-semibold text-navy">Contrato #{{ d.id }} — ${{ d.monto_total }} USD</p>
-                <p class="text-xs text-navy/40 mt-0.5">Chat #{{ d.chat_id }} · {{ new Date(d.created_at).toLocaleDateString() }}</p>
+                <p class="font-semibold text-navy">{{ d.empresa?.nombre_comercial ?? 'Empresa' }} → {{ d.influencer?.nombre_artistico ?? 'Influencer' }} — ${{ d.monto_total }} USD</p>
+                <p class="text-xs text-navy/40 mt-0.5">{{ new Date(d.created_at).toLocaleDateString() }}</p>
               </div>
               <span class="badge-warning">⚠️ En disputa</span>
             </div>
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div class="bg-slate rounded-lg p-3">
                 <p class="text-xs text-navy/50 mb-1">Empresa</p>
-                <p class="font-medium">{{ d.empresa?.nombre_comercial ?? `Empresa #${d.empresa?.id}` }}</p>
+                <p class="font-medium">{{ d.empresa?.nombre_comercial ?? 'Sin nombre' }}</p>
                 <p class="text-xs text-navy/40">{{ d.empresa?.user?.email }}</p>
               </div>
               <div class="bg-slate rounded-lg p-3">
                 <p class="text-xs text-navy/50 mb-1">Influencer</p>
-                <p class="font-medium">{{ d.influencer?.nombre_artistico ?? `Influencer #${d.influencer?.id}` }}</p>
+                <p class="font-medium">{{ d.influencer?.nombre_artistico ?? 'Sin nombre' }}</p>
                 <p class="text-xs text-navy/40">{{ d.influencer?.user?.email }}</p>
               </div>
             </div>
@@ -147,7 +147,7 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
               </div>
               <div>
                 <label class="label">Nota del árbitro (obligatoria)</label>
-                <textarea v-model="disputeNota" class="input" rows="2"
+                <textarea v-model="disputeNota" class="input" rows="2" required
                   placeholder="El influencer entregó el trabajo según las especificaciones…" />
               </div>
               <div class="flex gap-2">

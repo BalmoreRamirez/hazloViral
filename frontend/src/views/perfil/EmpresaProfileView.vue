@@ -148,7 +148,7 @@ function confirmDelete(id: number, titulo: string) {
         <!-- Formulario de edición -->
         <form v-else-if="editing" @submit.prevent="saveProfile" class="space-y-4">
           <div class="field">
-            <label class="label">Nombre comercial *</label>
+            <label class="label">Nombre comercial</label>
             <InputText v-model="form.nombre_comercial" class="w-full" required />
           </div>
           <div class="field">
@@ -185,8 +185,8 @@ function confirmDelete(id: number, titulo: string) {
             {{ editingBrief ? '✏️ Editar brief' : '➕ Nuevo brief de campaña' }}
           </p>
           <div class="field">
-            <label class="label">Título de la campaña *</label>
-            <InputText v-model="briefForm.titulo_campana" class="w-full" placeholder="Lanzamiento Producto X…" />
+            <label class="label">Título de la campaña</label>
+            <InputText v-model="briefForm.titulo_campana" class="w-full" placeholder="Lanzamiento Producto X…" required />
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="field">

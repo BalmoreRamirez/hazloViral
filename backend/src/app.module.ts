@@ -12,7 +12,8 @@ import { ContratosModule } from './contratos/contratos.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CreditsModule } from './credits/credits.module';
-import { StripeModule } from './stripe/stripe.module';
+import { WompiModule } from './wompi/wompi.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { StripeModule } from './stripe/stripe.module';
     AdminModule,
     AuthModule,
     CreditsModule,
-    StripeModule,
+    WompiModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

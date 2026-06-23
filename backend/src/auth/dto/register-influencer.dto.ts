@@ -33,6 +33,10 @@ export class RegisterInfluencerDto {
   ubicacion?: string;
 
   @IsOptional()
+  @IsString()
+  direccion?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)

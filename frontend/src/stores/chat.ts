@@ -12,6 +12,7 @@ export interface ChatRoom {
 export interface ChatMessage {
   id: number; chat_id: number; sender_id: number; message_text: string | null
   is_proposal: boolean; proposal_status: string | null; proposal_data: any
+  contraoferta_data: { tarifa_propuesta: number; justificacion: string } | null
   contrato_id: number | null; created_at: string; sender?: any
 }
 
@@ -50,7 +51,10 @@ export const useChatStore = defineStore('chat', () => {
     socketConnected.value = true
 
     // Evitar listeners duplicados
-    socket.off('joined_chat').off('new_message').off('credit_status').off('chat_blocked').off('contract_created')
+    socket
+      .off('joined_chat').off('new_message').off('credit_status').off('chat_blocked')
+      .off('contract_created').off('proposal_countered').off('proposal_rejected')
+      .off('counter_resolved').off('contract_funded')
 
     socket.emit('join_chat', { chat_id: chat.id })
 
@@ -71,6 +75,42 @@ export const useChatStore = defineStore('chat', () => {
       chatsApi.messages(chat.id).then((msgs) => { messages.value = msgs })
       console.log('Contrato creado:', data)
     })
+
+    // Contraoferta enviada por el influencer
+    socket.on('proposal_countered', (data: { message: ChatMessage; original_message_id: number }) => {
+      // Marcar la propuesta original como 'countered'
+      const original = messages.value.find(m => m.id === data.original_message_id)
+      if (original) original.proposal_status = 'countered'
+      // Agregar el mensaje de contraoferta si no está ya en la lista
+      if (!messages.value.find(m => m.id === data.message.id)) {
+        messages.value.push(data.message)
+      }
+    })
+
+    // Propuesta rechazada por el influencer
+    socket.on('proposal_rejected', (data: { message_id: number }) => {
+      const msg = messages.value.find(m => m.id === data.message_id)
+      if (msg) msg.proposal_status = 'rejected'
+    })
+
+    // Empresa acepta o rechaza la contraoferta
+    socket.on('counter_resolved', (data: { message_id: number; action: 'accepted' | 'rejected'; contrato?: any }) => {
+      const msg = messages.value.find(m => m.id === data.message_id)
+      if (msg) {
+        msg.proposal_status = data.action === 'accepted' ? 'accepted' : 'counter_rejected'
+        if (data.action === 'accepted' && data.contrato) {
+          msg.contrato_id = data.contrato.id
+        }
+      }
+    })
+
+    // Empresa fonda el contrato → propuesta pasa a 'funded'
+    socket.on('contract_funded', (data: { contrato_id: number; proposal_message_id: number | null }) => {
+      if (data.proposal_message_id) {
+        const msg = messages.value.find(m => m.id === data.proposal_message_id)
+        if (msg) msg.proposal_status = 'funded'
+      }
+    })
   }
 
   function sendMessage(text: string) {
@@ -79,7 +119,7 @@ export const useChatStore = defineStore('chat', () => {
     socket.emit('send_message', { chat_id: activeChat.value.id, message_text: text })
   }
 
-  function sendProposal(proposal_data: { tarifa: number; entregables: any[]; plazo: string }) {
+  function sendProposal(proposal_data: { tarifa: number; entregables: any[]; plazo: string; contrato_pdf_url?: string }) {
     if (!activeChat.value) return
     const socket = getSocket()
     socket.emit('send_message', {

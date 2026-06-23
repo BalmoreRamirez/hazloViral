@@ -120,13 +120,9 @@ const STATUS_LABEL: Record<string, string> = {
             class="py-3 flex items-center justify-between cursor-pointer hover:bg-slate/50 -mx-5 px-5 rounded-lg transition-colors">
             <div>
               <p class="font-medium text-sm text-navy">
-                Chat #{{ chat.id }}
-                <span v-if="isEmpresa && chat.influencer" class="text-navy/50 ml-2">
-                  con {{ chat.influencer.nombre_artistico }}
-                </span>
-                <span v-else-if="chat.empresa" class="text-navy/50 ml-2">
-                  con {{ chat.empresa.nombre_comercial }}
-                </span>
+                <span v-if="isEmpresa && chat.influencer">{{ chat.influencer.nombre_artistico }}</span>
+                <span v-else-if="chat.empresa">{{ chat.empresa.nombre_comercial }}</span>
+                <span v-else>Sin nombre</span>
               </p>
               <p class="text-xs text-navy/40">{{ new Date(chat.created_at).toLocaleDateString() }}</p>
             </div>
@@ -148,7 +144,10 @@ const STATUS_LABEL: Record<string, string> = {
             @click="router.push(`/contratos/${c.id}`)"
             class="py-3 flex items-center justify-between cursor-pointer hover:bg-slate/50 -mx-5 px-5 rounded-lg">
             <div>
-              <p class="font-medium text-sm">Contrato #{{ c.id }} — ${{ c.monto_total }}</p>
+              <p class="font-medium text-sm">
+                {{ c.influencer?.nombre_artistico ?? c.empresa?.nombre_comercial ?? 'Contrato' }}
+                — ${{ c.monto_total }}
+              </p>
               <p class="text-xs text-navy/40">Límite: {{ c.fecha_limite_entrega }}</p>
             </div>
             <span class="badge-info text-xs">{{ STATUS_LABEL[c.status] ?? c.status }}</span>

@@ -10,16 +10,22 @@ export enum ChatStatus {
 }
 
 export enum ContratoStatus {
-  PENDING_PAYMENT = 'pending_payment',
-  FUNDED_IN_ESCROW = 'funded_in_escrow',
-  UNDER_REVIEW = 'under_review',
-  COMPLETED = 'completed',
-  IN_DISPUTE = 'in_dispute',
+  PENDING_PAYMENT      = 'pending_payment',
+  FUNDED_IN_ESCROW     = 'funded_in_escrow',
+  UNDER_REVIEW         = 'under_review',
+  CHANGES_REQUESTED    = 'changes_requested',
+  PENDING_PUBLICATION  = 'pending_publication',
+  PUBLICATION_REVIEW   = 'publication_review',
+  COMPLETED            = 'completed',
+  IN_DISPUTE           = 'in_dispute',
+  INCUMPLIMIENTO       = 'incumplimiento',
 }
 
 export enum ProposalStatus {
-  PENDING = 'pending',
-  ACCEPTED = 'accepted',
-  COUNTERED = 'countered',
-  FUNDED = 'funded',
+  PENDING          = 'pending',
+  REJECTED         = 'rejected',
+  COUNTERED        = 'countered',
+  COUNTER_REJECTED = 'counter_rejected',
+  ACCEPTED         = 'accepted',
+  FUNDED           = 'funded',
 }

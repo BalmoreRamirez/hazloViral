@@ -32,6 +32,9 @@ export class InfluencerProfile {
   @Column({ nullable: true, length: 100 })
   ubicacion: string;
 
+  @Column({ nullable: true, length: 255 })
+  direccion: string;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
   tarifa_base: number;
 
