@@ -2,6 +2,7 @@ import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
+  HttpException,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
@@ -50,13 +51,17 @@ export class StripeExceptionFilter implements ExceptionFilter {
       return response.status(status).json({ statusCode: status, message, stripe_type: err.type });
     }
 
-    // Si no es un error de Stripe, dejar que NestJS lo maneje normalmente
-    // Re-lanzar para que BaseExceptionFilter lo procese
-    const status = err?.status ?? err?.statusCode ?? HttpStatus.INTERNAL_SERVER_ERROR;
-    const message = err?.message ?? 'Internal server error';
-    return response.status(
-      // Nunca devolver 401 si el error proviene de una librería externa
-      status === 401 && !err?.name?.includes('Http') ? HttpStatus.INTERNAL_SERVER_ERROR : status,
-    ).json({ statusCode: status, message });
+    // Para HttpExceptions de NestJS (401, 400, 403, etc.) devolver la respuesta tal cual
+    if (exception instanceof HttpException) {
+      const status = exception.getStatus();
+      return response.status(status).json(exception.getResponse());
+    }
+
+    // Error inesperado no-HTTP (bug, librería externa, etc.)
+    this.logger.error('Unhandled exception', err);
+    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: 'Internal server error',
+    });
   }
 }

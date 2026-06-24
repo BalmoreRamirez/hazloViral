@@ -31,9 +31,35 @@ const HazloViralPreset = definePreset(Aura, {
           hoverColor: '{primary.500}',
           activeColor: '{primary.400}',
         },
+        // Form fields: InputText, Password, Select trigger, Textarea, InputNumber
         formField: {
+          background: '#ffffff',
           borderColor: 'rgba(15,23,42,0.2)',
           hoverBorderColor: 'rgba(15,23,42,0.4)',
+          focusBorderColor: 'rgba(124,58,237,0.5)',
+          color: '#0F172A',
+          placeholderColor: 'rgba(15,23,42,0.35)',
+          shadow: 'none',
+        },
+        // Select / AutoComplete dropdown panel
+        overlay: {
+          select: {
+            background: '#ffffff',
+            borderColor: 'rgba(15,23,42,0.12)',
+            color: '#0F172A',
+            shadow: '0 4px 16px 0 rgb(15 23 42 / 0.12), 0 1px 4px 0 rgb(15 23 42 / 0.06)',
+          },
+        },
+        // Dropdown list options
+        list: {
+          option: {
+            focusBackground: 'rgba(124,58,237,0.07)',
+            focusColor: '#7C3AED',
+            selectedBackground: 'rgba(124,58,237,0.1)',
+            selectedColor: '#7C3AED',
+            selectedFocusBackground: 'rgba(124,58,237,0.15)',
+            selectedFocusColor: '#7C3AED',
+          },
         },
       },
     },
@@ -48,6 +74,7 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import Password from 'primevue/password'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 import Divider from 'primevue/divider'
@@ -74,7 +101,7 @@ app.use(PrimeVue, {
       darkModeSelector: '.dark',
       cssLayer: {
         name: 'primevue',
-        order: 'tailwind-base, primevue, tailwind-utilities',
+        order: 'theme, base, properties, components, primevue, utilities',
       },
     },
   },
@@ -88,6 +115,7 @@ app.directive('tooltip', Tooltip)
 app.component('Button', Button)
 app.component('Card', Card)
 app.component('InputText', InputText)
+app.component('Password', Password)
 app.component('InputNumber', InputNumber)
 app.component('Textarea', Textarea)
 app.component('Tag', Tag)

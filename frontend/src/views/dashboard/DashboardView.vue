@@ -18,9 +18,10 @@ const balance     = computed(() => creditsStore.balance)
 const rechargeAmt = computed(() => balance.value ? Math.max(10, balance.value.deficit + 5) : 10)
 
 onMounted(async () => {
+  const role = authStore.user?.role
   await Promise.all([
-    chatStore.loadChats(),
-    contractsStore.fetchContracts(),
+    (role === 'empresa' || role === 'influencer') ? chatStore.loadChats() : Promise.resolve(),
+    (role === 'empresa' || role === 'influencer') ? contractsStore.fetchContracts() : Promise.resolve(),
     isEmpresa.value ? creditsStore.fetchBalance() : Promise.resolve(),
   ])
 })
