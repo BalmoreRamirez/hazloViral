@@ -97,12 +97,18 @@ async function startChat() {
               class="flex items-center gap-3 bg-slate rounded-xl p-3 border border-navy/8">
               <span class="text-2xl">{{ REDES_ICON[m.red_social] ?? '📱' }}</span>
               <div class="flex-1">
-                <p class="font-semibold text-navy text-sm">{{ m.red_social }}</p>
-                <p class="text-xs text-navy/50">{{ m.username }}</p>
+                <div class="flex items-center gap-1.5">
+                  <p class="font-semibold text-navy text-sm">{{ m.red_social }}</p>
+                  <!-- Insignia de cuenta verificada -->
+                  <span v-if="m.is_verified"
+                    class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-violet text-white text-[9px] font-bold"
+                    title="Seguidores verificados automáticamente">✓</span>
+                </div>
+                <p class="text-xs text-navy/50">@{{ m.username }}</p>
               </div>
               <div class="text-right">
                 <p class="font-bold text-navy">{{ formatFollowers(m.seguidores) }}</p>
-                <p class="text-xs text-green-600 font-semibold">{{ m.engagement_rate }}% eng</p>
+                <p v-if="m.engagement_rate > 0" class="text-xs text-green-600 font-semibold">{{ m.engagement_rate }}% eng</p>
               </div>
             </div>
           </div>

@@ -12,12 +12,14 @@ const showMetricForm = ref(false)
 const connectLoading = ref(false)
 const connectError   = ref('')
 const deletingId     = ref<number | null>(null)
+const verifyingId    = ref<number | null>(null)
 
 const REDES = ['TikTok', 'Instagram', 'YouTube', 'Twitter', 'Facebook', 'Twitch', 'LinkedIn']
 
 const form = ref({ nombre_artistico: '', bio: '', ubicacion: '', tarifa_base: 0, disponibilidad: true })
-const metricForm = ref({ red_social: 'TikTok', username: '', seguidores: 0, engagement_rate: 0 })
-const savingMetric = ref(false)
+const metricForm = ref({ red_social: 'TikTok', username: '' })
+const savingMetric  = ref(false)
+const metricError   = ref('')
 
 const hasConnect = computed(() => !!authStore.user?.stripe_connect_id)
 const esData = computed(() => store.influencerProfile)
@@ -43,11 +45,20 @@ async function saveProfile() {
 async function addMetric() {
   if (!metricForm.value.username) return
   savingMetric.value = true
+  metricError.value  = ''
   try {
     await store.addMetric({ ...metricForm.value })
-    metricForm.value = { red_social: 'TikTok', username: '', seguidores: 0, engagement_rate: 0 }
+    metricForm.value     = { red_social: 'TikTok', username: '' }
     showMetricForm.value = false
+  } catch (e: any) {
+    metricError.value = e.response?.data?.message ?? 'No se pudo verificar la cuenta.'
   } finally { savingMetric.value = false }
+}
+
+async function verifyMetric(id: number) {
+  verifyingId.value = id
+  try { await store.verifyMetric(id) }
+  finally { verifyingId.value = null }
 }
 
 async function deleteMetric(id: number) {
@@ -172,6 +183,7 @@ const REDES_ICON: Record<string, string> = {
 
         <!-- Formulario nueva métrica -->
         <div v-if="showMetricForm" class="border border-violet/20 rounded-xl p-4 mb-4 bg-violet/5 space-y-3">
+          <p class="text-xs text-navy/50">El número de seguidores se obtiene automáticamente para Instagram, TikTok y Facebook.</p>
           <div class="grid grid-cols-2 gap-3">
             <div class="field">
               <label class="label">Red social</label>
@@ -180,24 +192,17 @@ const REDES_ICON: Record<string, string> = {
               </select>
             </div>
             <div class="field">
-              <label class="label">Username</label>
-              <input v-model="metricForm.username" class="input" placeholder="@tuusuario" />
-            </div>
-            <div class="field">
-              <label class="label">Seguidores</label>
-              <input v-model.number="metricForm.seguidores" type="number" min="0" class="input" />
-            </div>
-            <div class="field">
-              <label class="label">Engagement rate (%)</label>
-              <input v-model.number="metricForm.engagement_rate" type="number" min="0" step="0.01" class="input" />
+              <label class="label">Username (sin @)</label>
+              <input v-model="metricForm.username" class="input" placeholder="tuusuario" />
             </div>
           </div>
           <div class="flex gap-2">
             <button @click="addMetric" :disabled="savingMetric || !metricForm.username" class="btn-primary text-sm">
-              {{ savingMetric ? 'Guardando…' : 'Agregar' }}
+              {{ savingMetric ? 'Verificando…' : 'Agregar y verificar' }}
             </button>
-            <button @click="showMetricForm = false" class="btn-ghost text-sm">Cancelar</button>
+            <button @click="showMetricForm = false; metricError = ''" class="btn-ghost text-sm">Cancelar</button>
           </div>
+          <p v-if="metricError" class="text-coral text-sm">{{ metricError }}</p>
         </div>
 
         <!-- Lista de métricas -->
@@ -209,15 +214,32 @@ const REDES_ICON: Record<string, string> = {
             class="flex items-center gap-3 p-3 bg-slate rounded-xl border border-navy/8">
             <span class="text-2xl">{{ REDES_ICON[m.red_social] ?? '📱' }}</span>
             <div class="flex-1 min-w-0">
-              <p class="font-semibold text-navy text-sm">{{ m.red_social }}</p>
-              <p class="text-xs text-navy/50">{{ m.username }}</p>
+              <div class="flex items-center gap-1.5">
+                <p class="font-semibold text-navy text-sm">{{ m.red_social }}</p>
+                <!-- Badge verificado -->
+                <span v-if="m.is_verified"
+                  class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-violet text-white text-[9px] font-bold"
+                  title="Cuenta verificada automáticamente">✓</span>
+                <span v-else class="text-[10px] text-navy/30 font-medium">sin verificar</span>
+              </div>
+              <p class="text-xs text-navy/50">@{{ m.username }}</p>
               <div class="flex gap-2 mt-1">
                 <span class="badge-info text-xs">👥 {{ formatFollowers(m.seguidores) }}</span>
-                <span class="badge-active text-xs">⚡ {{ m.engagement_rate }}%</span>
+                <span v-if="m.engagement_rate > 0" class="badge-active text-xs">⚡ {{ m.engagement_rate }}%</span>
               </div>
+              <p v-if="m.verified_at" class="text-[10px] text-navy/30 mt-0.5">
+                Verificado {{ new Date(m.verified_at).toLocaleDateString('es') }}
+              </p>
             </div>
-            <button @click="deleteMetric(m.id)" :disabled="deletingId === m.id"
-              class="text-coral/60 hover:text-coral text-lg disabled:opacity-30">✕</button>
+            <div class="flex flex-col items-end gap-1">
+              <button @click="deleteMetric(m.id)" :disabled="deletingId === m.id"
+                class="text-coral/60 hover:text-coral text-lg disabled:opacity-30">✕</button>
+              <button @click="verifyMetric(m.id)" :disabled="verifyingId === m.id"
+                class="text-xs text-violet/70 hover:text-violet disabled:opacity-40"
+                title="Re-verificar con la API">
+                {{ verifyingId === m.id ? '…' : '🔄' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>

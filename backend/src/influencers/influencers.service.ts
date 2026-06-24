@@ -1,15 +1,19 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Cron } from '@nestjs/schedule';
 import { InfluencerProfile } from './entities/influencer-profile.entity';
 import { InfluencerMetric } from './entities/influencer-metric.entity';
 import { User } from '../users/entities/user.entity';
 import { UpdateInfluencerDto } from './dto/update-influencer.dto';
 import { CreateMetricDto, UpdateMetricDto } from './dto/influencer-metric.dto';
+import { SocialVerificationService } from './social-verification.service';
 
 export interface SearchInfluencerQuery {
   red_social?: string;
@@ -23,11 +27,14 @@ export interface SearchInfluencerQuery {
 
 @Injectable()
 export class InfluencersService {
+  private readonly logger = new Logger(InfluencersService.name);
+
   constructor(
     @InjectRepository(InfluencerProfile)
     private readonly profilesRepo: Repository<InfluencerProfile>,
     @InjectRepository(InfluencerMetric)
     private readonly metricsRepo: Repository<InfluencerMetric>,
+    private readonly verificationService: SocialVerificationService,
   ) {}
 
   // ─── Perfil propio ────────────────────────────────────────────────────────────
@@ -50,7 +57,7 @@ export class InfluencersService {
     return this.profilesRepo.save(profile);
   }
 
-  // ─── Buscador público (claude.md §4.1 — acceso gratuito para empresas) ────────
+  // ─── Buscador público ─────────────────────────────────────────────────────────
   async search(query: SearchInfluencerQuery): Promise<{ data: InfluencerProfile[]; total: number }> {
     const page  = query.page  ?? 1;
     const limit = Math.min(query.limit ?? 20, 50);
@@ -89,15 +96,40 @@ export class InfluencersService {
     return profile;
   }
 
-  // ─── Métricas de redes sociales (claude.md §4 "Carga Manual en V1") ──────────
+  // ─── Métricas ─────────────────────────────────────────────────────────────────
   async addMetric(user: User, dto: CreateMetricDto): Promise<InfluencerMetric> {
     const profile = await this.getMyProfile(user);
+
+    const username = dto.username.replace(/^@/, '').trim();
+
+    // Para plataformas soportadas, verificar ANTES de guardar
+    if (this.verificationService.isSupported(dto.red_social)) {
+      const result = await this.verificationService.verify(dto.red_social, username);
+      if (!result) {
+        throw new BadRequestException(
+          `No se pudo verificar @${username} en ${dto.red_social}. Asegúrate de que la cuenta sea pública y el username sea correcto.`,
+        );
+      }
+      const metric = new InfluencerMetric();
+      metric.influencer_id   = profile.id;
+      metric.red_social      = dto.red_social;
+      metric.username        = username;
+      metric.seguidores      = result.followers;
+      metric.engagement_rate = result.engagement_rate;
+      metric.is_verified     = true;
+      metric.verified_at     = new Date();
+      return this.metricsRepo.save(metric);
+    }
+
+    // Plataformas no soportadas (YouTube, Twitter, etc.) — carga manual
     const metric = new InfluencerMetric();
-    metric.influencer_id = profile.id;
-    metric.red_social    = dto.red_social;
-    metric.username      = dto.username;
-    metric.seguidores    = dto.seguidores;
-    metric.engagement_rate = dto.engagement_rate;
+    metric.influencer_id   = profile.id;
+    metric.red_social      = dto.red_social;
+    metric.username        = username;
+    metric.seguidores      = dto.seguidores ?? 0;
+    metric.engagement_rate = dto.engagement_rate ?? 0;
+    metric.is_verified     = false;
+    metric.verified_at     = null;
     return this.metricsRepo.save(metric);
   }
 
@@ -122,6 +154,47 @@ export class InfluencersService {
     await this.metricsRepo.remove(metric);
   }
 
+  async reVerifyMetric(user: User, metricId: number): Promise<InfluencerMetric> {
+    const metric = await this.assertOwnsMetric(user, metricId);
+    return this.runVerification(metric);
+  }
+
+  // ─── Verificación ─────────────────────────────────────────────────────────────
+  private async runVerification(metric: InfluencerMetric): Promise<InfluencerMetric> {
+    if (!this.verificationService.isSupported(metric.red_social)) return metric;
+
+    const result = await this.verificationService.verify(metric.red_social, metric.username);
+    if (result) {
+      metric.seguidores      = result.followers;
+      metric.engagement_rate = result.engagement_rate;
+      metric.is_verified     = true;
+      metric.verified_at     = new Date();
+    } else {
+      metric.is_verified = false;
+      metric.verified_at = null;
+    }
+    return this.metricsRepo.save(metric);
+  }
+
+  // ─── Cron: re-verificación semanal (domingos 3 AM) ───────────────────────────
+  @Cron('0 3 * * 0')
+  async reVerifyAllMetrics(): Promise<void> {
+    this.logger.log('Iniciando re-verificación semanal de métricas...');
+    const metrics = await this.metricsRepo.find();
+    let verified = 0;
+    for (const metric of metrics) {
+      if (!this.verificationService.isSupported(metric.red_social)) continue;
+      try {
+        await this.runVerification(metric);
+        verified++;
+      } catch (err: any) {
+        this.logger.warn(`Re-verificación fallida para metric #${metric.id}: ${err?.message}`);
+      }
+    }
+    this.logger.log(`Re-verificación completada: ${verified} métricas actualizadas.`);
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
   private async assertOwnsMetric(user: User, metricId: number): Promise<InfluencerMetric> {
     const profile = await this.getMyProfile(user);
     const metric  = await this.metricsRepo.findOne({ where: { id: metricId } });

@@ -93,4 +93,10 @@ export class InfluencersController {
   deleteMetric(@GetUser() user: User, @Param('id', ParseIntPipe) id: number) {
     return this.service.deleteMetric(user, id);
   }
+
+  @Post('metrics/:id/verify')
+  @Roles(UserRole.INFLUENCER)
+  reVerifyMetric(@GetUser() user: User, @Param('id', ParseIntPipe) id: number) {
+    return this.service.reVerifyMetric(user, id);
+  }
 }

@@ -36,6 +36,12 @@ export class InfluencerMetric {
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0.0 })
   engagement_rate: number;
 
+  @Column({ default: false })
+  is_verified: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  verified_at: Date | null;
+
   @UpdateDateColumn()
   updated_at: Date;
 }

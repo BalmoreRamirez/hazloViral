@@ -11,15 +11,17 @@ export class CreateMetricDto {
   @MaxLength(100)
   username: string;
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  seguidores: number;
+  seguidores?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  engagement_rate: number;
+  engagement_rate?: number;
 }
 
 export class UpdateMetricDto {

@@ -18,7 +18,8 @@ export interface InfluencerProfile {
 
 export interface Metric {
   id: number; influencer_id: number; red_social: string
-  username: string; seguidores: number; engagement_rate: number; updated_at: string
+  username: string; seguidores: number; engagement_rate: number
+  is_verified: boolean; verified_at: string | null; updated_at: string
 }
 
 export interface CampaignBrief {
@@ -76,6 +77,13 @@ export const useProfileStore = defineStore('profile', () => {
     metrics.value = metrics.value.filter(m => m.id !== id)
   }
 
+  async function verifyMetric(id: number) {
+    const updated = await influencerApi.verifyMetric(id)
+    const idx = metrics.value.findIndex(m => m.id === id)
+    if (idx >= 0) metrics.value[idx] = updated
+    return updated
+  }
+
   // ─── Campaign Briefs ─────────────────────────────────────────────────────────
   async function loadBriefs() {
     briefs.value = await campaignsApi.list()
@@ -103,7 +111,7 @@ export const useProfileStore = defineStore('profile', () => {
     empresaProfile, influencerProfile, metrics, briefs, loading, saving,
     loadEmpresaProfile, updateEmpresaProfile,
     loadInfluencerProfile, updateInfluencerProfile,
-    addMetric, removeMetric,
+    addMetric, removeMetric, verifyMetric,
     loadBriefs, createBrief, updateBrief, removeBrief,
   }
 })

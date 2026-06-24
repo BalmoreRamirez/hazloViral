@@ -25,6 +25,7 @@ export const influencerApi = {
   updateMetric:   (id: number, data: { username?: string; seguidores?: number; engagement_rate?: number }) =>
     api.patch(`/influencers/metrics/${id}`, data).then(r => r.data),
   deleteMetric:   (id: number) => api.delete(`/influencers/metrics/${id}`),
+  verifyMetric:   (id: number) => api.post(`/influencers/metrics/${id}/verify`).then(r => r.data),
 
   // Stripe Connect onboarding (§4.2)
   connectOnboard: () => api.post('/stripe/connect/onboard').then(r => r.data),
