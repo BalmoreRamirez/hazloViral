@@ -5,12 +5,14 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { InfluencerProfile } from './influencer-profile.entity';
 
 @Entity('influencer_metrics')
 @Index('idx_metrics_search', ['red_social', 'seguidores', 'engagement_rate'])
+@Unique('uq_metric_platform_username', ['red_social', 'username'])
 export class InfluencerMetric {
   @PrimaryGeneratedColumn()
   id: number;

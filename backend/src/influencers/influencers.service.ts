@@ -54,6 +54,8 @@ export class InfluencersService {
     if (dto.ubicacion !== undefined) profile.ubicacion = dto.ubicacion;
     if (dto.tarifa_base !== undefined) profile.tarifa_base = dto.tarifa_base;
     if (dto.disponibilidad !== undefined) profile.disponibilidad = dto.disponibilidad;
+    if (dto.tipo_identificacion !== undefined) profile.tipo_identificacion = dto.tipo_identificacion;
+    if (dto.numero_identificacion !== undefined) profile.numero_identificacion = dto.numero_identificacion;
     return this.profilesRepo.save(profile);
   }
 
@@ -101,6 +103,16 @@ export class InfluencersService {
     const profile = await this.getMyProfile(user);
 
     const username = dto.username.replace(/^@/, '').trim();
+
+    // Unicidad global: el mismo username+red_social no puede estar en dos cuentas
+    const existing = await this.metricsRepo.findOne({
+      where: { red_social: dto.red_social, username },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        `@${username} ya está registrado en ${dto.red_social} por otra cuenta de la plataforma.`,
+      );
+    }
 
     // Para plataformas soportadas, verificar ANTES de guardar
     if (this.verificationService.isSupported(dto.red_social)) {

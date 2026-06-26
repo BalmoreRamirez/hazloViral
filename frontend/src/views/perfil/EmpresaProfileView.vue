@@ -17,7 +17,14 @@ const savingBrief   = ref(false)
 const deletingBrief = ref<number | null>(null)
 const editingBrief  = ref<number | null>(null)
 
-const form = ref({ nombre_comercial: '', sitio_web: '', umbral_creditos: 5 })
+const TIPOS_ID = ['DUI', 'PASAPORTE']
+
+const form = ref({
+  nombre_comercial: '', sitio_web: '', umbral_creditos: 5,
+  representante_nombre: '',
+  representante_tipo_identificacion: 'DUI',
+  representante_numero_identificacion: '',
+})
 
 const briefForm = ref({
   titulo_campana: '', objetivo_principal: '', tono_de_voz: '',
@@ -27,9 +34,12 @@ const briefForm = ref({
 onMounted(async () => {
   await Promise.all([store.loadEmpresaProfile(), store.loadBriefs()])
   if (store.empresaProfile) {
-    form.value.nombre_comercial = store.empresaProfile.nombre_comercial
-    form.value.sitio_web        = store.empresaProfile.sitio_web ?? ''
-    form.value.umbral_creditos  = Number(store.empresaProfile.umbral_creditos)
+    form.value.nombre_comercial                  = store.empresaProfile.nombre_comercial
+    form.value.sitio_web                         = store.empresaProfile.sitio_web ?? ''
+    form.value.umbral_creditos                   = Number(store.empresaProfile.umbral_creditos)
+    form.value.representante_nombre              = store.empresaProfile.representante_nombre ?? ''
+    form.value.representante_tipo_identificacion = store.empresaProfile.representante_tipo_identificacion ?? 'DUI'
+    form.value.representante_numero_identificacion = store.empresaProfile.representante_numero_identificacion ?? ''
   }
 })
 
@@ -143,6 +153,17 @@ function confirmDelete(id: number, titulo: string) {
             <dt class="label">Umbral mínimo (solo lectura)</dt>
             <dd class="font-semibold text-navy mt-1">{{ Number(store.empresaProfile.umbral_creditos).toFixed(2) }} cr.</dd>
           </div>
+          <div class="sm:col-span-2 border-t border-navy/8 pt-4">
+            <dt class="label mb-2">Representante legal</dt>
+            <template v-if="store.empresaProfile.representante_nombre">
+              <dd class="font-semibold text-navy">{{ store.empresaProfile.representante_nombre }}</dd>
+              <dd class="text-navy/50 mt-0.5">
+                {{ store.empresaProfile.representante_tipo_identificacion }}:
+                {{ store.empresaProfile.representante_numero_identificacion }}
+              </dd>
+            </template>
+            <dd v-else class="text-coral/70 text-xs font-medium">⚠️ Datos del representante no registrados</dd>
+          </div>
         </dl>
 
         <!-- Formulario de edición -->
@@ -159,6 +180,25 @@ function confirmDelete(id: number, titulo: string) {
             <label class="label">Umbral de créditos</label>
             <InputNumber v-model="form.umbral_creditos" class="w-full" :min="0" :step="0.5"
               :minFractionDigits="2" :maxFractionDigits="2" suffix=" cr." fluid />
+          </div>
+          <div class="border-t border-navy/8 pt-4 space-y-3">
+            <p class="text-sm font-semibold text-navy">Representante legal</p>
+            <div class="field">
+              <label class="label">Nombre completo del representante</label>
+              <InputText v-model="form.representante_nombre" class="w-full" placeholder="Nombre Apellido" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="field">
+                <label class="label">Tipo de identificación</label>
+                <select v-model="form.representante_tipo_identificacion" class="input">
+                  <option v-for="t in TIPOS_ID" :key="t">{{ t }}</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="label">Número de identificación</label>
+                <InputText v-model="form.representante_numero_identificacion" class="w-full" placeholder="00000000-0" />
+              </div>
+            </div>
           </div>
           <div class="flex gap-2 pt-1">
             <Button type="submit" :loading="store.saving" label="Guardar cambios" icon="pi pi-check" size="small" />

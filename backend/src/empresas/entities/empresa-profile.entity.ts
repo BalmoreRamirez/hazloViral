@@ -35,6 +35,15 @@ export class EmpresaProfile {
   @Column({ nullable: true, length: 255 })
   direccion: string;
 
+  @Column({ nullable: true, length: 255 })
+  representante_nombre: string;
+
+  @Column({ nullable: true, length: 20 })
+  representante_tipo_identificacion: string; // 'DUI' | 'PASAPORTE'
+
+  @Column({ nullable: true, length: 50 })
+  representante_numero_identificacion: string;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 10.0 })
   balance_creditos: number;
 

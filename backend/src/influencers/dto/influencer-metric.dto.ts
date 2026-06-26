@@ -1,7 +1,7 @@
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
-const REDES = ['TikTok', 'Instagram', 'YouTube', 'Twitter', 'Facebook', 'Twitch', 'LinkedIn'] as const;
+const REDES = ['TikTok', 'Instagram', 'YouTube', 'Facebook'] as const;
 
 export class CreateMetricDto {
   @IsIn(REDES)

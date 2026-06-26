@@ -130,6 +130,20 @@ export class ChatsService {
       throw new BadRequestException('El mensaje no puede estar vacío.');
     }
 
+    // Propuesta de contrato: el influencer debe tener al menos 1 red verificada
+    if (dto.is_proposal && user.role === UserRole.EMPRESA) {
+      const influencer = await this.influencersRepo.findOne({
+        where: { id: chat.influencer_id },
+        relations: { metrics: true },
+      });
+      const hasVerified = influencer?.metrics?.some((m) => m.is_verified) ?? false;
+      if (!hasVerified) {
+        throw new BadRequestException(
+          'Este influencer aún no tiene redes sociales verificadas. No es posible enviarle un contrato.',
+        );
+      }
+    }
+
     const msg = new Message();
     msg.chat_id = dto.chat_id;
     msg.sender_id = user.id;

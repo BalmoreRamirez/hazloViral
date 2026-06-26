@@ -23,6 +23,9 @@ export class EmpresasService {
     if (dto.nombre_comercial !== undefined) profile.nombre_comercial = dto.nombre_comercial;
     if (dto.sitio_web !== undefined) profile.sitio_web = dto.sitio_web;
     if (dto.umbral_creditos !== undefined) profile.umbral_creditos = dto.umbral_creditos;
+    if (dto.representante_nombre !== undefined) profile.representante_nombre = dto.representante_nombre;
+    if (dto.representante_tipo_identificacion !== undefined) profile.representante_tipo_identificacion = dto.representante_tipo_identificacion;
+    if (dto.representante_numero_identificacion !== undefined) profile.representante_numero_identificacion = dto.representante_numero_identificacion;
     return this.repo.save(profile);
   }
 }

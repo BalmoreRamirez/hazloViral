@@ -17,8 +17,8 @@ const chatting  = ref(false)
 const chatError = ref('')
 
 const REDES_ICON: Record<string, string> = {
-  TikTok: '🎵', Instagram: '📸', YouTube: '▶️', Twitter: '𝕏',
-  Facebook: '👤', Twitch: '🎮', LinkedIn: '💼',
+  TikTok: '🎵', Instagram: '📸', YouTube: '▶️',
+  Facebook: '👤',
 }
 
 function formatFollowers(n: number) {

@@ -1,5 +1,7 @@
-import { IsBoolean, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+
+const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
 
 export class UpdateInfluencerDto {
   @IsOptional()
@@ -25,4 +27,13 @@ export class UpdateInfluencerDto {
   @IsOptional()
   @IsBoolean()
   disponibilidad?: boolean;
+
+  @IsOptional()
+  @IsIn(TIPOS_ID)
+  tipo_identificacion?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  numero_identificacion?: string;
 }

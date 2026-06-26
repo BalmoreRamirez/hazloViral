@@ -6,12 +6,17 @@ import { campaignsApi } from '@/api/campaigns'
 export interface EmpresaProfile {
   id: number; user_id: number; nombre_comercial: string
   sitio_web: string; balance_creditos: number; umbral_creditos: number
+  representante_nombre: string | null
+  representante_tipo_identificacion: string | null
+  representante_numero_identificacion: string | null
 }
 
 export interface InfluencerProfile {
   id: number; user_id: number; nombre_artistico: string
   bio: string; ubicacion: string; tarifa_base: number
   disponibilidad: boolean; fecha_nacimiento: string
+  tipo_identificacion: string | null
+  numero_identificacion: string | null
   tutor_nombre: string; tutor_email: string; tutor_autorizacion: boolean
   metrics: Metric[]
 }

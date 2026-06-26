@@ -6,7 +6,7 @@ export interface VerificationResult {
   engagement_rate: number;
 }
 
-const SUPPORTED = ['Instagram', 'TikTok', 'Facebook'];
+const SUPPORTED = ['Instagram', 'TikTok', 'Facebook']; // YouTube: manual (sin API)
 
 @Injectable()
 export class SocialVerificationService {

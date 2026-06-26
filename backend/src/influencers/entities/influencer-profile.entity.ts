@@ -35,6 +35,12 @@ export class InfluencerProfile {
   @Column({ nullable: true, length: 255 })
   direccion: string;
 
+  @Column({ nullable: true, length: 20 })
+  tipo_identificacion: string; // 'DUI' | 'PASAPORTE'
+
+  @Column({ nullable: true, length: 50 })
+  numero_identificacion: string;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
   tarifa_base: number;
 

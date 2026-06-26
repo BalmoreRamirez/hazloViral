@@ -14,9 +14,11 @@ const connectError   = ref('')
 const deletingId     = ref<number | null>(null)
 const verifyingId    = ref<number | null>(null)
 
-const REDES = ['TikTok', 'Instagram', 'YouTube', 'Twitter', 'Facebook', 'Twitch', 'LinkedIn']
+const REDES = ['TikTok', 'Instagram', 'YouTube', 'Facebook']
 
-const form = ref({ nombre_artistico: '', bio: '', ubicacion: '', tarifa_base: 0, disponibilidad: true })
+const TIPOS_ID = ['DUI', 'PASAPORTE']
+
+const form = ref({ nombre_artistico: '', bio: '', ubicacion: '', tarifa_base: 0, disponibilidad: true, tipo_identificacion: 'DUI', numero_identificacion: '' })
 const metricForm = ref({ red_social: 'TikTok', username: '' })
 const savingMetric  = ref(false)
 const metricError   = ref('')
@@ -28,11 +30,13 @@ onMounted(async () => {
   await store.loadInfluencerProfile()
   if (esData.value) {
     form.value = {
-      nombre_artistico: esData.value.nombre_artistico,
-      bio:              esData.value.bio ?? '',
-      ubicacion:        esData.value.ubicacion ?? '',
-      tarifa_base:      Number(esData.value.tarifa_base),
-      disponibilidad:   esData.value.disponibilidad,
+      nombre_artistico:    esData.value.nombre_artistico,
+      bio:                 esData.value.bio ?? '',
+      ubicacion:           esData.value.ubicacion ?? '',
+      tarifa_base:         Number(esData.value.tarifa_base),
+      disponibilidad:      esData.value.disponibilidad,
+      tipo_identificacion: esData.value.tipo_identificacion ?? 'DUI',
+      numero_identificacion: esData.value.numero_identificacion ?? '',
     }
   }
 })
@@ -85,8 +89,8 @@ function formatFollowers(n: number) {
 }
 
 const REDES_ICON: Record<string, string> = {
-  TikTok: '🎵', Instagram: '📸', YouTube: '▶️', Twitter: '𝕏',
-  Facebook: '👤', Twitch: '🎮', LinkedIn: '💼',
+  TikTok: '🎵', Instagram: '📸', YouTube: '▶️',
+  Facebook: '👤',
 }
 </script>
 
@@ -128,6 +132,12 @@ const REDES_ICON: Record<string, string> = {
             </div>
           </div>
 
+          <!-- Número de identificación -->
+          <div v-if="esData.numero_identificacion" class="mt-3 flex items-center gap-2 text-sm">
+            <span class="badge-muted">🪪 {{ esData.tipo_identificacion }}: {{ esData.numero_identificacion }}</span>
+          </div>
+          <div v-else class="mt-3 text-xs text-coral/70 font-medium">⚠️ Número de identificación no registrado</div>
+
           <!-- Tutor legal si es menor -->
           <div v-if="esData.tutor_nombre" class="mt-4 bg-coral/5 border border-coral/20 rounded-lg p-3 text-sm">
             <p class="font-semibold text-coral mb-1">👨‍👦 Representante legal vinculado</p>
@@ -162,6 +172,18 @@ const REDES_ICON: Record<string, string> = {
             <input v-model="form.disponibilidad" type="checkbox" class="rounded accent-violet" />
             <span class="text-sm font-medium text-navy/70">Disponible para nuevas campañas</span>
           </label>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="field">
+              <label class="label">Tipo de identificación</label>
+              <select v-model="form.tipo_identificacion" class="input">
+                <option v-for="t in TIPOS_ID" :key="t">{{ t }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="label">Número de identificación</label>
+              <input v-model="form.numero_identificacion" class="input" placeholder="00000000-0" />
+            </div>
+          </div>
           <div class="flex gap-2">
             <button type="submit" :disabled="store.saving" class="btn-primary text-sm">
               {{ store.saving ? 'Guardando…' : 'Guardar cambios' }}
