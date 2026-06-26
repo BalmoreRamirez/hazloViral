@@ -77,6 +77,13 @@ onMounted(async () => {
     contractsStore.fetchAuditLog(contratoId),
   ])
 
+  // Gap 3: Wompi redirige aquí tras fondeo exitoso — espera el webhook y refresca
+  if (route.query.wompi === 'success') {
+    await new Promise(r => setTimeout(r, 1500))
+    await contractsStore.fetchContract(contratoId)
+    router.replace({ path: `/contratos/${contratoId}` })
+  }
+
   const s = connectSocket()
 
   // Unirse al cuarto del chat del contrato para recibir eventos en tiempo real
@@ -226,11 +233,11 @@ const STATUS_STEPS = [
 const ORDER = [
   'pending_payment','funded_in_escrow','under_review',
   'changes_requested','pending_publication','publication_review','completed',
-  'in_dispute','incumplimiento',
+  'incumplimiento',
 ]
 
 function stepState(step: string, current: string) {
-  if (['in_dispute','incumplimiento'].includes(current)) return 'past'
+  if (current === 'incumplimiento') return 'past'
   if (current === 'changes_requested' && step === 'under_review') return 'active'
   const ci = ORDER.indexOf(current)
   const si = ORDER.indexOf(step)
@@ -247,7 +254,6 @@ const STATUS_LABELS: Record<string, string> = {
   pending_publication: '📢 Pendiente de publicación',
   publication_review:  '👁 Revisando publicaciones',
   completed:           '✅ Completado',
-  in_dispute:          '⚠️ En disputa',
   incumplimiento:      '🚫 Incumplimiento',
 }
 
@@ -261,7 +267,6 @@ const AUDIT_ACTIONS: Record<string, string> = {
   deliverables_approved:   'Entregables aprobados',
   publications_registered: 'Publicaciones registradas',
   approved:                'Fondos liberados — contrato finalizado',
-  disputed:                'Disputa iniciada',
   noncompliance_reported:  'Incumplimiento reportado',
 }
 
@@ -290,7 +295,7 @@ const TIPO_ICON: Record<string, string> = {
             <div class="flex items-center gap-2 flex-wrap">
               <h1 class="text-2xl font-display font-bold text-navy">Contrato</h1>
               <span class="px-2 py-0.5 rounded-full text-xs font-semibold" :class="{
-                'bg-amber-100 text-amber-700':  ['pending_payment','in_dispute','incumplimiento'].includes(contrato.status),
+                'bg-amber-100 text-amber-700':  ['pending_payment','incumplimiento'].includes(contrato.status),
                 'bg-blue-100 text-blue-700':    ['funded_in_escrow','under_review','changes_requested','pending_publication','publication_review'].includes(contrato.status),
                 'bg-green-100 text-green-700':  contrato.status === 'completed',
               }">{{ STATUS_LABELS[contrato.status] ?? contrato.status }}</span>
@@ -332,11 +337,9 @@ const TIPO_ICON: Record<string, string> = {
           <!-- Timeline -->
           <div class="card">
             <h2 class="font-semibold text-navy mb-4">Estado del contrato</h2>
-            <div v-if="['in_dispute','incumplimiento'].includes(contrato.status)"
+            <div v-if="contrato.status === 'incumplimiento'"
               class="bg-coral/10 border border-coral/20 rounded-lg p-4 text-coral text-sm">
-              {{ contrato.status === 'in_dispute'
-                ? '⚠️ Contrato en disputa — un administrador revisará el caso.'
-                : `🚫 Incumplimiento reportado: ${contrato.motivo_incumplimiento}` }}
+              🚫 Incumplimiento reportado: {{ contrato.motivo_incumplimiento }}
             </div>
             <div v-else class="flex items-center">
               <template v-for="(step, i) in STATUS_STEPS" :key="step.key">
@@ -536,7 +539,17 @@ const TIPO_ICON: Record<string, string> = {
                   class="btn-ghost text-sm border-amber-300 text-amber-700">
                   🔄 Solicitar cambios ({{ contrato.revision_round }}/{{ MAX_ROUNDS }})
                 </button>
-                <p v-else class="text-xs text-navy/50 self-center">Máximo de rondas alcanzado. Si hay problemas, inicia una disputa.</p>
+                <div v-else class="w-full mt-1 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm">
+                  <p class="font-semibold text-amber-800 mb-1">⚠️ Rondas de revisión agotadas</p>
+                  <p class="text-amber-700 text-xs mb-2">
+                    Usaste las {{ MAX_ROUNDS }} rondas disponibles. Si el trabajo entregado sigue sin cumplir el acuerdo,
+                    puedes reportar un incumplimiento para que el equipo de hazloViral intervenga.
+                  </p>
+                  <button @click="showNonCompliance = !showNonCompliance"
+                    class="btn-ghost text-xs border-coral/40 text-coral hover:bg-coral/5">
+                    🚫 Reportar incumplimiento
+                  </button>
+                </div>
               </div>
               <div v-if="showChanges" class="border border-amber-200 rounded-lg p-4 space-y-3 bg-amber-50">
                 <p class="text-sm font-semibold text-amber-700">Solicitar cambios — ronda {{ contrato.revision_round + 1 }}/{{ MAX_ROUNDS }}</p>

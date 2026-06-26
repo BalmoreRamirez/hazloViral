@@ -158,7 +158,13 @@ async function sendCounter(msg: ChatMessage) {
   if (!counterTarifa.value || !counterJust.value) return
   counterLoading.value = true
   try {
-    await contractsStore.counterProposal(msg.id, counterTarifa.value, counterJust.value)
+    const counter = await contractsStore.counterProposal(msg.id, counterTarifa.value, counterJust.value)
+    // Optimistic: añadir contraoferta y marcar original inmediatamente,
+    // sin esperar al evento WS (el store de chat deduplica si el WS llega después)
+    if (counter) {
+      msg.proposal_status = 'countered'
+      chatStore.addMessage(counter as any)
+    }
     counterMsgId.value = null
   } catch (e: any) {
     alert(e.response?.data?.message ?? 'Error al enviar contraoferta.')

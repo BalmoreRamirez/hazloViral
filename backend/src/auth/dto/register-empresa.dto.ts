@@ -1,4 +1,6 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
+
+const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
 
 export class RegisterEmpresaDto {
   @IsEmail()
@@ -23,4 +25,11 @@ export class RegisterEmpresaDto {
   @IsOptional()
   @IsString()
   direccion?: string;
+
+  @IsIn(TIPOS_ID)
+  representante_tipo_identificacion: 'DUI' | 'PASAPORTE';
+
+  @IsString()
+  @IsNotEmpty()
+  representante_numero_identificacion: string;
 }

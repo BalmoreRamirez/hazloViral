@@ -2,18 +2,35 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
-import { computed, onMounted } from 'vue'
+import { authApi } from '@/api/auth'
+import { computed, onMounted, ref } from 'vue'
 
 const router       = useRouter()
 const authStore    = useAuthStore()
 const creditsStore = useCreditsStore()
 
-const user    = computed(() => authStore.user)
-const balance = computed(() => creditsStore.balance)
-const isLow   = computed(() => balance.value && !balance.value.is_above_threshold)
-const isAdmin = computed(() => user.value?.role === 'admin')
+const user           = computed(() => authStore.user)
+const balance        = computed(() => creditsStore.balance)
+const isLow          = computed(() => balance.value && !balance.value.is_above_threshold)
+const isAdmin        = computed(() => user.value?.role === 'admin')
+const emailUnverified = computed(() => user.value && !user.value.is_email_verified)
+const resendLoading  = ref(false)
+const resendDone     = ref(false)
+const devVerifyUrl   = ref<string | null>(null)
+
+async function resendVerification() {
+  resendLoading.value = true
+  try {
+    const res = await authApi.resendVerification()
+    devVerifyUrl.value = res?.dev_verify_url ?? null
+    resendDone.value = true
+  } finally {
+    resendLoading.value = false
+  }
+}
 
 onMounted(async () => {
+  await authStore.refreshUser()
   if (authStore.isEmpresa) await creditsStore.fetchBalance()
 })
 
@@ -75,6 +92,25 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
         </div>
       </div>
     </header>
+
+    <!-- Alerta email no verificado -->
+    <div v-if="emailUnverified" class="bg-amber-50 border-b border-amber-200 px-6 py-2">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-amber-800 text-sm font-medium">
+          📧 Verifica tu correo electrónico para activar todas las funciones de la plataforma.
+        </p>
+        <div class="flex items-center gap-3">
+          <span v-if="resendDone && !devVerifyUrl" class="text-green-700 text-xs font-medium">¡Enviado! Revisa tu bandeja.</span>
+          <a v-if="devVerifyUrl" :href="devVerifyUrl" class="text-xs text-violet underline font-medium">
+            [dev] Verificar ahora →
+          </a>
+          <button v-if="!resendDone" @click="resendVerification" :disabled="resendLoading"
+            class="text-xs text-amber-700 border border-amber-400 rounded px-2 py-1 hover:bg-amber-100 transition-colors">
+            {{ resendLoading ? 'Enviando…' : 'Reenviar correo' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Alerta saldo bajo (claude.md §5.1) -->
     <div v-if="isLow" class="bg-coral/10 border-b border-coral/30 px-6 py-2 flex items-center justify-between">

@@ -160,7 +160,7 @@ export class WompiService {
     return result;
   }
 
-  // ─── 5. Payout al influencer (requiere cuenta bancaria — pendiente) ──────────
+  // ─── 5. Payout al influencer vía Wompi Dispersiones ────────────────────────
   async disbursementToInfluencer(contratoId: number): Promise<string | null> {
     const contrato = await this.contratosRepo.findOne({
       where: { id: contratoId },
@@ -168,13 +168,66 @@ export class WompiService {
     });
     if (!contrato) return null;
 
-    // La API de Dispersiones de Wompi requiere que el influencer tenga
-    // registrada su cuenta bancaria colombiana. Se implementará en fase 2.
-    this.logger.warn(
-      `Payout pendiente para contrato ${contratoId}. ` +
-        `El influencer debe registrar su cuenta bancaria para usar Wompi Dispersiones.`,
-    );
-    return null;
+    const influencer = contrato.influencer;
+    if (
+      !influencer?.banco_nombre ||
+      !influencer?.banco_cuenta_numero ||
+      !influencer?.banco_cuenta_tipo
+    ) {
+      this.logger.warn(
+        `Payout cancelado para contrato ${contratoId}: el influencer no tiene cuenta bancaria registrada.`,
+      );
+      return null;
+    }
+
+    const amountCentavos = Math.round(Number(contrato.monto_total) * this.usdToCop * 100);
+    const reference      = `payout-contrato-${contratoId}-${contrato.id}`;
+
+    const apiBase =
+      this.config.get<string>('FORMA_PAGO') === 'produccion'
+        ? 'https://production.wompi.co/v1'
+        : 'https://sandbox.wompi.co/v1';
+
+    const body = {
+      amount_in_cents: amountCentavos,
+      currency:        this.currency,
+      reference,
+      destination: {
+        account_holder: influencer.user.email,
+        financial_institution_code: influencer.banco_nombre,
+        account_number: influencer.banco_cuenta_numero,
+        account_type:   influencer.banco_cuenta_tipo,
+        type: 'BANK_ACCOUNT',
+      },
+    };
+
+    try {
+      const res = await fetch(`${apiBase}/dispersiones`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization:  `Bearer ${this.privateKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json() as Record<string, any>;
+
+      if (!res.ok) {
+        this.logger.error(
+          `Wompi Dispersiones error para contrato ${contratoId}: ${JSON.stringify(data)}`,
+        );
+        return null;
+      }
+
+      const txId = String(data?.data?.id ?? data?.id ?? '');
+      this.logger.log(
+        `Payout realizado para contrato ${contratoId} — txId Wompi: ${txId}`,
+      );
+      return txId;
+    } catch (err: any) {
+      this.logger.error(`Wompi Dispersiones excepción para contrato ${contratoId}: ${err?.message}`);
+      return null;
+    }
   }
 
   // ─── Helpers privados ────────────────────────────────────────────────────────

@@ -12,13 +12,14 @@ const loading    = ref(false)
 const page       = ref(1)
 
 const filters = ref({
-  red_social:    '',
-  ubicacion:     '',
-  min_seguidores: 0,
-  max_tarifa:    '',
+  red_social:      '',
+  ubicacion:       '',
+  min_seguidores:  0,
+  max_tarifa:      '',
+  solo_disponibles: true,
 })
 
-const REDES = ['', 'TikTok', 'Instagram', 'YouTube', 'Twitter', 'Facebook', 'Twitch']
+const REDES = ['TikTok', 'Instagram', 'YouTube', 'Facebook']
 
 const PAISES = [
   'Argentina','Bolivia','Brasil','Chile','Colombia','Costa Rica','Cuba',
@@ -36,6 +37,7 @@ async function search() {
     if (filters.value.ubicacion)      params.ubicacion      = filters.value.ubicacion
     if (filters.value.min_seguidores) params.min_seguidores = filters.value.min_seguidores
     if (filters.value.max_tarifa)     params.max_tarifa     = Number(filters.value.max_tarifa)
+    if (!filters.value.solo_disponibles) params.disponible  = false
     const data = await influencerApi.search(params)
     results.value = data.data
     total.value   = data.total
@@ -45,7 +47,7 @@ async function search() {
 onMounted(search)
 
 function clearFilters() {
-  filters.value = { red_social: '', ubicacion: '', min_seguidores: 0, max_tarifa: '' }
+  filters.value = { red_social: '', ubicacion: '', min_seguidores: 0, max_tarifa: '', solo_disponibles: true }
   search()
 }
 
@@ -56,8 +58,7 @@ function formatFollowers(n: number) {
 }
 
 const REDES_ICON: Record<string, string> = {
-  TikTok: '🎵', Instagram: '📸', YouTube: '▶️', Twitter: '𝕏',
-  Facebook: '👤', Twitch: '🎮', LinkedIn: '💼',
+  TikTok: '🎵', Instagram: '📸', YouTube: '▶️', Facebook: '👤',
 }
 </script>
 
@@ -76,7 +77,7 @@ const REDES_ICON: Record<string, string> = {
             <label class="label">Red social</label>
             <select v-model="filters.red_social" class="input" @change="search">
               <option value="">Todas</option>
-              <option v-for="r in REDES.slice(1)" :key="r">{{ r }}</option>
+              <option v-for="r in REDES" :key="r">{{ r }}</option>
             </select>
           </div>
           <div class="field">
@@ -94,11 +95,17 @@ const REDES_ICON: Record<string, string> = {
             <input v-model="filters.max_tarifa" type="number" min="0" class="input" @keyup.enter="search" />
           </div>
         </div>
-        <div class="flex gap-2 mt-3">
-          <button @click="search" :disabled="loading" class="btn-primary text-sm">
-            {{ loading ? 'Buscando…' : '🔍 Buscar' }}
-          </button>
-          <button @click="clearFilters" class="btn-ghost text-sm">Limpiar</button>
+        <div class="flex items-center justify-between mt-3">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input v-model="filters.solo_disponibles" type="checkbox" class="rounded accent-violet" @change="search" />
+            <span class="text-sm font-medium text-navy/70">Solo disponibles</span>
+          </label>
+          <div class="flex gap-2">
+            <button @click="search" :disabled="loading" class="btn-primary text-sm">
+              {{ loading ? 'Buscando…' : '🔍 Buscar' }}
+            </button>
+            <button @click="clearFilters" class="btn-ghost text-sm">Limpiar</button>
+          </div>
         </div>
       </div>
 
@@ -131,7 +138,9 @@ const REDES_ICON: Record<string, string> = {
           <!-- Tarifa -->
           <div class="flex items-center justify-between mb-3">
             <span class="badge-info">💰 ${{ Number(inf.tarifa_base).toFixed(0) }} USD</span>
-            <span class="badge-active text-xs">✅ Disponible</span>
+            <span :class="inf.disponibilidad ? 'badge-active' : 'badge-muted'" class="text-xs">
+              {{ inf.disponibilidad ? '✅ Disponible' : '🔒 No disponible' }}
+            </span>
           </div>
 
           <!-- Métricas -->

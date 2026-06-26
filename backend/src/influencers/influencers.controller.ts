@@ -38,10 +38,13 @@ export class InfluencersController {
     @Query('max_tarifa')                                                               max_tarifa?: string,
     @Query('page',           new DefaultValuePipe(1),  ParseIntPipe) page?:           number,
     @Query('limit',          new DefaultValuePipe(20), ParseIntPipe) limit?:          number,
+    @Query('disponible')                                              disponible?:     string,
   ) {
     // max_tarifa solo se aplica si se envía explícitamente (evita filtrar con 0 por defecto)
     const maxTarifa = max_tarifa !== undefined ? Number(max_tarifa) : undefined;
-    return this.service.search({ red_social, ubicacion, min_seguidores, max_tarifa: maxTarifa, page, limit });
+    // disponible=false → muestra todos; cualquier otro valor (o ausente) → solo disponibles
+    const soloDisponibles = disponible === undefined ? true : disponible !== 'false';
+    return this.service.search({ red_social, ubicacion, min_seguidores, max_tarifa: maxTarifa, page, limit, disponible: soloDisponibles });
   }
 
   // ─── Perfil propio (influencer) ───────────────────────────────────────────────

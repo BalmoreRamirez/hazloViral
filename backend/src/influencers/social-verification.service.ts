@@ -90,30 +90,52 @@ export class SocialVerificationService {
     if (!res.ok) return null;
 
     const json = JSON.parse(raw);
-    const stats = json?.data?.userInfo?.stats ?? json?.userInfo?.stats ?? json?.data?.stats;
+    // Respuesta directa: { userInfo: { stats, statsV2 } } o bajo data:
+    const userInfo = json?.userInfo ?? json?.data?.userInfo;
+    const stats    = userInfo?.stats ?? json?.data?.stats;
     if (!stats) {
       this.logger.warn(`[TT] stats not found, top-level keys=${Object.keys(json ?? {}).join(',')}`);
       return null;
     }
-    const followers = stats.followerCount ?? stats.followers ?? 0;
-    const hearts    = stats.heartCount ?? stats.diggCount ?? 0;
+    // statsV2 tiene strings con el valor exacto (stats.heartCount puede tener overflow int32)
+    const statsV2   = userInfo?.statsV2;
+    const followers = Number(statsV2?.followerCount ?? stats.followerCount ?? stats.followers ?? 0);
+    const hearts    = Number(statsV2?.heart ?? statsV2?.heartCount ?? stats.heart ?? 0);
     const engagement_rate = parseFloat(((hearts / Math.max(followers, 1)) * 100).toFixed(2));
-    return { followers: Number(followers), engagement_rate };
+    return { followers, engagement_rate };
   }
 
   private async verifyFacebook(username: string): Promise<VerificationResult | null> {
-    const url = `https://facebook-scraper3.p.rapidapi.com/page/info?page_name=${encodeURIComponent(username)}`;
+    const host = this.config.get<string>('FB_RAPIDAPI_HOST') ?? 'facebook-scraper-api4.p.rapidapi.com';
+
+    // Acepta username suelto ("EngenSA") o URL completa ("https://www.facebook.com/EngenSA")
+    const fbUrl = username.startsWith('http')
+      ? username
+      : `https://www.facebook.com/${username}`;
+
+    const url = `https://${host}/get_facebook_pages_details_from_link?link=${encodeURIComponent(fbUrl)}&exact_followers_count=true&proxy_country=us&page_section=default`;
+
+    this.logger.warn(`[FB] → ${url}`);
     const res = await fetch(url, {
       headers: {
         'x-rapidapi-key':  this.rapidApiKey,
-        'x-rapidapi-host': 'facebook-scraper3.p.rapidapi.com',
+        'x-rapidapi-host': host,
       },
     });
+
+    const raw = await res.text();
+    this.logger.warn(`[FB] status=${res.status} body=${raw.slice(0, 500)}`);
+
     if (!res.ok) return null;
-    const json = await res.json();
-    const page = json?.data ?? json;
+
+    const json = JSON.parse(raw);
+    // La API devuelve un array; el primer elemento tiene followers_count
+    const page = Array.isArray(json) ? json[0] : (json?.data ?? json);
     const followers = page?.followers_count ?? page?.fan_count ?? page?.fans ?? 0;
-    if (!followers) return null;
+    if (!followers) {
+      this.logger.warn(`[FB] followers=0, keys=${Object.keys(page ?? {}).join(',')}`);
+      return null;
+    }
     return { followers: Number(followers), engagement_rate: 0 };
   }
 }

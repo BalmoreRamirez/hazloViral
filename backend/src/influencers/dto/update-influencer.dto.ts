@@ -36,4 +36,18 @@ export class UpdateInfluencerDto {
   @IsString()
   @MaxLength(50)
   numero_identificacion?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  banco_nombre?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  banco_cuenta_numero?: string;
+
+  @IsOptional()
+  @IsIn(['CORRIENTE', 'AHORROS'])
+  banco_cuenta_tipo?: string;
 }

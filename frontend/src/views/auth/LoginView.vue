@@ -52,7 +52,12 @@ async function submit() {
             <InputText v-model="email" placeholder="tu@correo.com" fluid required />
           </div>
           <div>
-            <label class="label">Contraseña</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="label mb-0">Contraseña</label>
+              <RouterLink to="/forgot-password" class="text-xs text-violet hover:underline">
+                ¿Olvidaste tu contraseña?
+              </RouterLink>
+            </div>
             <Password v-model="password" toggleMask fluid :feedback="false" />
           </div>
 

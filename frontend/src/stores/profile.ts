@@ -17,6 +17,9 @@ export interface InfluencerProfile {
   disponibilidad: boolean; fecha_nacimiento: string
   tipo_identificacion: string | null
   numero_identificacion: string | null
+  banco_nombre: string | null
+  banco_cuenta_numero: string | null
+  banco_cuenta_tipo: string | null
   tutor_nombre: string; tutor_email: string; tutor_autorizacion: boolean
   metrics: Metric[]
 }
@@ -71,7 +74,7 @@ export const useProfileStore = defineStore('profile', () => {
   }
 
   // ─── Métricas ────────────────────────────────────────────────────────────────
-  async function addMetric(data: { red_social: string; username: string; seguidores: number; engagement_rate: number }) {
+  async function addMetric(data: { red_social: string; username: string }) {
     const m = await influencerApi.addMetric(data)
     metrics.value.push(m)
     return m

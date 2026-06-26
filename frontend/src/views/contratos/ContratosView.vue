@@ -18,7 +18,7 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   funded_in_escrow: { label: '🔒 En custodia',     cls: 'badge-info' },
   under_review:     { label: '🔍 En revisión',     cls: 'badge-info' },
   completed:        { label: '✅ Completado',       cls: 'badge-active' },
-  in_dispute:       { label: '⚠️ En disputa',      cls: 'badge-warning' },
+  incumplimiento:   { label: '🚫 Incumplimiento',   cls: 'badge-warning' },
 }
 
 const REDES_ICON: Record<string, string> = {

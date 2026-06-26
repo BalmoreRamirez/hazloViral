@@ -56,6 +56,9 @@ export class InfluencersService {
     if (dto.disponibilidad !== undefined) profile.disponibilidad = dto.disponibilidad;
     if (dto.tipo_identificacion !== undefined) profile.tipo_identificacion = dto.tipo_identificacion;
     if (dto.numero_identificacion !== undefined) profile.numero_identificacion = dto.numero_identificacion;
+    if (dto.banco_nombre !== undefined) profile.banco_nombre = dto.banco_nombre;
+    if (dto.banco_cuenta_numero !== undefined) profile.banco_cuenta_numero = dto.banco_cuenta_numero;
+    if (dto.banco_cuenta_tipo !== undefined) profile.banco_cuenta_tipo = dto.banco_cuenta_tipo;
     return this.profilesRepo.save(profile);
   }
 
@@ -65,10 +68,17 @@ export class InfluencersService {
     const limit = Math.min(query.limit ?? 20, 50);
     const skip  = (page - 1) * limit;
 
+    const soloDisponibles = query.disponible !== false;
+
     const qb = this.profilesRepo
       .createQueryBuilder('p')
-      .leftJoinAndSelect('p.metrics', 'm')
-      .where('p.disponibilidad = :disp', { disp: true });
+      .leftJoinAndSelect('p.metrics', 'm');
+
+    if (soloDisponibles) {
+      qb.where('p.disponibilidad = true');
+    } else {
+      qb.where('1=1');
+    }
 
     if (query.ubicacion) {
       qb.andWhere('LOWER(p.ubicacion) LIKE LOWER(:ub)', { ub: `%${query.ubicacion}%` });

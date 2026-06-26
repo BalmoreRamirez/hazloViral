@@ -2,15 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import { useProfileStore } from '@/stores/profile'
-import { useAuthStore } from '@/stores/auth'
-import { influencerApi } from '@/api/profiles'
-
-const store     = useProfileStore()
-const authStore = useAuthStore()
+const store = useProfileStore()
 const editing   = ref(false)
 const showMetricForm = ref(false)
-const connectLoading = ref(false)
-const connectError   = ref('')
 const deletingId     = ref<number | null>(null)
 const verifyingId    = ref<number | null>(null)
 
@@ -18,12 +12,16 @@ const REDES = ['TikTok', 'Instagram', 'YouTube', 'Facebook']
 
 const TIPOS_ID = ['DUI', 'PASAPORTE']
 
+const bankEditing = ref(false)
+const bankSaving  = ref(false)
+const bankForm    = ref({ banco_nombre: '', banco_cuenta_numero: '', banco_cuenta_tipo: 'AHORROS' })
+const TIPOS_CUENTA = ['AHORROS', 'CORRIENTE']
+
 const form = ref({ nombre_artistico: '', bio: '', ubicacion: '', tarifa_base: 0, disponibilidad: true, tipo_identificacion: 'DUI', numero_identificacion: '' })
 const metricForm = ref({ red_social: 'TikTok', username: '' })
 const savingMetric  = ref(false)
 const metricError   = ref('')
 
-const hasConnect = computed(() => !!authStore.user?.stripe_connect_id)
 const esData = computed(() => store.influencerProfile)
 
 onMounted(async () => {
@@ -37,6 +35,11 @@ onMounted(async () => {
       disponibilidad:      esData.value.disponibilidad,
       tipo_identificacion: esData.value.tipo_identificacion ?? 'DUI',
       numero_identificacion: esData.value.numero_identificacion ?? '',
+    }
+    bankForm.value = {
+      banco_nombre:        esData.value.banco_nombre ?? '',
+      banco_cuenta_numero: esData.value.banco_cuenta_numero ?? '',
+      banco_cuenta_tipo:   esData.value.banco_cuenta_tipo ?? 'AHORROS',
     }
   }
 })
@@ -71,15 +74,10 @@ async function deleteMetric(id: number) {
   finally { deletingId.value = null }
 }
 
-async function connectStripe() {
-  connectLoading.value = true
-  connectError.value   = ''
-  try {
-    const { url } = await influencerApi.connectOnboard()
-    window.location.href = url
-  } catch (e: any) {
-    connectError.value = e.response?.data?.message ?? 'Error al iniciar onboarding financiero.'
-  } finally { connectLoading.value = false }
+async function saveBank() {
+  bankSaving.value = true
+  try { await store.updateInfluencerProfile(bankForm.value); bankEditing.value = false }
+  finally { bankSaving.value = false }
 }
 
 function formatFollowers(n: number) {
@@ -266,26 +264,55 @@ const REDES_ICON: Record<string, string> = {
         </div>
       </div>
 
-      <!-- Onboarding financiero §4.2 -->
+      <!-- Cuenta bancaria para pagos vía Wompi -->
       <div class="card">
-        <h2 class="font-display font-semibold text-navy mb-2">Onboarding financiero</h2>
-        <p class="text-sm text-navy/60 mb-4">
-          Para recibir pagos de contratos necesitas vincular tu cuenta bancaria mediante Stripe Connect.
-        </p>
-        <div v-if="hasConnect" class="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg p-3">
-          <span class="text-green-600 text-xl">✅</span>
+        <div class="flex items-center justify-between mb-3">
           <div>
-            <p class="font-semibold text-green-700 text-sm">Cuenta bancaria vinculada</p>
-            <p class="text-xs text-green-600">ID: {{ authStore.user?.stripe_connect_id }}</p>
+            <h2 class="font-display font-semibold text-navy">Cuenta bancaria</h2>
+            <p class="text-xs text-navy/40 mt-0.5">Para recibir pagos de contratos vía Wompi</p>
           </div>
+          <button v-if="!bankEditing" @click="bankEditing = true" class="btn-secondary text-sm">✏️ Editar</button>
         </div>
-        <div v-else>
-          <button @click="connectStripe" :disabled="connectLoading" class="btn-primary">
-            {{ connectLoading ? 'Redirigiendo a Stripe…' : '🏦 Vincular cuenta bancaria' }}
-          </button>
-          <p v-if="connectError" class="text-coral text-sm mt-2">{{ connectError }}</p>
-          <p class="text-xs text-navy/40 mt-2">Proceso seguro mediante Stripe Connect Express</p>
-        </div>
+
+        <template v-if="!bankEditing">
+          <div v-if="esData?.banco_nombre" class="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg p-3">
+            <span class="text-green-600 text-xl">🏦</span>
+            <div>
+              <p class="font-semibold text-green-700 text-sm">{{ esData.banco_nombre }}</p>
+              <p class="text-xs text-green-600">
+                Cuenta {{ esData.banco_cuenta_tipo }} · {{ esData.banco_cuenta_numero }}
+              </p>
+            </div>
+          </div>
+          <div v-else class="text-sm text-coral/70 font-medium">
+            ⚠️ Sin cuenta bancaria registrada. Agrégala para poder recibir pagos.
+          </div>
+        </template>
+
+        <form v-else @submit.prevent="saveBank" class="space-y-3">
+          <div class="field">
+            <label class="label">Nombre del banco</label>
+            <input v-model="bankForm.banco_nombre" class="input" placeholder="Ej. Bancolombia" required />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="field">
+              <label class="label">Número de cuenta</label>
+              <input v-model="bankForm.banco_cuenta_numero" class="input" placeholder="000000000" required />
+            </div>
+            <div class="field">
+              <label class="label">Tipo de cuenta</label>
+              <select v-model="bankForm.banco_cuenta_tipo" class="input">
+                <option v-for="t in TIPOS_CUENTA" :key="t">{{ t }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" :disabled="bankSaving" class="btn-primary text-sm">
+              {{ bankSaving ? 'Guardando…' : 'Guardar cuenta' }}
+            </button>
+            <button type="button" @click="bankEditing = false" class="btn-ghost text-sm">Cancelar</button>
+          </div>
+        </form>
       </div>
     </div>
   </AppLayout>

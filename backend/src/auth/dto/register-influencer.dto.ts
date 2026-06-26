@@ -2,6 +2,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -11,6 +12,8 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
 
 export class RegisterInfluencerDto {
   @IsEmail()
@@ -41,6 +44,13 @@ export class RegisterInfluencerDto {
   @IsNumber()
   @Min(0)
   tarifa_base?: number;
+
+  @IsIn(TIPOS_ID)
+  tipo_identificacion: 'DUI' | 'PASAPORTE';
+
+  @IsString()
+  @IsNotEmpty()
+  numero_identificacion: string;
 
   // Formato: YYYY-MM-DD
   @IsDateString()

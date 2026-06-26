@@ -25,7 +25,6 @@ import { SubmitDeliverablesDto } from './dto/submit-deliverables.dto';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { RegisterPublicationsDto } from './dto/register-publications.dto';
 import { ReportNonComplianceDto } from './dto/report-non-compliance.dto';
-import { DisputeDto } from './dto/dispute.dto';
 
 const MAX_REVISION_ROUNDS = 3;
 
@@ -273,48 +272,7 @@ export class ContratosService {
     });
   }
 
-  // ─── 5. Empresa fonda el contrato ────────────────────────────────────────────
-  async fundContract(user: User, contratoId: number, stripeChargeId?: string): Promise<ContratoEscrow> {
-    const contrato = await this.findAndAuthorize(contratoId, user, UserRole.EMPRESA);
-
-    if (contrato.status !== ContratoStatus.PENDING_PAYMENT) {
-      throw new BadRequestException(
-        `El contrato debe estar en pending_payment. Estado: ${contrato.status}`,
-      );
-    }
-
-    const prevStatus = contrato.status;
-    contrato.status = ContratoStatus.FUNDED_IN_ESCROW;
-    if (stripeChargeId) contrato.stripe_charge_id = stripeChargeId;
-    const saved = await this.contratosRepo.save(contrato);
-
-    const msg = await this.messagesRepo.findOne({
-      where: { contrato_id: saved.id, is_proposal: true },
-    });
-    if (msg) {
-      msg.proposal_status = ProposalStatus.FUNDED;
-      await this.messagesRepo.save(msg);
-    }
-
-    await this.writeAudit(null, {
-      contrato_id: saved.id,
-      actor_id: user.id,
-      action: 'funded',
-      previous_status: prevStatus,
-      new_status: ContratoStatus.FUNDED_IN_ESCROW,
-      metadata: stripeChargeId ? { stripe_charge_id: stripeChargeId } : undefined,
-    });
-
-    this.chatGateway.server.to(`chat-${contrato.chat_id}`).emit('contract_funded', {
-      contrato_id: saved.id,
-      proposal_message_id: msg?.id ?? null,
-      message: 'El pago está en custodia. Puedes comenzar a trabajar.',
-    });
-
-    return saved;
-  }
-
-  // ─── 6. Influencer sube entregables → under_review ───────────────────────────
+  // ─── 5. Influencer sube entregables → under_review ───────────────────────────
   async submitDeliverables(user: User, contratoId: number, dto: SubmitDeliverablesDto): Promise<ContratoEscrow> {
     const contrato = await this.findAndAuthorize(contratoId, user, UserRole.INFLUENCER);
 
@@ -454,7 +412,7 @@ export class ContratosService {
   }
 
   // ─── 10. Empresa aprueba publicaciones → completed + payout ──────────────────
-  async approveAndRelease(user: User, contratoId: number, stripeTransferId?: string): Promise<ContratoEscrow> {
+  async approveAndRelease(user: User, contratoId: number, wompiTransferId?: string): Promise<ContratoEscrow> {
     const contrato = await this.findAndAuthorize(contratoId, user, UserRole.EMPRESA);
 
     if (contrato.status !== ContratoStatus.PUBLICATION_REVIEW) {
@@ -465,7 +423,7 @@ export class ContratosService {
 
     const prevStatus = contrato.status;
     contrato.status = ContratoStatus.COMPLETED;
-    if (stripeTransferId) contrato.stripe_transfer_id = stripeTransferId;
+    if (wompiTransferId) contrato.stripe_transfer_id = wompiTransferId;
     const saved = await this.contratosRepo.save(contrato);
 
     await this.writeAudit(null, {
@@ -493,8 +451,8 @@ export class ContratosService {
   async reportNonCompliance(user: User, dto: ReportNonComplianceDto): Promise<ContratoEscrow> {
     const contrato = await this.findAndAuthorize(dto.contrato_id, user, UserRole.EMPRESA);
 
-    if (contrato.status !== ContratoStatus.PUBLICATION_REVIEW) {
-      throw new BadRequestException(`Solo se puede reportar incumplimiento desde publication_review.`);
+    if (![ContratoStatus.PUBLICATION_REVIEW, ContratoStatus.UNDER_REVIEW].includes(contrato.status)) {
+      throw new BadRequestException(`Solo se puede reportar incumplimiento desde publication_review o under_review.`);
     }
 
     const prevStatus = contrato.status;
@@ -514,46 +472,6 @@ export class ContratosService {
     this.chatGateway.server.to(`chat-${contrato.chat_id}`).emit('noncompliance_reported', {
       contrato_id: saved.id,
       message: 'La empresa reportó un incumplimiento. Un administrador revisará el caso.',
-    });
-
-    return saved;
-  }
-
-  // ─── 12. Disputa (cualquier parte) ───────────────────────────────────────────
-  async initiateDispute(user: User, contratoId: number, dto: DisputeDto): Promise<ContratoEscrow> {
-    const contrato = await this.contratosRepo.findOne({ where: { id: contratoId } });
-    if (!contrato) throw new NotFoundException('Contrato no encontrado.');
-
-    const allowedStatuses = [
-      ContratoStatus.FUNDED_IN_ESCROW,
-      ContratoStatus.UNDER_REVIEW,
-      ContratoStatus.CHANGES_REQUESTED,
-      ContratoStatus.PENDING_PUBLICATION,
-      ContratoStatus.PUBLICATION_REVIEW,
-    ];
-    if (!allowedStatuses.includes(contrato.status)) {
-      throw new BadRequestException(`No se puede disputar un contrato en estado ${contrato.status}.`);
-    }
-
-    await this.assertIsParticipant(contrato, user);
-
-    const prevStatus = contrato.status;
-    contrato.status = ContratoStatus.IN_DISPUTE;
-    const saved = await this.contratosRepo.save(contrato);
-
-    await this.writeAudit(null, {
-      contrato_id: saved.id,
-      actor_id: user.id,
-      action: 'disputed',
-      previous_status: prevStatus,
-      new_status: ContratoStatus.IN_DISPUTE,
-      metadata: { motivo: dto.motivo },
-    });
-
-    this.chatGateway.server.to(`chat-${contrato.chat_id}`).emit('contract_disputed', {
-      contrato_id: saved.id,
-      motivo: dto.motivo,
-      message: 'Se ha iniciado una disputa. Un administrador revisará el caso.',
     });
 
     return saved;

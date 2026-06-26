@@ -14,8 +14,8 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
 import { UpdateSettingDto } from './dto/update-setting.dto';
-import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { ResolveIncumplimientoDto } from './dto/resolve-incumplimiento.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,6 +27,20 @@ export class AdminController {
   @Get('stats')
   getStats() {
     return this.adminService.getStats();
+  }
+
+  // ─── Incumplimientos ──────────────────────────────────────────────────────────
+  @Get('incumplimientos')
+  listIncumplimientos() {
+    return this.adminService.listIncumplimientos();
+  }
+
+  @Post('incumplimientos/:id/resolve')
+  resolveIncumplimiento(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ResolveIncumplimientoDto,
+  ) {
+    return this.adminService.resolveIncumplimiento(id, dto.resolucion);
   }
 
   // ─── Global Settings (claude.md §4.3) ────────────────────────────────────────
@@ -41,20 +55,6 @@ export class AdminController {
     @Body() dto: UpdateSettingDto,
   ) {
     return this.adminService.set(key, dto.value);
-  }
-
-  // ─── Disputas (claude.md §4.3 — Admin como árbitro) ─────────────────────────
-  @Get('disputes')
-  listDisputes() {
-    return this.adminService.listDisputes();
-  }
-
-  @Post('disputes/:id/resolve')
-  resolveDispute(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: ResolveDisputeDto,
-  ) {
-    return this.adminService.resolveDispute(id, dto);
   }
 
   // ─── Usuarios ─────────────────────────────────────────────────────────────────

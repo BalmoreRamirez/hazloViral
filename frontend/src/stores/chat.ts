@@ -129,6 +129,10 @@ export const useChatStore = defineStore('chat', () => {
     })
   }
 
+  function addMessage(msg: ChatMessage) {
+    if (!messages.value.find(m => m.id === msg.id)) messages.value.push(msg)
+  }
+
   function leaveChat() {
     activeChat.value = null
     messages.value   = []
@@ -138,6 +142,6 @@ export const useChatStore = defineStore('chat', () => {
   return {
     chats, activeChat, messages, isBlocked, blockMessage,
     socketConnected, loadingMessages,
-    loadChats, openChat, enterChat, sendMessage, sendProposal, leaveChat,
+    loadChats, openChat, enterChat, sendMessage, sendProposal, addMessage, leaveChat,
   }
 })

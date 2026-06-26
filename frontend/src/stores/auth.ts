@@ -6,7 +6,7 @@ import { disconnectSocket } from '@/socket'
 export interface AppUser {
   id: number; email: string; role: 'empresa' | 'influencer' | 'admin'
   stripe_customer_id: string | null; stripe_connect_id: string | null
-  is_active: boolean; created_at: string
+  is_active: boolean; is_email_verified: boolean; created_at: string
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -44,6 +44,17 @@ export const useAuthStore = defineStore('auth', () => {
     return res
   }
 
+  async function refreshUser() {
+    if (!token.value) return
+    try {
+      const fresh = await authApi.me()
+      user.value  = fresh
+      localStorage.setItem('hv_user', JSON.stringify(fresh))
+    } catch {
+      // token expirado u otro error — no forzar logout aquí
+    }
+  }
+
   function logout() {
     disconnectSocket()
     token.value = null
@@ -52,5 +63,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('hv_user')
   }
 
-  return { token, user, isAuthenticated, isEmpresa, isInfluencer, login, registerEmpresa, registerInfluencer, logout }
+  return { token, user, isAuthenticated, isEmpresa, isInfluencer, login, registerEmpresa, registerInfluencer, logout, refreshUser }
 })

@@ -7,8 +7,7 @@ import { ContratoEscrow } from '../contratos/entities/contrato-escrow.entity';
 import { User } from '../users/entities/user.entity';
 import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
-import { ContratoStatus, UserRole } from '../common/enums';
-import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
+import { UserRole, ContratoStatus } from '../common/enums';
 
 // Valores por defecto según claude.md §5.1
 const DEFAULTS: { key: string; value: string; description: string }[] = [
@@ -68,33 +67,6 @@ export class AdminService implements OnApplicationBootstrap {
     );
   }
 
-  // ─── Disputas ─────────────────────────────────────────────────────────────────
-  async listDisputes(): Promise<ContratoEscrow[]> {
-    return this.contratosRepo.find({
-      where: { status: ContratoStatus.IN_DISPUTE },
-      relations: { empresa: { user: true }, influencer: { user: true }, chat: true },
-      order: { updated_at: 'DESC' },
-    });
-  }
-
-  // claude.md §4.3 — Admin como árbitro: distribuye fondos de manera justa
-  async resolveDispute(id: number, dto: ResolveDisputeDto): Promise<ContratoEscrow> {
-    const contrato = await this.contratosRepo.findOne({
-      where: { id, status: ContratoStatus.IN_DISPUTE },
-    });
-    if (!contrato) throw new NotFoundException('Disputa no encontrada o ya resuelta.');
-
-    contrato.status = ContratoStatus.COMPLETED;
-
-    // Registrar la resolución en stripe_transfer_id como trazabilidad
-    const resolution = `ADMIN:${dto.decision.toUpperCase()}:${dto.nota.slice(0, 50)}`;
-    contrato.stripe_transfer_id = resolution;
-
-    const saved = await this.contratosRepo.save(contrato);
-    this.logger.log(`Disputa #${id} resuelta a favor de ${dto.decision}: ${dto.nota}`);
-    return saved;
-  }
-
   // ─── Usuarios ─────────────────────────────────────────────────────────────────
   async listUsers(): Promise<any[]> {
     const users = await this.usersRepo.find({
@@ -123,16 +95,33 @@ export class AdminService implements OnApplicationBootstrap {
     return this.usersRepo.save(user);
   }
 
+  // ─── Incumplimientos ──────────────────────────────────────────────────────────
+  async listIncumplimientos(): Promise<ContratoEscrow[]> {
+    return this.contratosRepo.find({
+      where: { status: ContratoStatus.INCUMPLIMIENTO },
+      relations: { empresa: true, influencer: true },
+      order: { updated_at: 'DESC' },
+    });
+  }
+
+  async resolveIncumplimiento(id: number, resolucion: string): Promise<ContratoEscrow> {
+    const contrato = await this.contratosRepo.findOne({ where: { id } });
+    if (!contrato) throw new NotFoundException('Contrato no encontrado.');
+    contrato.resolucion_admin   = resolucion;
+    contrato.resuelto_por_admin = true;
+    return this.contratosRepo.save(contrato);
+  }
+
   // ─── Estadísticas globales ────────────────────────────────────────────────────
   async getStats(): Promise<Record<string, number>> {
-    const [users, empresas, influencers, contratos, disputas] = await Promise.all([
+    const [users, empresas, influencers, contratos, incumplimientos] = await Promise.all([
       this.usersRepo.count(),
       this.usersRepo.count({ where: { role: UserRole.EMPRESA } }),
       this.usersRepo.count({ where: { role: UserRole.INFLUENCER } }),
       this.contratosRepo.count(),
-      this.contratosRepo.count({ where: { status: ContratoStatus.IN_DISPUTE } }),
+      this.contratosRepo.count({ where: { status: ContratoStatus.INCUMPLIMIENTO, resuelto_por_admin: false } }),
     ]);
-    return { users, empresas, influencers, contratos, disputas };
+    return { users, empresas, influencers, contratos, incumplimientos };
   }
 
   // ─── Seeds ────────────────────────────────────────────────────────────────────

@@ -10,14 +10,24 @@ const editingKey   = ref<string | null>(null)
 const editingValue = ref('')
 const savingKey    = ref<string | null>(null)
 
-// Disputes
-const resolving       = ref<number | null>(null)
-const disputeDecision = ref<'empresa' | 'influencer' | 'split'>('influencer')
-const disputeNota     = ref('')
-const showResolve     = ref<number | null>(null)
-
 // Users
 const togglingId = ref<number | null>(null)
+
+// Incumplimientos
+const resolvingId    = ref<number | null>(null)
+const resolucionText = ref<Record<number, string>>({})
+function toggleResolve(id: number) {
+  if (resolucionText.value[id] !== undefined) { delete resolucionText.value[id] }
+  else { resolucionText.value[id] = '' }
+}
+async function submitResolve(id: number) {
+  if (!resolucionText.value[id]?.trim()) return
+  resolvingId.value = id
+  try {
+    await adminStore.resolveIncumplimiento(id, resolucionText.value[id])
+    delete resolucionText.value[id]
+  } finally { resolvingId.value = null }
+}
 
 onMounted(() => adminStore.fetchAll())
 
@@ -32,24 +42,12 @@ async function saveSetting(key: string) {
   finally { savingKey.value = null; editingKey.value = null }
 }
 
-async function resolve(id: number) {
-  if (!disputeNota.value) return
-  resolving.value = id
-  try {
-    await adminStore.resolveDispute(id, disputeDecision.value, disputeNota.value)
-    showResolve.value = null
-    disputeNota.value = ''
-  } catch (e: any) { alert(e.response?.data?.message ?? 'Error') }
-  finally { resolving.value = null }
-}
-
 async function toggleUser(id: number, current: boolean) {
   togglingId.value = id
   try { await adminStore.toggleUserStatus(id, !current) }
   finally { togglingId.value = null }
 }
 
-const DECISION_LABEL = { empresa: '↩️ Devolver a empresa', influencer: '✅ Pagar a influencer', split: '⚖️ Dividir mitad' }
 const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', empresa: 'bg-navy/10 text-navy', influencer: 'bg-green-100 text-green-700' }
 </script>
 
@@ -65,7 +63,8 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
       <!-- Stats -->
       <div v-if="adminStore.stats" class="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div v-for="(val, key) in adminStore.stats" :key="key" class="card text-center py-4">
-          <p class="text-2xl font-bold" :class="key === 'disputas' && val > 0 ? 'text-coral' : 'text-violet'">{{ val }}</p>
+          <p class="text-2xl font-bold"
+            :class="key === 'incumplimientos' && val > 0 ? 'text-coral' : 'text-violet'">{{ val }}</p>
           <p class="text-xs text-navy/50 mt-1 capitalize">{{ key }}</p>
         </div>
       </div>
@@ -103,65 +102,56 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
         </div>
       </div>
 
-      <!-- Disputes -->
+      <!-- Incumplimientos -->
       <div class="card">
         <h2 class="font-display font-semibold text-navy mb-4 flex items-center gap-2">
-          ⚠️ Contratos en disputa
-          <span v-if="adminStore.disputes.length > 0" class="badge-warning">{{ adminStore.disputes.length }}</span>
+          🚫 Contratos en incumplimiento
+          <span v-if="adminStore.incumplimientos.filter(i => !i.resuelto_por_admin).length"
+            class="text-xs bg-coral/20 text-coral px-2 py-0.5 rounded-full font-bold">
+            {{ adminStore.incumplimientos.filter(i => !i.resuelto_por_admin).length }} sin resolver
+          </span>
         </h2>
-        <div v-if="adminStore.disputes.length === 0" class="text-center py-6 text-navy/40 text-sm">
-          No hay disputas activas. ✅
+        <div v-if="!adminStore.incumplimientos.length" class="text-navy/40 text-sm text-center py-4">
+          No hay contratos en incumplimiento.
         </div>
-        <div v-else class="space-y-4">
-          <div v-for="d in adminStore.disputes" :key="d.id" class="border border-coral/20 rounded-xl p-4 space-y-3">
-            <div class="flex items-start justify-between">
-              <div>
-                <p class="font-semibold text-navy">{{ d.empresa?.nombre_comercial ?? 'Empresa' }} → {{ d.influencer?.nombre_artistico ?? 'Influencer' }} — ${{ d.monto_total }} USD</p>
-                <p class="text-xs text-navy/40 mt-0.5">{{ new Date(d.created_at).toLocaleDateString() }}</p>
+        <div v-else class="divide-y divide-navy/5 space-y-0">
+          <div v-for="inc in adminStore.incumplimientos" :key="inc.id" class="py-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <span class="font-semibold text-sm text-navy">Contrato #{{ inc.id }}</span>
+                  <span class="text-xs text-navy/40">
+                    {{ inc.empresa?.nombre_comercial ?? '—' }} → {{ inc.influencer?.nombre_artistico ?? '—' }}
+                  </span>
+                  <span class="badge-info text-xs">${{ Number(inc.monto_total).toFixed(2) }} USD</span>
+                  <span v-if="inc.resuelto_por_admin" class="badge-active text-xs">✅ Resuelto</span>
+                  <span v-else class="text-xs bg-coral/10 text-coral px-1.5 py-0.5 rounded font-medium">⏳ Pendiente</span>
+                </div>
+                <p class="text-sm text-navy/70 mb-1"><span class="font-medium">Motivo:</span> {{ inc.motivo_incumplimiento }}</p>
+                <p v-if="inc.resolucion_admin" class="text-sm text-green-700 bg-green-50 rounded px-2 py-1 mt-1">
+                  <span class="font-medium">Resolución admin:</span> {{ inc.resolucion_admin }}
+                </p>
               </div>
-              <span class="badge-warning">⚠️ En disputa</span>
+              <button v-if="!inc.resuelto_por_admin"
+                @click="toggleResolve(inc.id)"
+                class="btn-ghost text-xs shrink-0">
+                {{ resolucionText[inc.id] !== undefined ? 'Cancelar' : 'Resolver' }}
+              </button>
             </div>
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div class="bg-slate rounded-lg p-3">
-                <p class="text-xs text-navy/50 mb-1">Empresa</p>
-                <p class="font-medium">{{ d.empresa?.nombre_comercial ?? 'Sin nombre' }}</p>
-                <p class="text-xs text-navy/40">{{ d.empresa?.user?.email }}</p>
-              </div>
-              <div class="bg-slate rounded-lg p-3">
-                <p class="text-xs text-navy/50 mb-1">Influencer</p>
-                <p class="font-medium">{{ d.influencer?.nombre_artistico ?? 'Sin nombre' }}</p>
-                <p class="text-xs text-navy/40">{{ d.influencer?.user?.email }}</p>
-              </div>
-            </div>
-
-            <!-- Formulario de resolución -->
-            <div v-if="showResolve === d.id" class="border border-navy/10 rounded-lg p-3 space-y-3 bg-white">
-              <p class="text-sm font-semibold text-navy">Resolución del árbitro</p>
-              <div class="grid grid-cols-3 gap-2">
-                <button v-for="(label, key) in DECISION_LABEL" :key="key"
-                  @click="disputeDecision = key as any"
-                  :class="['text-xs py-2 px-3 rounded-lg border transition-all font-medium',
-                    disputeDecision === key ? 'bg-violet text-white border-violet' : 'border-navy/20 text-navy/60 hover:border-violet/40']">
-                  {{ label }}
-                </button>
-              </div>
-              <div>
-                <label class="label">Nota del árbitro (obligatoria)</label>
-                <textarea v-model="disputeNota" class="input" rows="2" required
-                  placeholder="El influencer entregó el trabajo según las especificaciones…" />
-              </div>
+            <!-- Panel de resolución -->
+            <div v-if="resolucionText[inc.id] !== undefined" class="mt-3 border border-violet/20 rounded-lg p-3 bg-violet/5 space-y-2">
+              <p class="text-xs font-semibold text-violet">Nota de resolución (mínimo 10 caracteres)</p>
+              <textarea v-model="resolucionText[inc.id]" class="input text-sm" rows="2"
+                placeholder="Ej: Se determinó que el influencer incumplió el acuerdo. Se procede con devolución parcial al anunciante…" />
               <div class="flex gap-2">
-                <button @click="resolve(d.id)" :disabled="resolving === d.id || !disputeNota"
-                  class="btn-primary text-sm">
-                  {{ resolving === d.id ? 'Resolviendo…' : 'Confirmar resolución' }}
+                <button @click="submitResolve(inc.id)"
+                  :disabled="resolvingId === inc.id || !resolucionText[inc.id]?.trim() || resolucionText[inc.id].length < 10"
+                  class="btn-primary text-xs">
+                  {{ resolvingId === inc.id ? 'Guardando…' : 'Confirmar resolución' }}
                 </button>
-                <button @click="showResolve = null; disputeNota = ''" class="btn-ghost text-sm">Cancelar</button>
+                <button @click="toggleResolve(inc.id)" class="btn-ghost text-xs">Cancelar</button>
               </div>
             </div>
-            <button v-else @click="showResolve = d.id; disputeDecision = 'influencer'"
-              class="btn-danger text-sm w-full">
-              ⚖️ Resolver disputa
-            </button>
           </div>
         </div>
       </div>

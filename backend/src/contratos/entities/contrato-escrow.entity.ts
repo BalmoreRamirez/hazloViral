@@ -66,6 +66,12 @@ export class ContratoEscrow {
   @Column({ type: 'text', nullable: true })
   motivo_incumplimiento: string;
 
+  @Column({ type: 'text', nullable: true })
+  resolucion_admin: string;
+
+  @Column({ default: false })
+  resuelto_por_admin: boolean;
+
   @Column({ type: 'enum', enum: ContratoStatus, default: ContratoStatus.PENDING_PAYMENT })
   status: ContratoStatus;
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
@@ -8,6 +8,7 @@ import { useChatStore } from '@/stores/chat'
 import { useContractsStore } from '@/stores/contracts'
 
 const router         = useRouter()
+const route          = useRoute()
 const authStore      = useAuthStore()
 const creditsStore   = useCreditsStore()
 const chatStore      = useChatStore()
@@ -24,6 +25,13 @@ onMounted(async () => {
     (role === 'empresa' || role === 'influencer') ? contractsStore.fetchContracts() : Promise.resolve(),
     isEmpresa.value ? creditsStore.fetchBalance() : Promise.resolve(),
   ])
+
+  // Gap 3: Wompi redirige aquí tras recarga de créditos exitosa
+  if (route.query.wompi === 'success' && route.query.tipo === 'creditos') {
+    await new Promise(r => setTimeout(r, 1500))
+    await creditsStore.fetchBalance()
+    router.replace({ path: '/dashboard' })
+  }
 })
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,7 +39,7 @@ const STATUS_LABEL: Record<string, string> = {
   funded_in_escrow: '🔒 En custodia',
   under_review:     '🔍 En revisión',
   completed:        '✅ Completado',
-  in_dispute:       '⚠️ En disputa',
+  incumplimiento:   '🚫 Incumplimiento',
 }
 </script>
 
@@ -77,7 +85,7 @@ const STATUS_LABEL: Record<string, string> = {
             <p v-if="creditsStore.rechargeError" class="text-xs text-coral">
               {{ creditsStore.rechargeError }}
             </p>
-            <p v-else class="text-xs text-navy/40">Pago seguro con Stripe</p>
+            <p v-else class="text-xs text-navy/40">Pago seguro con Wompi</p>
           </div>
         </div>
       </template>
@@ -100,7 +108,7 @@ const STATUS_LABEL: Record<string, string> = {
         </div>
         <div class="card text-center">
           <p class="text-2xl font-bold text-coral">
-            {{ contractsStore.contracts.filter(c => c.status === 'in_dispute').length }}
+            {{ contractsStore.contracts.filter(c => c.status === 'incumplimiento').length }}
           </p>
           <p class="text-xs text-navy/50 mt-1">En disputa</p>
         </div>

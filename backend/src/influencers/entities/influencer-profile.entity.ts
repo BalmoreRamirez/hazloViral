@@ -41,6 +41,16 @@ export class InfluencerProfile {
   @Column({ nullable: true, length: 50 })
   numero_identificacion: string;
 
+  // Datos bancarios para Wompi Dispersiones
+  @Column({ nullable: true, length: 100 })
+  banco_nombre: string;
+
+  @Column({ nullable: true, length: 50 })
+  banco_cuenta_numero: string;
+
+  @Column({ nullable: true, length: 20 })
+  banco_cuenta_tipo: string; // 'CORRIENTE' | 'AHORROS'
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
   tarifa_base: number;
 

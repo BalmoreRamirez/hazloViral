@@ -1,12 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { StripeExceptionFilter } from './common/filters/stripe-exception.filter';
 import { join } from 'path';
 import * as express from 'express';
 
 async function bootstrap() {
-  // rawBody:true es requerido para verificar la firma del webhook de Stripe
+  // rawBody:true necesario para verificar firma del webhook de Wompi
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Servir archivos subidos (PDFs, videos, imágenes) sin el prefijo /api
@@ -15,7 +14,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.useGlobalFilters(new StripeExceptionFilter());
   app.enableCors({
     origin: ['http://localhost:5173', 'http://localhost:5174'],
     credentials: true,

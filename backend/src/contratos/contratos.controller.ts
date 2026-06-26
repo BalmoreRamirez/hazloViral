@@ -22,7 +22,6 @@ import { SubmitDeliverablesDto } from './dto/submit-deliverables.dto';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { RegisterPublicationsDto } from './dto/register-publications.dto';
 import { ReportNonComplianceDto } from './dto/report-non-compliance.dto';
-import { DisputeDto } from './dto/dispute.dto';
 
 @Controller('contratos')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -80,11 +79,8 @@ export class ContratosController {
   }
 
   // ── Flujo del contrato (Escrow) ────────────────────────────────────────────
-  @Post(':id/fund')
-  @Roles(UserRole.EMPRESA)
-  fundContract(@Param('id', ParseIntPipe) id: number, @GetUser() user: User) {
-    return this.contratosService.fundContract(user, id);
-  }
+  // El fondeo se hace exclusivamente vía Wompi: POST /wompi/contract-checkout/:id
+  // o POST /wompi/dev/simulate-fund/:id en modo desarrollo.
 
   @Post(':id/submit-deliverables')
   @Roles(UserRole.INFLUENCER)
@@ -124,15 +120,5 @@ export class ContratosController {
   @Roles(UserRole.EMPRESA)
   reportNonCompliance(@GetUser() user: User, @Body() dto: ReportNonComplianceDto) {
     return this.contratosService.reportNonCompliance(user, dto);
-  }
-
-  @Post(':id/dispute')
-  @Roles(UserRole.EMPRESA, UserRole.INFLUENCER)
-  initiateDispute(
-    @Param('id', ParseIntPipe) id: number,
-    @GetUser() user: User,
-    @Body() dto: DisputeDto,
-  ) {
-    return this.contratosService.initiateDispute(user, id, dto);
   }
 }

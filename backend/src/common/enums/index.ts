@@ -17,7 +17,6 @@ export enum ContratoStatus {
   PENDING_PUBLICATION  = 'pending_publication',
   PUBLICATION_REVIEW   = 'publication_review',
   COMPLETED            = 'completed',
-  IN_DISPUTE           = 'in_dispute',
   INCUMPLIMIENTO       = 'incumplimiento',
 }
 

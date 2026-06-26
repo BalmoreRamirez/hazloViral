@@ -15,6 +15,7 @@ import { AuthModule } from './auth/auth.module';
 import { CreditsModule } from './credits/credits.module';
 import { WompiModule } from './wompi/wompi.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { UploadsModule } from './uploads/uploads.module';
     CreditsModule,
     WompiModule,
     UploadsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
