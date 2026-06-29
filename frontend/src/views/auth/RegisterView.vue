@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
-import { required, email, minLength, helpers } from '@vuelidate/validators'
+import { required, email, helpers } from '@vuelidate/validators'
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -77,6 +77,17 @@ const esMenor = computed(() => {
   return birth > age18
 })
 
+// ── Seguridad de contraseña ───────────────────────────────────────────────────
+const PWD_RULES = [
+  { key: 'len',     label: 'Entre 8 y 128 caracteres',  test: (v: string) => v.length >= 8 && v.length <= 128 },
+  { key: 'upper',   label: 'Al menos una mayúscula',     test: (v: string) => /[A-Z]/.test(v) },
+  { key: 'lower',   label: 'Al menos una minúscula',     test: (v: string) => /[a-z]/.test(v) },
+  { key: 'number',  label: 'Al menos un número',         test: (v: string) => /\d/.test(v) },
+  { key: 'special', label: 'Al menos un carácter especial (!@#$…)', test: (v: string) => /[^A-Za-z\d]/.test(v) },
+]
+const pwdStrength = computed(() => PWD_RULES.map(r => ({ ...r, ok: r.test(password.value) })))
+const pwdValid    = computed(() => pwdStrength.value.every(r => r.ok))
+
 // ── Validadores custom ────────────────────────────────────────────────────────
 const urlValida = helpers.withMessage(
   'Debe ser una URL válida (https://...)',
@@ -95,8 +106,8 @@ const rules = computed(() => {
       email:    helpers.withMessage('Formato de email inválido', email),
     },
     password: {
-      required:   helpers.withMessage('La contraseña es obligatoria', required),
-      minLength:  helpers.withMessage('Mínimo 8 caracteres', minLength(8)),
+      required:  helpers.withMessage('La contraseña es obligatoria', required),
+      segura:    helpers.withMessage('La contraseña no cumple los requisitos de seguridad', () => !password.value || pwdValid.value),
     },
   }
 
@@ -249,9 +260,16 @@ async function submit() {
             <div>
               <label class="label">Contraseña</label>
               <input
-                v-model="password" type="password" required
+                v-model="password" type="password" required maxlength="128"
                 :class="['input', { '!border-coral': v$.password.$error }]"
                 @blur="v$.password.$touch()" />
+              <!-- Checklist de seguridad -->
+              <div v-if="password" class="mt-2 space-y-1">
+                <p v-for="r in pwdStrength" :key="r.key"
+                  :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-green-600' : 'text-navy/40']">
+                  <span class="font-bold">{{ r.ok ? '✓' : '○' }}</span> {{ r.label }}
+                </p>
+              </div>
               <p v-if="v$.password.$error" class="text-coral text-xs mt-1">
                 {{ v$.password.$errors[0]?.$message }}
               </p>

@@ -9,11 +9,18 @@ export interface ChatRoom {
   empresa?: any; influencer?: any
 }
 
+export interface BriefSnapshot {
+  id: number; titulo_campana: string; objetivo_principal: string | null
+  tono_de_voz: string | null; puntos_clave_si: string | null
+  restricciones_no: string | null; recursos_esteticos: string | null
+}
+
 export interface ChatMessage {
   id: number; chat_id: number; sender_id: number; message_text: string | null
   is_proposal: boolean; proposal_status: string | null; proposal_data: any
   contraoferta_data: { tarifa_propuesta: number; justificacion: string } | null
   contrato_id: number | null; created_at: string; sender?: any
+  campaign_brief_id: number | null; campaignBrief: BriefSnapshot | null
 }
 
 export const useChatStore = defineStore('chat', () => {
@@ -129,6 +136,15 @@ export const useChatStore = defineStore('chat', () => {
     })
   }
 
+  function sendBrief(briefId: number) {
+    if (!activeChat.value) return
+    const socket = getSocket()
+    socket.emit('send_message', {
+      chat_id: activeChat.value.id,
+      campaign_brief_id: briefId,
+    })
+  }
+
   function addMessage(msg: ChatMessage) {
     if (!messages.value.find(m => m.id === msg.id)) messages.value.push(msg)
   }
@@ -142,6 +158,6 @@ export const useChatStore = defineStore('chat', () => {
   return {
     chats, activeChat, messages, isBlocked, blockMessage,
     socketConnected, loadingMessages,
-    loadChats, openChat, enterChat, sendMessage, sendProposal, addMessage, leaveChat,
+    loadChats, openChat, enterChat, sendMessage, sendProposal, sendBrief, addMessage, leaveChat,
   }
 })

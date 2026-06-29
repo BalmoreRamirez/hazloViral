@@ -7,20 +7,25 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
   Min,
-  MinLength,
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
 
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,128}$/;
+const PASSWORD_MSG   = 'La contraseña debe tener entre 8 y 128 caracteres, al menos una mayúscula, una minúscula, un número y un carácter especial.';
+
 export class RegisterInfluencerDto {
   @IsEmail()
   email: string;
 
   @IsString()
-  @MinLength(8)
+  @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MSG })
   password: string;
 
   @IsString()

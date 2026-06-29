@@ -6,6 +6,7 @@ import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
 import { useContractsStore } from '@/stores/contracts'
+import { useProfileStore } from '@/stores/profile'
 import type { ChatMessage } from '@/stores/chat'
 import { uploadContratoPdf } from '@/api/chats'
 
@@ -15,6 +16,7 @@ const chatStore      = useChatStore()
 const authStore      = useAuthStore()
 const creditsStore   = useCreditsStore()
 const contractsStore = useContractsStore()
+const profileStore   = useProfileStore()
 
 const chatId      = Number(route.params.id)
 const text        = ref('')
@@ -40,6 +42,9 @@ const counterLoading = ref(false)
 
 // Resolve counter (empresa)
 const resolveLoading = ref<number | null>(null)
+
+// Brief picker
+const showBriefPicker = ref(false)
 
 const isEmpresa   = computed(() => authStore.isEmpresa)
 const isBlocked   = computed(() => chatStore.isBlocked)
@@ -72,6 +77,7 @@ onMounted(async () => {
   const chat = chatStore.chats.find(c => c.id === chatId)
   if (!chat) { router.push('/chats'); return }
   await chatStore.enterChat(chat)
+  if (isEmpresa.value) await profileStore.loadBriefs()
   scrollToBottom()
 })
 
@@ -186,6 +192,11 @@ async function resolveCounter(msg: ChatMessage, action: 'accept' | 'reject') {
 }
 
 function isMine(msg: ChatMessage) { return msg.sender_id === myId.value }
+
+function pickBrief(briefId: number) {
+  chatStore.sendBrief(briefId)
+  showBriefPicker.value = false
+}
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente',
@@ -338,6 +349,40 @@ function formatTime(dt: string) {
             </div>
           </div>
 
+          <!-- ── Tarjeta de brief ── -->
+          <div v-else-if="msg.campaignBrief" class="flex justify-center">
+            <div class="card max-w-sm w-full border-amber-200 bg-amber-50 space-y-2">
+              <div class="flex items-center gap-2">
+                <span>📋</span>
+                <p class="font-display font-semibold text-amber-800 text-sm">Brief de campaña</p>
+                <span class="ml-auto text-xs text-amber-600">{{ formatTime(msg.created_at) }}</span>
+              </div>
+              <p class="font-semibold text-navy text-sm">{{ msg.campaignBrief.titulo_campana }}</p>
+              <div class="text-xs space-y-1 text-navy/70">
+                <p v-if="msg.campaignBrief.objetivo_principal">
+                  <span class="font-medium text-navy/50 uppercase tracking-wide">Objetivo:</span>
+                  {{ msg.campaignBrief.objetivo_principal }}
+                </p>
+                <p v-if="msg.campaignBrief.tono_de_voz">
+                  <span class="font-medium text-navy/50 uppercase tracking-wide">Tono:</span>
+                  {{ msg.campaignBrief.tono_de_voz }}
+                </p>
+                <p v-if="msg.campaignBrief.puntos_clave_si">
+                  <span class="font-medium text-green-700 uppercase tracking-wide">✅ Incluir:</span>
+                  {{ msg.campaignBrief.puntos_clave_si }}
+                </p>
+                <p v-if="msg.campaignBrief.restricciones_no">
+                  <span class="font-medium text-coral uppercase tracking-wide">🚫 Evitar:</span>
+                  {{ msg.campaignBrief.restricciones_no }}
+                </p>
+                <p v-if="msg.campaignBrief.recursos_esteticos">
+                  <span class="font-medium text-navy/50 uppercase tracking-wide">🎨 Recursos:</span>
+                  {{ msg.campaignBrief.recursos_esteticos }}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- ── Mensaje normal ── -->
           <div v-else :class="['flex', isMine(msg) ? 'justify-end' : 'justify-start']">
             <div :class="['max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl text-sm', isMine(msg)
@@ -401,11 +446,35 @@ function formatTime(dt: string) {
         </div>
       </div>
 
+      <!-- Selector de briefs -->
+      <div v-if="showBriefPicker && isEmpresa" class="card mb-2 space-y-2">
+        <p class="font-semibold text-navy text-sm flex items-center gap-2">
+          📋 Enviar brief de campaña
+          <button @click="showBriefPicker = false" class="ml-auto text-navy/40 hover:text-navy text-xs">✕</button>
+        </p>
+        <div v-if="!profileStore.briefs.length" class="text-navy/40 text-sm text-center py-3">
+          No tienes briefs creados.
+          <RouterLink to="/perfil/empresa" class="text-violet underline ml-1">Crear uno →</RouterLink>
+        </div>
+        <div v-else class="divide-y divide-navy/5 max-h-48 overflow-y-auto">
+          <button v-for="b in profileStore.briefs" :key="b.id"
+            @click="pickBrief(b.id)"
+            class="w-full text-left px-2 py-2.5 hover:bg-violet/5 rounded-lg transition-colors">
+            <p class="text-sm font-medium text-navy">{{ b.titulo_campana }}</p>
+            <p v-if="b.objetivo_principal" class="text-xs text-navy/50 truncate mt-0.5">
+              {{ b.objetivo_principal }}
+            </p>
+          </button>
+        </div>
+      </div>
+
       <!-- Input de mensaje -->
       <div class="card py-3">
         <div class="flex gap-2">
-          <button v-if="isEmpresa && !isBlocked" @click="showProposal = !showProposal"
-            class="btn-ghost text-sm px-3" title="Enviar propuesta">📋</button>
+          <button v-if="isEmpresa && !isBlocked" @click="showProposal = !showProposal; showBriefPicker = false"
+            class="btn-ghost text-sm px-3" title="Enviar propuesta">📝</button>
+          <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
+            class="btn-ghost text-sm px-3" title="Enviar brief">📋</button>
           <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
             :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
             class="input flex-1" />

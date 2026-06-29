@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authApi } from '@/api/auth'
 
@@ -13,6 +13,16 @@ const loading     = ref(false)
 const success     = ref(false)
 const error       = ref('')
 
+const PWD_RULES = [
+  { key: 'len',     label: 'Entre 8 y 128 caracteres',           test: (v: string) => v.length >= 8 && v.length <= 128 },
+  { key: 'upper',   label: 'Al menos una mayúscula',              test: (v: string) => /[A-Z]/.test(v) },
+  { key: 'lower',   label: 'Al menos una minúscula',              test: (v: string) => /[a-z]/.test(v) },
+  { key: 'number',  label: 'Al menos un número',                  test: (v: string) => /\d/.test(v) },
+  { key: 'special', label: 'Al menos un carácter especial (!@#$…)', test: (v: string) => /[^A-Za-z\d]/.test(v) },
+]
+const pwdStrength = computed(() => PWD_RULES.map(r => ({ ...r, ok: r.test(newPassword.value) })))
+const pwdValid    = computed(() => pwdStrength.value.every(r => r.ok))
+
 onMounted(() => {
   token.value = (route.query.token as string) ?? ''
   if (!token.value) error.value = 'Enlace inválido. Solicita uno nuevo.'
@@ -20,12 +30,12 @@ onMounted(() => {
 
 async function submit() {
   error.value = ''
-  if (newPassword.value !== confirm.value) {
-    error.value = 'Las contraseñas no coinciden.'
+  if (!pwdValid.value) {
+    error.value = 'La contraseña no cumple los requisitos de seguridad.'
     return
   }
-  if (newPassword.value.length < 8) {
-    error.value = 'La contraseña debe tener al menos 8 caracteres.'
+  if (newPassword.value !== confirm.value) {
+    error.value = 'Las contraseñas no coinciden.'
     return
   }
   loading.value = true
@@ -71,14 +81,20 @@ async function submit() {
         <!-- Estado: formulario -->
         <template v-else>
           <h2 class="text-xl font-display font-semibold text-navy mb-2">Nueva contraseña</h2>
-          <p class="text-navy/50 text-sm mb-6">Elige una contraseña segura de al menos 8 caracteres.</p>
+          <p class="text-navy/50 text-sm mb-6">Elige una contraseña que cumpla todos los requisitos.</p>
 
           <form @submit.prevent="submit" class="space-y-4">
             <div>
               <label class="label">Nueva contraseña</label>
-              <Password v-model="newPassword" toggleMask fluid :feedback="true"
-                promptLabel="Ingresa tu nueva contraseña"
-                weakLabel="Débil" mediumLabel="Media" strongLabel="Fuerte" />
+              <Password v-model="newPassword" toggleMask fluid :feedback="false"
+                promptLabel="Ingresa tu nueva contraseña" maxlength="128" />
+              <!-- Checklist de seguridad -->
+              <div v-if="newPassword" class="mt-2 space-y-1">
+                <p v-for="r in pwdStrength" :key="r.key"
+                  :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-green-600' : 'text-navy/40']">
+                  <span class="font-bold">{{ r.ok ? '✓' : '○' }}</span> {{ r.label }}
+                </p>
+              </div>
             </div>
             <div>
               <label class="label">Confirmar contraseña</label>
