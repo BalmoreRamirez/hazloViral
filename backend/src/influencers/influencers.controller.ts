@@ -60,6 +60,13 @@ export class InfluencersController {
     return this.service.updateMyProfile(user, dto);
   }
 
+  // ─── Búsqueda por username ────────────────────────────────────────────────────
+  @Get('by-username/:username')
+  @Roles(UserRole.EMPRESA, UserRole.INFLUENCER, UserRole.ADMIN)
+  getByUsername(@Param('username') username: string) {
+    return this.service.findByUsername(username.replace(/^@/, ''));
+  }
+
   // ─── Perfil público por ID ────────────────────────────────────────────────────
   @Get(':id')
   @Roles(UserRole.EMPRESA, UserRole.INFLUENCER, UserRole.ADMIN)

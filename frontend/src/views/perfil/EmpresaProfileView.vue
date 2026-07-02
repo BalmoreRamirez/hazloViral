@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import AvatarUpload from '@/components/AvatarUpload.vue'
+import CoverBanner from '@/components/CoverBanner.vue'
 import { useProfileStore } from '@/stores/profile'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'primevue/usetoast'
@@ -22,11 +23,22 @@ const editingBrief  = ref<number | null>(null)
 
 const TIPOS_ID = ['DUI', 'PASAPORTE']
 
+const RUBROS_LIST = [
+  { label: '✈️ Turismo', value: 'turismo' }, { label: '🏨 Hoteles', value: 'hoteles' },
+  { label: '🗺️ Viajes', value: 'viajes' }, { label: '🍽️ Gastronomía', value: 'gastronomia' },
+  { label: '👗 Moda', value: 'moda' }, { label: '💻 Tecnología', value: 'tecnologia' },
+  { label: '💪 Fitness', value: 'fitness' }, { label: '💄 Belleza', value: 'belleza' },
+  { label: '💼 Negocios', value: 'negocios' }, { label: '🎭 Entretenimiento', value: 'entretenimiento' },
+  { label: '📚 Educación', value: 'educacion' }, { label: '📷 Fotografía', value: 'fotografia' },
+  { label: '🏥 Salud', value: 'salud' }, { label: '🎵 Música', value: 'musica' }, { label: '⚽ Deporte', value: 'deporte' },
+]
+
 const form = ref({
   nombre_comercial: '', sitio_web: '', umbral_creditos: 5,
   representante_nombre: '',
   representante_tipo_identificacion: 'DUI',
   representante_numero_identificacion: '',
+  rubro: '',
 })
 
 const briefForm = ref({
@@ -43,6 +55,7 @@ onMounted(async () => {
     form.value.representante_nombre              = store.empresaProfile.representante_nombre ?? ''
     form.value.representante_tipo_identificacion = store.empresaProfile.representante_tipo_identificacion ?? 'DUI'
     form.value.representante_numero_identificacion = store.empresaProfile.representante_numero_identificacion ?? ''
+    form.value.rubro                             = store.empresaProfile.rubro ?? ''
   }
 })
 
@@ -116,6 +129,9 @@ function confirmDelete(id: number, titulo: string) {
         <p class="text-sm mt-1 text-navy-lighter">Gestiona los datos de tu marca y tus briefs de campaña</p>
       </div>
 
+      <!-- Cover banner por rubro -->
+      <CoverBanner :rubro="store.empresaProfile?.rubro" :nombre="store.empresaProfile?.nombre_comercial" />
+
       <!-- ── Datos de la empresa ───────────────────────────────────────────── -->
       <div class="card">
         <div class="flex items-center justify-between mb-5">
@@ -155,6 +171,10 @@ function confirmDelete(id: number, titulo: string) {
               <span v-else class="text-navy/40 italic">No configurado</span>
             </dd>
           </div>
+          <div v-if="store.empresaProfile.rubro">
+            <dt class="label">Rubro</dt>
+            <dd class="font-semibold text-navy mt-1 capitalize">{{ store.empresaProfile.rubro }}</dd>
+          </div>
           <div>
             <dt class="label">Balance de créditos</dt>
             <dd class="font-bold text-2xl mt-1"
@@ -189,6 +209,13 @@ function confirmDelete(id: number, titulo: string) {
           <div class="field">
             <label class="label">Sitio web</label>
             <InputText v-model="form.sitio_web" type="url" class="w-full" placeholder="https://…" />
+          </div>
+          <div class="field">
+            <label class="label">Rubro / industria</label>
+            <select v-model="form.rubro" class="input">
+              <option value="">— Sin especificar —</option>
+              <option v-for="r in RUBROS_LIST" :key="r.value" :value="r.value">{{ r.label }}</option>
+            </select>
           </div>
           <div class="field">
             <label class="label">Umbral de créditos</label>
@@ -245,7 +272,7 @@ function confirmDelete(id: number, titulo: string) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="field">
               <label class="label">Objetivo principal</label>
-              <InputText v-model="briefForm.objetivo_principal" class="w-full" placeholder="Aumentar awareness…" />
+              <InputText v-model="briefForm.objetivo_principal" class="w-full" placeholder="Aumentar reconocimiento de marca…" />
             </div>
             <div class="field">
               <label class="label">Tono de voz</label>
@@ -253,12 +280,12 @@ function confirmDelete(id: number, titulo: string) {
             </div>
           </div>
           <div class="field">
-            <label class="label">✅ Do's — puntos clave a incluir</label>
+            <label class="label">✅ ¿Qué debe incluir el contenido?</label>
             <Textarea v-model="briefForm.puntos_clave_si" class="w-full" rows="2"
               placeholder="Mostrar el producto en uso natural…" autoResize />
           </div>
           <div class="field">
-            <label class="label">❌ Don'ts — restricciones</label>
+            <label class="label">❌ ¿Qué debe evitar el contenido?</label>
             <Textarea v-model="briefForm.restricciones_no" class="w-full" rows="2"
               placeholder="No mencionar a la competencia…" autoResize />
           </div>

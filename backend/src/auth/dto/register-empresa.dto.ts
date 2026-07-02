@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, Matches, MaxLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, Matches, MaxLength, ValidateIf } from 'class-validator';
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,128}$/;
 const PASSWORD_MSG   = 'La contraseña debe tener entre 8 y 128 caracteres, al menos una mayúscula, una minúscula, un número y un carácter especial.';
@@ -18,13 +18,18 @@ export class RegisterEmpresaDto {
   @IsNotEmpty()
   nombre_comercial: string;
 
-  @IsOptional()
+  @ValidateIf(o => o.sitio_web != null && o.sitio_web !== '')
   @IsUrl()
   sitio_web?: string;
 
   @IsOptional()
   @IsString()
   pais?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  rubro?: string;
 
   @IsOptional()
   @IsString()

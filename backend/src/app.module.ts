@@ -16,6 +16,7 @@ import { CreditsModule } from './credits/credits.module';
 import { WompiModule } from './wompi/wompi.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { RatingsModule } from './ratings/ratings.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     WompiModule,
     UploadsModule,
     NotificationsModule,
+    RatingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -61,6 +61,7 @@ export class AuthService {
       if (dto.sitio_web)  profile.sitio_web  = dto.sitio_web;
       if (dto.pais)       profile.pais       = dto.pais;
       if (dto.direccion)  profile.direccion  = dto.direccion;
+      if (dto.rubro)      profile.rubro      = dto.rubro;
       profile.representante_tipo_identificacion   = dto.representante_tipo_identificacion;
       profile.representante_numero_identificacion = dto.representante_numero_identificacion;
       profile.balance_creditos = WELCOME_BONUS; // §5.1 Bono de bienvenida
@@ -104,10 +105,12 @@ export class AuthService {
 
       const profile = new InfluencerProfile();
       profile.user_id = user.id;
+      profile.username         = dto.username;
       profile.nombre_artistico = dto.nombre_artistico;
       if (dto.bio)       profile.bio       = dto.bio;
       if (dto.ubicacion) profile.ubicacion = dto.ubicacion;
       if (dto.direccion) profile.direccion = dto.direccion;
+      if (dto.rubro)     profile.rubro     = dto.rubro;
       profile.tarifa_base = dto.tarifa_base ?? 0;
       profile.fecha_nacimiento = dto.fecha_nacimiento;
       profile.tipo_identificacion   = dto.tipo_identificacion;

@@ -23,6 +23,18 @@ export interface ChatMessage {
   campaign_brief_id: number | null; campaignBrief: BriefSnapshot | null
 }
 
+function readKey() {
+  try { return `hv_read_chats_${JSON.parse(localStorage.getItem('hv_user') ?? '{}').id ?? 0}` } catch { return 'hv_read_chats_0' }
+}
+
+function loadReadIds(): Set<number> {
+  try { return new Set(JSON.parse(localStorage.getItem(readKey()) ?? '[]') as number[]) } catch { return new Set() }
+}
+
+function saveReadIds(ids: Set<number>) {
+  localStorage.setItem(readKey(), JSON.stringify([...ids]))
+}
+
 export const useChatStore = defineStore('chat', () => {
   const chats           = ref<ChatRoom[]>([])
   const activeChat      = ref<ChatRoom | null>(null)
@@ -31,8 +43,16 @@ export const useChatStore = defineStore('chat', () => {
   const blockMessage    = ref('')
   const socketConnected = ref(false)
   const loadingMessages = ref(false)
+  const readIds         = ref<Set<number>>(loadReadIds())
 
   const creditsStore = useCreditsStore()
+
+  function isRead(chatId: number) { return readIds.value.has(chatId) }
+
+  function markRead(chatId: number) {
+    readIds.value.add(chatId)
+    saveReadIds(readIds.value)
+  }
 
   async function loadChats() {
     chats.value = await chatsApi.list()
@@ -47,6 +67,7 @@ export const useChatStore = defineStore('chat', () => {
   async function enterChat(chat: ChatRoom) {
     activeChat.value = chat
     isBlocked.value  = false
+    markRead(chat.id)
     loadingMessages.value = true
     try {
       messages.value = await chatsApi.messages(chat.id)
@@ -157,7 +178,8 @@ export const useChatStore = defineStore('chat', () => {
 
   return {
     chats, activeChat, messages, isBlocked, blockMessage,
-    socketConnected, loadingMessages,
+    socketConnected, loadingMessages, readIds,
+    isRead, markRead,
     loadChats, openChat, enterChat, sendMessage, sendProposal, sendBrief, addMessage, leaveChat,
   }
 })

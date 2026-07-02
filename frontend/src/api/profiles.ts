@@ -3,16 +3,18 @@ import { api } from './index'
 // ─── Empresa ─────────────────────────────────────────────────────────────────
 export const empresaApi = {
   getProfile: () => api.get('/empresas/profile').then(r => r.data),
-  updateProfile: (data: { nombre_comercial?: string; sitio_web?: string; umbral_creditos?: number }) =>
+  updateProfile: (data: Record<string, unknown>) =>
     api.patch('/empresas/profile', data).then(r => r.data),
 }
 
 // ─── Influencer ───────────────────────────────────────────────────────────────
 export const influencerApi = {
   getProfile:    () => api.get('/influencers/profile').then(r => r.data),
-  updateProfile: (data: { nombre_artistico?: string; bio?: string; ubicacion?: string; tarifa_base?: number; disponibilidad?: boolean }) =>
+  updateProfile: (data: Record<string, unknown>) =>
     api.patch('/influencers/profile', data).then(r => r.data),
   getPublic: (id: number) => api.get(`/influencers/${id}`).then(r => r.data),
+  getByUsername: (username: string) =>
+    api.get(`/influencers/by-username/${username.replace(/^@/, '')}`).then(r => r.data),
 
   // Buscador (§4.1)
   search: (params: { red_social?: string; ubicacion?: string; min_seguidores?: number; max_tarifa?: number; page?: number; limit?: number }) =>

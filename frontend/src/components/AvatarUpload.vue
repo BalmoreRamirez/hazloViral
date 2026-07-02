@@ -28,14 +28,16 @@ function hashColor(str: string): string {
   ]
   let hash = 0
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  return palette[Math.abs(hash) % palette.length]
+  return palette[Math.abs(hash) % palette.length] ?? '#7C3AED'
 }
 
 const initials = computed(() => {
   const parts = props.name.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  const first = parts[0] ?? ''
+  if (parts.length === 1) return first.slice(0, 2).toUpperCase()
+  const last = parts[parts.length - 1] ?? ''
+  return ((first[0] ?? '') + (last[0] ?? '')).toUpperCase()
 })
 
 const bgColor    = computed(() => hashColor(props.name || 'user'))

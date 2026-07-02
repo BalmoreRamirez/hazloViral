@@ -14,17 +14,37 @@ const registered   = ref(false)
 const devVerifyUrl = ref<string | null>(null)
 
 // Campos comunes
-const email_    = ref(''); const password = ref('')
-const pais      = ref(''); const direccion = ref('')
+const email_       = ref(''); const password    = ref('')
+const departamento = ref(''); const direccion   = ref('')
+const rubro        = ref('')
 // Empresa
 const nombre_comercial = ref(''); const sitio_web = ref('')
 const rep_tipo_id   = ref<'DUI' | 'PASAPORTE'>('DUI')
 const rep_numero_id = ref('')
 // Influencer
+const username         = ref('')
 const nombre_artistico = ref(''); const bio = ref('')
 const tarifa_base      = ref(0);  const fecha_nacimiento = ref('')
 const tipo_identificacion   = ref<'DUI' | 'PASAPORTE'>('DUI')
 const numero_identificacion = ref('')
+
+const RUBROS_LIST = [
+  { label: '✈️ Turismo',        value: 'turismo' },
+  { label: '🏨 Hoteles',        value: 'hoteles' },
+  { label: '🗺️ Viajes',         value: 'viajes' },
+  { label: '🍽️ Gastronomía',    value: 'gastronomia' },
+  { label: '👗 Moda',           value: 'moda' },
+  { label: '💻 Tecnología',     value: 'tecnologia' },
+  { label: '💪 Fitness',        value: 'fitness' },
+  { label: '💄 Belleza',        value: 'belleza' },
+  { label: '💼 Negocios',       value: 'negocios' },
+  { label: '🎭 Entretenimiento', value: 'entretenimiento' },
+  { label: '📚 Educación',      value: 'educacion' },
+  { label: '📷 Fotografía',     value: 'fotografia' },
+  { label: '🏥 Salud',          value: 'salud' },
+  { label: '🎵 Música',         value: 'musica' },
+  { label: '⚽ Deporte',        value: 'deporte' },
+]
 // Tutor (menores)
 const tutor_nombre       = ref(''); const tutor_documento_id = ref('')
 const tutor_email        = ref(''); const tutor_autorizacion = ref(false)
@@ -63,11 +83,11 @@ function onRepNumeroIdInput(e: Event) {
     ? applyDuiMask(e) : applyPasaporteMask(e)
 }
 
-const paises = [
-  'Argentina','Bolivia','Brasil','Chile','Colombia','Costa Rica','Cuba',
-  'Ecuador','El Salvador','España','Estados Unidos','Guatemala','Honduras',
-  'México','Nicaragua','Panamá','Paraguay','Perú','Puerto Rico',
-  'República Dominicana','Uruguay','Venezuela','Otro',
+const DEPARTAMENTOS_SV = [
+  'Ahuachapán', 'Cabañas', 'Chalatenango', 'Cuscatlán',
+  'La Libertad', 'La Paz', 'La Unión', 'Morazán',
+  'San Miguel', 'San Salvador', 'San Vicente',
+  'Santa Ana', 'Sonsonate', 'Usulután',
 ]
 
 const esMenor = computed(() => {
@@ -125,6 +145,10 @@ const rules = computed(() => {
 
   const inf = {
     ...base,
+    username: {
+      required: helpers.withMessage('El username es obligatorio', required),
+      formato:  helpers.withMessage('Solo letras, números y guiones bajos (3–30 caracteres)', helpers.regex(/^[a-zA-Z0-9_]{3,30}$/)),
+    },
     nombre_artistico:  { required: helpers.withMessage('El nombre artístico es obligatorio', required) },
     fecha_nacimiento:  { required: helpers.withMessage('La fecha de nacimiento es obligatoria', required) },
     numero_identificacion: {
@@ -150,7 +174,7 @@ const rules = computed(() => {
 const v$ = useVuelidate(rules, {
   email_, password,
   nombre_comercial, sitio_web, rep_numero_id,
-  nombre_artistico, fecha_nacimiento, numero_identificacion,
+  username, nombre_artistico, fecha_nacimiento, numero_identificacion,
   tutor_nombre, tutor_documento_id, tutor_email, tutor_autorizacion,
 })
 
@@ -170,18 +194,21 @@ async function submit() {
         email: email_.value, password: password.value,
         nombre_comercial: nombre_comercial.value,
         sitio_web:  sitio_web.value  || undefined,
-        pais:       pais.value       || undefined,
+        pais:       departamento.value ? `${departamento.value}, El Salvador` : 'El Salvador',
         direccion:  direccion.value  || undefined,
+        rubro:      rubro.value      || undefined,
         representante_tipo_identificacion:   rep_tipo_id.value,
         representante_numero_identificacion: rep_numero_id.value,
       })
     } else {
       res = await authStore.registerInfluencer({
         email: email_.value, password: password.value,
+        username: username.value,
         nombre_artistico: nombre_artistico.value,
         bio:        bio.value       || undefined,
-        ubicacion:  pais.value      || undefined,
+        ubicacion:  departamento.value ? `${departamento.value}, El Salvador` : 'El Salvador',
         direccion:  direccion.value || undefined,
+        rubro:      rubro.value     || undefined,
         tarifa_base: tarifa_base.value || undefined,
         fecha_nacimiento: fecha_nacimiento.value,
         tipo_identificacion:   tipo_identificacion.value,
@@ -298,16 +325,31 @@ async function submit() {
                 {{ v$.sitio_web.$errors[0]?.$message }}
               </p>
             </div>
+            <div>
+              <label class="label">Rubro / industria (opcional)</label>
+              <select v-model="rubro" class="input">
+                <option value="">— Selecciona tu rubro —</option>
+                <option v-for="r in RUBROS_LIST" :key="r.value" :value="r.value">{{ r.label }}</option>
+              </select>
+            </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="label">País</label>
-                <Select v-model="pais" :options="paises" filter
-                  placeholder="Selecciona un país" class="w-full" />
+                <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-navy/60">
+                  🇸🇻 <span class="font-medium text-navy/80">El Salvador</span>
+                </div>
               </div>
               <div>
-                <label class="label">Dirección (opcional)</label>
-                <input v-model="direccion" class="input" placeholder="Calle, ciudad…" />
+                <label class="label">Departamento</label>
+                <select v-model="departamento" class="input">
+                  <option value="">— Selecciona —</option>
+                  <option v-for="d in DEPARTAMENTOS_SV" :key="d">{{ d }}</option>
+                </select>
               </div>
+            </div>
+            <div>
+              <label class="label">Dirección (opcional)</label>
+              <input v-model="direccion" class="input" placeholder="Colonia, calle, municipio…" />
             </div>
             <!-- Documento de identidad (representante legal) -->
             <div>
@@ -343,6 +385,19 @@ async function submit() {
           <!-- ── Influencer ─────────────────────────────────────────────────── -->
           <template v-else>
             <div>
+              <label class="label">Username <span class="text-navy/40 font-normal text-xs">— así te encontrarán las empresas</span></label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-navy/40 font-medium select-none">@</span>
+                <input
+                  v-model="username" required placeholder="mario_blue"
+                  :class="['input pl-7 w-full', { '!border-coral': v$.username?.$error }]"
+                  @blur="v$.username?.$touch()" />
+              </div>
+              <p v-if="v$.username?.$error" class="text-coral text-xs mt-1">
+                {{ v$.username.$errors[0]?.$message }}
+              </p>
+            </div>
+            <div>
               <label class="label">Nombre artístico</label>
               <input
                 v-model="nombre_artistico" required
@@ -352,20 +407,37 @@ async function submit() {
                 {{ v$.nombre_artistico.$errors[0]?.$message }}
               </p>
             </div>
+            <div>
+              <label class="label">Rubro / nicho (opcional)</label>
+              <select v-model="rubro" class="input">
+                <option value="">— Selecciona tu rubro —</option>
+                <option v-for="r in RUBROS_LIST" :key="r.value" :value="r.value">{{ r.label }}</option>
+              </select>
+            </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="label">País</label>
-                <Select v-model="pais" :options="paises" filter
-                  placeholder="Selecciona un país" class="w-full" />
+                <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-navy/60">
+                  🇸🇻 <span class="font-medium text-navy/80">El Salvador</span>
+                </div>
               </div>
+              <div>
+                <label class="label">Departamento</label>
+                <select v-model="departamento" class="input">
+                  <option value="">— Selecciona —</option>
+                  <option v-for="d in DEPARTAMENTOS_SV" :key="d">{{ d }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="label">Tarifa base (USD)</label>
                 <input v-model.number="tarifa_base" type="number" min="0" class="input" />
               </div>
-            </div>
-            <div>
-              <label class="label">Dirección (opcional)</label>
-              <input v-model="direccion" class="input" placeholder="Calle, ciudad…" />
+              <div>
+                <label class="label">Dirección (opcional)</label>
+                <input v-model="direccion" class="input" placeholder="Colonia, calle…" />
+              </div>
             </div>
             <div>
               <label class="label">Fecha de nacimiento</label>

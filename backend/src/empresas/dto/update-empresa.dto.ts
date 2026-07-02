@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsOptional, IsString, IsUrl, MaxLength, Min } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, IsUrl, MaxLength, Min, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
 
 const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
@@ -9,7 +9,7 @@ export class UpdateEmpresaDto {
   @MaxLength(255)
   nombre_comercial?: string;
 
-  @IsOptional()
+  @ValidateIf(o => o.sitio_web != null && o.sitio_web !== '')
   @IsUrl()
   sitio_web?: string;
 
@@ -32,4 +32,9 @@ export class UpdateEmpresaDto {
   @IsString()
   @MaxLength(50)
   representante_numero_identificacion?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  rubro?: string;
 }

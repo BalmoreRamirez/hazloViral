@@ -26,6 +26,7 @@ export class EmpresasService {
     if (dto.representante_nombre !== undefined) profile.representante_nombre = dto.representante_nombre;
     if (dto.representante_tipo_identificacion !== undefined) profile.representante_tipo_identificacion = dto.representante_tipo_identificacion;
     if (dto.representante_numero_identificacion !== undefined) profile.representante_numero_identificacion = dto.representante_numero_identificacion;
+    if (dto.rubro !== undefined) profile.rubro = dto.rubro;
     return this.repo.save(profile);
   }
 }

@@ -44,6 +44,9 @@ export class EmpresaProfile {
   @Column({ nullable: true, length: 50 })
   representante_numero_identificacion: string;
 
+  @Column({ nullable: true, length: 50 })
+  rubro: string;  // turismo, gastronomia, moda, tecnologia, etc.
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 10.0 })
   balance_creditos: number;
 

@@ -59,7 +59,18 @@ export class InfluencersService {
     if (dto.banco_nombre !== undefined) profile.banco_nombre = dto.banco_nombre;
     if (dto.banco_cuenta_numero !== undefined) profile.banco_cuenta_numero = dto.banco_cuenta_numero;
     if (dto.banco_cuenta_tipo !== undefined) profile.banco_cuenta_tipo = dto.banco_cuenta_tipo;
+    if (dto.username !== undefined) profile.username = dto.username;
+    if (dto.rubro !== undefined) profile.rubro = dto.rubro;
     return this.profilesRepo.save(profile);
+  }
+
+  async findByUsername(username: string): Promise<InfluencerProfile> {
+    const profile = await this.profilesRepo.findOne({
+      where: { username },
+      relations: { metrics: true },
+    });
+    if (!profile) throw new NotFoundException(`No se encontró un influencer con el username @${username}.`);
+    return profile;
   }
 
   // ─── Buscador público ─────────────────────────────────────────────────────────

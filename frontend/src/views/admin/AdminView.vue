@@ -145,7 +145,7 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
                 placeholder="Ej: Se determinó que el influencer incumplió el acuerdo. Se procede con devolución parcial al anunciante…" />
               <div class="flex gap-2">
                 <button @click="submitResolve(inc.id)"
-                  :disabled="resolvingId === inc.id || !resolucionText[inc.id]?.trim() || resolucionText[inc.id].length < 10"
+                  :disabled="resolvingId === inc.id || !resolucionText[inc.id]?.trim() || (resolucionText[inc.id]?.length ?? 0) < 10"
                   class="btn-primary text-xs">
                   {{ resolvingId === inc.id ? 'Guardando…' : 'Confirmar resolución' }}
                 </button>

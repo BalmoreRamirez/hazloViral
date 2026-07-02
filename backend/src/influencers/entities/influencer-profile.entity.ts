@@ -23,6 +23,9 @@ export class InfluencerProfile {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
+  @Column({ type: 'varchar', length: 30, unique: true, nullable: true })
+  username: string | null;
+
   @Column({ length: 255 })
   nombre_artistico: string;
 
@@ -50,6 +53,9 @@ export class InfluencerProfile {
 
   @Column({ nullable: true, length: 20 })
   banco_cuenta_tipo: string; // 'CORRIENTE' | 'AHORROS'
+
+  @Column({ nullable: true, length: 50 })
+  rubro: string;  // turismo, gastronomia, moda, tecnologia, fitness, etc.
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
   tarifa_base: number;

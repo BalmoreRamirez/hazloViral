@@ -4,26 +4,29 @@ import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
+import { influencerApi } from '@/api/profiles'
 
 const router    = useRouter()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 
-const newInfluencerId = ref('')
-const openError       = ref('')
-const opening         = ref(false)
+const usernameInput = ref('')
+const openError     = ref('')
+const opening       = ref(false)
 
 onMounted(() => chatStore.loadChats())
 
 async function openChat() {
-  if (!newInfluencerId.value) return
+  const raw = usernameInput.value.trim()
+  if (!raw) return
   openError.value = ''
   opening.value   = true
   try {
-    const chat = await chatStore.openChat(Number(newInfluencerId.value))
+    const profile = await influencerApi.getByUsername(raw)
+    const chat    = await chatStore.openChat(profile.id)
     router.push(`/chats/${chat.id}`)
   } catch (e: any) {
-    openError.value = e.response?.data?.message ?? 'Error al abrir chat.'
+    openError.value = e.response?.data?.message ?? 'No se encontró ese influencer.'
   } finally {
     opening.value = false
   }
@@ -41,10 +44,13 @@ async function openChat() {
       <div v-if="authStore.isEmpresa" class="card">
         <p class="text-sm font-semibold text-navy/70 mb-3">Iniciar chat con influencer</p>
         <div class="flex gap-2">
-          <input v-model="newInfluencerId" type="number" placeholder="ID del influencer"
-            class="input flex-1" min="1" />
-          <button @click="openChat" :disabled="opening" class="btn-primary whitespace-nowrap">
-            {{ opening ? 'Abriendo…' : 'Abrir chat' }}
+          <div class="relative flex-1">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-navy/40 font-medium select-none">@</span>
+            <input v-model="usernameInput" type="text" placeholder="username_del_influencer"
+              class="input pl-7 w-full" @keyup.enter="openChat" />
+          </div>
+          <button @click="openChat" :disabled="opening || !usernameInput.trim()" class="btn-primary whitespace-nowrap">
+            {{ opening ? 'Buscando…' : 'Iniciar chat' }}
           </button>
         </div>
         <p v-if="openError" class="text-coral text-xs mt-2">{{ openError }}</p>
@@ -61,17 +67,22 @@ async function openChat() {
             @click="router.push(`/chats/${chat.id}`)"
             class="py-4 flex items-center justify-between cursor-pointer hover:bg-slate rounded-lg -mx-5 px-5 transition-colors">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center text-violet font-bold">
-                {{ (authStore.isEmpresa ? chat.influencer?.nombre_artistico : chat.empresa?.nombre_comercial)?.[0]?.toUpperCase() ?? '?' }}
+              <!-- Avatar con punto de no leído -->
+              <div class="relative shrink-0">
+                <div class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center text-violet font-bold">
+                  {{ (authStore.isEmpresa ? chat.influencer?.nombre_artistico : chat.empresa?.nombre_comercial)?.[0]?.toUpperCase() ?? '?' }}
+                </div>
+                <span v-if="!chatStore.isRead(chat.id)"
+                  class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-violet border-2 border-white" />
               </div>
               <div>
-                <p class="font-semibold text-sm text-navy">
+                <p :class="['text-sm', chatStore.isRead(chat.id) ? 'font-medium text-navy' : 'font-bold text-navy']">
                   <span v-if="authStore.isEmpresa && chat.influencer">{{ chat.influencer.nombre_artistico }}</span>
                   <span v-else-if="chat.empresa">{{ chat.empresa.nombre_comercial }}</span>
                   <span v-else>Sin nombre</span>
                 </p>
-                <p class="text-xs text-navy/40">
-                  {{ new Date(chat.created_at).toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' }) }}
+                <p :class="['text-xs', chatStore.isRead(chat.id) ? 'text-navy/40' : 'text-violet/70 font-medium']">
+                  {{ chatStore.isRead(chat.id) ? new Date(chat.created_at).toLocaleDateString('es-SV', { day:'2-digit', month:'short', year:'numeric' }) : 'Nuevo mensaje' }}
                 </p>
               </div>
             </div>

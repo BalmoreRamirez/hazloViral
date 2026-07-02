@@ -29,6 +29,10 @@ export class RegisterInfluencerDto {
   password: string;
 
   @IsString()
+  @Matches(/^[a-zA-Z0-9_]{3,30}$/, { message: 'El username solo puede contener letras, números y guiones bajos (3–30 caracteres).' })
+  username: string;
+
+  @IsString()
   @IsNotEmpty()
   nombre_artistico: string;
 
@@ -43,6 +47,11 @@ export class RegisterInfluencerDto {
   @IsOptional()
   @IsString()
   direccion?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  rubro?: string;
 
   @IsOptional()
   @Type(() => Number)

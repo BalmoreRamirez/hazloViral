@@ -1,9 +1,13 @@
-import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
 
 export class UpdateInfluencerDto {
+  @IsOptional()
+  @Matches(/^[a-zA-Z0-9_]{3,30}$/, { message: 'El username solo puede contener letras, números y guiones bajos (3–30 caracteres).' })
+  username?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(255)
@@ -50,4 +54,9 @@ export class UpdateInfluencerDto {
   @IsOptional()
   @IsIn(['CORRIENTE', 'AHORROS'])
   banco_cuenta_tipo?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  rubro?: string;
 }

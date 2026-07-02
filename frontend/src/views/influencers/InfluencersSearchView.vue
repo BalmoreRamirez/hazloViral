@@ -2,7 +2,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import StarRating from '@/components/StarRating.vue'
 import { influencerApi } from '@/api/profiles'
+import { ratingsApi, type RatingSummary } from '@/api/ratings'
 
 const router = useRouter()
 
@@ -10,6 +12,7 @@ const results    = ref<any[]>([])
 const total      = ref(0)
 const loading    = ref(false)
 const page       = ref(1)
+const summaries  = ref<Record<number, RatingSummary>>({})
 
 const filters = ref({
   red_social:      '',
@@ -41,6 +44,14 @@ async function search() {
     const data = await influencerApi.search(params)
     results.value = data.data
     total.value   = data.total
+    // Load rating summaries for all results (non-blocking)
+    const pairs = await Promise.allSettled(
+      data.data.map((inf: any) => ratingsApi.getSummary(inf.id).then(s => ({ id: inf.id as number, s })))
+    )
+    summaries.value = {}
+    for (const p of pairs) {
+      if (p.status === 'fulfilled') summaries.value[p.value.id] = p.value.s
+    }
   } finally { loading.value = false }
 }
 
@@ -135,12 +146,18 @@ const REDES_ICON: Record<string, string> = {
           <!-- Bio -->
           <p v-if="inf.bio" class="text-xs text-navy/60 mb-3 line-clamp-2">{{ inf.bio }}</p>
 
-          <!-- Tarifa -->
+          <!-- Tarifa + rating -->
           <div class="flex items-center justify-between mb-3">
             <span class="badge-info">💰 ${{ Number(inf.tarifa_base).toFixed(0) }} USD</span>
-            <span :class="inf.disponibilidad ? 'badge-active' : 'badge-muted'" class="text-xs">
-              {{ inf.disponibilidad ? '✅ Disponible' : '🔒 No disponible' }}
-            </span>
+            <div class="flex items-center gap-1.5">
+              <template v-if="summaries[inf.id]?.total">
+                <StarRating :model-value="Math.round(summaries[inf.id]!.promedio ?? 0)" readonly size="sm" />
+                <span class="text-xs text-navy/50">({{ summaries[inf.id]!.total }})</span>
+              </template>
+              <span v-else :class="inf.disponibilidad ? 'badge-active' : 'badge-muted'" class="text-xs">
+                {{ inf.disponibilidad ? '✅' : '🔒' }}
+              </span>
+            </div>
           </div>
 
           <!-- Métricas -->

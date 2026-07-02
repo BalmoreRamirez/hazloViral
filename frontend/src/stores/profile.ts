@@ -9,10 +9,11 @@ export interface EmpresaProfile {
   representante_nombre: string | null
   representante_tipo_identificacion: string | null
   representante_numero_identificacion: string | null
+  rubro: string | null
 }
 
 export interface InfluencerProfile {
-  id: number; user_id: number; nombre_artistico: string
+  id: number; user_id: number; username: string | null; nombre_artistico: string
   bio: string; ubicacion: string; tarifa_base: number
   disponibilidad: boolean; fecha_nacimiento: string
   tipo_identificacion: string | null
@@ -21,6 +22,7 @@ export interface InfluencerProfile {
   banco_cuenta_numero: string | null
   banco_cuenta_tipo: string | null
   tutor_nombre: string; tutor_email: string; tutor_autorizacion: boolean
+  rubro: string | null
   metrics: Metric[]
 }
 
