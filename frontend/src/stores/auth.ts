@@ -5,6 +5,7 @@ import { disconnectSocket } from '@/socket'
 
 export interface AppUser {
   id: number; email: string; role: 'empresa' | 'influencer' | 'admin'
+  avatar_url: string | null
   stripe_customer_id: string | null; stripe_connect_id: string | null
   is_active: boolean; is_email_verified: boolean; created_at: string
 }

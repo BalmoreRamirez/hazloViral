@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
 import { authApi } from '@/api/auth'
 import { computed, onMounted, ref } from 'vue'
+import AvatarUpload from '@/components/AvatarUpload.vue'
 
 const router       = useRouter()
 const authStore    = useAuthStore()
@@ -83,10 +84,11 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
           </RouterLink>
         </template>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           <span class="text-sm text-slate/60 hidden sm:block">{{ user?.email }}</span>
           <span class="badge-info">{{ user?.role }}</span>
-          <button @click="logout" class="text-slate/50 hover:text-coral text-sm ml-2 transition-colors">
+          <AvatarUpload :name="user?.email ?? ''" size="sm" />
+          <button @click="logout" class="text-slate/50 hover:text-coral text-sm transition-colors">
             Salir
           </button>
         </div>

@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
+import AvatarUpload from '@/components/AvatarUpload.vue'
 import { useProfileStore } from '@/stores/profile'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 // Button, InputText, Textarea, Tag, InputNumber, Divider, Toast, ConfirmDialog
 // están registrados globalmente en main.ts — no requieren import local
 
-const store   = useProfileStore()
-const toast   = useToast()
+const store     = useProfileStore()
+const authStore = useAuthStore()
+const toast     = useToast()
 const confirm = useConfirm()
 
 const editing       = ref(false)
@@ -116,7 +119,18 @@ function confirmDelete(id: number, titulo: string) {
       <!-- ── Datos de la empresa ───────────────────────────────────────────── -->
       <div class="card">
         <div class="flex items-center justify-between mb-5">
-          <h2 class="font-display font-semibold text-navy text-lg">🏢 Datos de la empresa</h2>
+          <div class="flex items-center gap-4">
+            <AvatarUpload
+              :name="store.empresaProfile?.nombre_comercial ?? authStore.user?.email ?? ''"
+              size="lg"
+              editable
+              @updated="toast.add({ severity: 'success', summary: 'Foto actualizada', life: 3000 })"
+            />
+            <div>
+              <h2 class="font-display font-semibold text-navy text-lg">🏢 Datos de la empresa</h2>
+              <p class="text-xs text-navy/40">Haz clic en la foto para cambiarla</p>
+            </div>
+          </div>
           <Button v-if="!editing" @click="editing = true"
             label="Editar" icon="pi pi-pencil" severity="secondary" size="small" outlined />
         </div>

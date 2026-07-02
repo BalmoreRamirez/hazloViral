@@ -23,6 +23,9 @@ export class User {
   @Column({ type: 'enum', enum: UserRole })
   role: UserRole;
 
+  @Column({ nullable: true, length: 500 })
+  avatar_url: string;
+
   @Column({ nullable: true, length: 255 })
   stripe_customer_id: string;
 

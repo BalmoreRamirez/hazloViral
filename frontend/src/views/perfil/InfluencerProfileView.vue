@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
+import AvatarUpload from '@/components/AvatarUpload.vue'
 import { useProfileStore } from '@/stores/profile'
 const store = useProfileStore()
 const editing   = ref(false)
@@ -111,9 +112,11 @@ const REDES_ICON: Record<string, string> = {
 
         <template v-else-if="!editing && esData">
           <div class="flex items-start gap-4">
-            <div class="w-14 h-14 rounded-full bg-violet/20 flex items-center justify-center text-2xl font-bold text-violet shrink-0">
-              {{ esData.nombre_artistico?.[0]?.toUpperCase() }}
-            </div>
+            <AvatarUpload
+              :name="esData.nombre_artistico ?? ''"
+              size="lg"
+              editable
+            />
             <div class="flex-1 min-w-0">
               <p class="font-display font-bold text-lg text-navy">{{ esData.nombre_artistico }}</p>
               <p class="text-navy/50 text-sm">{{ esData.ubicacion || 'Sin ubicación' }}</p>
