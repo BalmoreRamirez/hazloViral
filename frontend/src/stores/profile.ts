@@ -24,6 +24,8 @@ export interface InfluencerProfile {
   tutor_nombre: string; tutor_email: string; tutor_autorizacion: boolean
   rubro: string | null
   metrics: Metric[]
+  is_verified?: boolean
+  user?: { avatar_url: string | null; is_email_verified: boolean }
 }
 
 export interface Metric {

@@ -41,7 +41,7 @@ export class InfluencersService {
   async getMyProfile(user: User): Promise<InfluencerProfile> {
     const profile = await this.profilesRepo.findOne({
       where: { user_id: user.id },
-      relations: { metrics: true },
+      relations: { metrics: true, user: true },
     });
     if (!profile) throw new NotFoundException('Perfil de influencer no encontrado.');
     return profile;
@@ -67,7 +67,7 @@ export class InfluencersService {
   async findByUsername(username: string): Promise<InfluencerProfile> {
     const profile = await this.profilesRepo.findOne({
       where: { username },
-      relations: { metrics: true },
+      relations: { metrics: true, user: true },
     });
     if (!profile) throw new NotFoundException(`No se encontró un influencer con el username @${username}.`);
     return profile;
@@ -83,12 +83,23 @@ export class InfluencersService {
 
     const qb = this.profilesRepo
       .createQueryBuilder('p')
+      .innerJoinAndSelect('p.user', 'u')
       .leftJoinAndSelect('p.metrics', 'm');
 
+    // Solo influencers con perfil verificado completo
+    qb.where('u.is_email_verified = true')
+      .andWhere('u.avatar_url IS NOT NULL')
+      .andWhere('p.tipo_identificacion IS NOT NULL')
+      .andWhere('p.numero_identificacion IS NOT NULL')
+      .andWhere(
+        'EXISTS (SELECT 1 FROM influencer_metrics vm WHERE vm.influencer_id = p.id AND vm.is_verified = true)',
+      )
+      .andWhere(
+        `DATE_PART('year', AGE(CAST(p.fecha_nacimiento AS DATE))) >= 16`,
+      );
+
     if (soloDisponibles) {
-      qb.where('p.disponibilidad = true');
-    } else {
-      qb.where('1=1');
+      qb.andWhere('p.disponibilidad = true');
     }
 
     if (query.ubicacion) {
@@ -113,7 +124,7 @@ export class InfluencersService {
   async getPublicProfile(id: number): Promise<InfluencerProfile> {
     const profile = await this.profilesRepo.findOne({
       where: { id },
-      relations: { metrics: true },
+      relations: { metrics: true, user: true },
     });
     if (!profile) throw new NotFoundException('Influencer no encontrado.');
     return profile;

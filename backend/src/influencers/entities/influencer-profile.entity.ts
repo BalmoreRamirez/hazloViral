@@ -11,6 +11,15 @@ import { InfluencerMetric } from './influencer-metric.entity';
 import { Chat } from '../../chats/entities/chat.entity';
 import { ContratoEscrow } from '../../contratos/entities/contrato-escrow.entity';
 
+function calcAge(dob: string): number {
+  const birth = new Date(dob);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 @Entity('influencers_profiles')
 export class InfluencerProfile {
   @PrimaryGeneratedColumn()
@@ -95,4 +104,15 @@ export class InfluencerProfile {
 
   @OneToMany(() => ContratoEscrow, (contrato) => contrato.influencer)
   contratos: ContratoEscrow[];
+
+  // Computed — requiere que las relaciones user y metrics estén cargadas
+  get is_verified(): boolean {
+    if (!this.user || !this.metrics) return false;
+    const hasId = !!(this.tipo_identificacion && this.numero_identificacion);
+    const hasVerifiedMetric = this.metrics.some((m) => m.is_verified);
+    const hasAvatar = !!(this.user.avatar_url);
+    const hasVerifiedEmail = this.user.is_email_verified;
+    const isOldEnough = !!this.fecha_nacimiento && calcAge(this.fecha_nacimiento) >= 16;
+    return hasId && hasVerifiedMetric && hasAvatar && hasVerifiedEmail && isOldEnough;
+  }
 }

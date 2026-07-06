@@ -222,12 +222,12 @@ async function reportNonCompliance() {
 
 // ── Timeline ───────────────────────────────────────────────────────────────
 const STATUS_STEPS = [
-  { key: 'pending_payment',     label: 'Pago pendiente',        icon: '⏳' },
-  { key: 'funded_in_escrow',    label: 'En custodia',           icon: '🔒' },
-  { key: 'under_review',        label: 'Revisión entregables',  icon: '🔍' },
-  { key: 'pending_publication', label: 'Publicación',           icon: '📢' },
-  { key: 'publication_review',  label: 'Revisión publicación',  icon: '👁' },
-  { key: 'completed',           label: 'Finalizado',            icon: '✅' },
+  { key: 'pending_payment',     label: 'Pago pendiente',        icon: '⏳', tooltip: 'La empresa debe realizar el pago al escrow para activar el contrato y que el influencer pueda comenzar.' },
+  { key: 'funded_in_escrow',    label: 'En custodia',           icon: '🔒', tooltip: 'El pago está retenido de forma segura. El influencer puede comenzar a producir el contenido acordado.' },
+  { key: 'under_review',        label: 'Revisión entregables',  icon: '🔍', tooltip: 'El influencer envió los entregables. La empresa puede aprobarlos o solicitar cambios (máx. 3 rondas).' },
+  { key: 'pending_publication', label: 'Publicación',           icon: '📢', tooltip: 'Los entregables fueron aprobados. El influencer debe publicar el contenido en las plataformas acordadas.' },
+  { key: 'publication_review',  label: 'Revisión publicación',  icon: '👁', tooltip: 'La empresa verifica que el contenido fue publicado correctamente según lo acordado.' },
+  { key: 'completed',           label: 'Finalizado',            icon: '✅', tooltip: 'Contrato completado exitosamente. El pago en escrow es liberado al influencer.' },
 ]
 
 const ORDER = [
@@ -344,11 +344,20 @@ const TIPO_ICON: Record<string, string> = {
             <div v-else class="flex items-center">
               <template v-for="(step, i) in STATUS_STEPS" :key="step.key">
                 <div class="flex flex-col items-center flex-1 min-w-0">
-                  <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-base border-2 transition-all', {
-                    'bg-violet border-violet text-white shadow-md': stepState(step.key, contrato.status) === 'active',
-                    'bg-green-500 border-green-500 text-white':     stepState(step.key, contrato.status) === 'past',
-                    'bg-white border-navy/20 text-navy/30':         stepState(step.key, contrato.status) === 'future',
-                  }]">{{ step.icon }}</div>
+                  <!-- Icono con tooltip -->
+                  <div class="relative group">
+                    <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-base border-2 transition-all cursor-default', {
+                      'bg-violet border-violet text-white shadow-md': stepState(step.key, contrato.status) === 'active',
+                      'bg-green-500 border-green-500 text-white':     stepState(step.key, contrato.status) === 'past',
+                      'bg-white border-navy/20 text-navy/30':         stepState(step.key, contrato.status) === 'future',
+                    }]">{{ step.icon }}</div>
+                    <!-- Tooltip flotante -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-52 bg-navy text-white text-xs rounded-xl px-3 py-2.5 text-center leading-relaxed
+                                opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-20 shadow-lg">
+                      {{ step.tooltip }}
+                      <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-navy" />
+                    </div>
+                  </div>
                   <p class="text-xs mt-1 text-center font-medium leading-tight px-1" :class="{
                     'text-violet':     stepState(step.key, contrato.status) === 'active',
                     'text-green-600':  stepState(step.key, contrato.status) === 'past',
@@ -374,12 +383,14 @@ const TIPO_ICON: Record<string, string> = {
                   <span class="text-navy/50">Monto total</span>
                   <strong>${{ contrato.monto_total }} USD</strong>
                 </div>
-                <div class="flex justify-between">
-                  <span class="text-navy/50">Comisión plataforma</span>
-                  <span>${{ contrato.comision_plataforma }} USD</span>
-                </div>
+                <template v-if="isEmpresa">
+                  <div class="flex justify-between">
+                    <span class="text-navy/50">Comisión plataforma</span>
+                    <span>${{ contrato.comision_plataforma }} USD</span>
+                  </div>
+                </template>
                 <div class="flex justify-between border-t border-navy/10 pt-1 mt-1">
-                  <span class="text-navy/50">Neto al influencer</span>
+                  <span class="text-navy/50">{{ isEmpresa ? 'Neto al influencer' : 'Recibirás' }}</span>
                   <strong class="text-green-600">
                     ${{ (Number(contrato.monto_total) - Number(contrato.comision_plataforma)).toFixed(2) }} USD
                   </strong>

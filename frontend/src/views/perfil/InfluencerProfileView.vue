@@ -4,6 +4,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import AvatarUpload from '@/components/AvatarUpload.vue'
 import CoverBanner from '@/components/CoverBanner.vue'
 import StarRating from '@/components/StarRating.vue'
+import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { useProfileStore } from '@/stores/profile'
 import { ratingsApi, type RatingSummary } from '@/api/ratings'
 
@@ -50,6 +51,27 @@ const bankForm   = ref({ banco_nombre: '', banco_cuenta_numero: '', banco_cuenta
 const esData         = computed(() => store.influencerProfile)
 const totalFollowers = computed(() => store.metrics.reduce((sum, m) => sum + m.seguidores, 0))
 const ownSummary     = ref<RatingSummary | null>(null)
+
+function calcAge(dob: string) {
+  const birth = new Date(dob)
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const m = now.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+  return age
+}
+
+const verificationChecklist = computed(() => {
+  const p = esData.value
+  if (!p) return null
+  return [
+    { label: 'Documento de identidad (DUI o Pasaporte)', ok: !!(p.tipo_identificacion && p.numero_identificacion) },
+    { label: 'Mínimo una red social verificada', ok: p.metrics?.some(m => m.is_verified) ?? false },
+    { label: 'Foto de perfil', ok: !!(p as any).user?.avatar_url },
+    { label: 'Correo electrónico verificado', ok: !!(p as any).user?.is_email_verified },
+    { label: 'Edad mínima de 16 años', ok: !!p.fecha_nacimiento && calcAge(p.fecha_nacimiento) >= 16 },
+  ]
+})
 
 onMounted(async () => {
   await store.loadInfluencerProfile()
@@ -153,9 +175,12 @@ function formatFollowers(n: number) {
         <!-- Name row -->
         <div class="flex items-start justify-between gap-3 mb-3">
           <div class="min-w-0">
-            <h2 class="text-xl font-display font-bold text-navy leading-tight truncate">
-              {{ esData.nombre_artistico }}
-            </h2>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl font-display font-bold text-navy leading-tight truncate">
+                {{ esData.nombre_artistico }}
+              </h2>
+              <VerifiedBadge v-if="esData.is_verified" size="md" />
+            </div>
             <p v-if="esData.username" class="text-violet font-medium text-sm mt-0.5">@{{ esData.username }}</p>
             <p v-if="esData.ubicacion" class="text-navy/50 text-sm mt-0.5 flex items-center gap-1">
               <span class="text-xs">📍</span> {{ esData.ubicacion }}
@@ -190,6 +215,25 @@ function formatFollowers(n: number) {
             <span class="font-bold text-navy text-sm">{{ ownSummary.promedio }}</span>
             <span class="text-navy/50 text-xs">({{ ownSummary.total }} reseña{{ ownSummary.total !== 1 ? 's' : '' }})</span>
           </template>
+        </div>
+
+        <!-- Verificación de perfil -->
+        <div v-if="verificationChecklist"
+          :class="esData.is_verified ? 'bg-violet/5 border-violet/20' : 'bg-amber-50 border-amber-200'"
+          class="rounded-xl border p-3 mb-4">
+          <div class="flex items-center gap-2 mb-2">
+            <VerifiedBadge v-if="esData.is_verified" size="sm" />
+            <span v-else class="text-amber-500 text-sm leading-none">⚠️</span>
+            <p class="text-xs font-semibold" :class="esData.is_verified ? 'text-violet' : 'text-amber-700'">
+              {{ esData.is_verified ? 'Perfil verificado — apareces en búsquedas' : 'Perfil incompleto — no apareces en búsquedas ni puedes ser contratado' }}
+            </p>
+          </div>
+          <ul class="space-y-1">
+            <li v-for="req in verificationChecklist" :key="req.label" class="flex items-center gap-2 text-xs">
+              <span :class="req.ok ? 'text-emerald-500' : 'text-coral'">{{ req.ok ? '✓' : '✗' }}</span>
+              <span :class="req.ok ? 'text-navy/60' : 'text-navy/80 font-medium'">{{ req.label }}</span>
+            </li>
+          </ul>
         </div>
 
         <!-- Identification + tutor -->

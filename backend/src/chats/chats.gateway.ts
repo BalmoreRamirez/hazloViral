@@ -94,6 +94,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const room = `chat-${data.chat_id}`;
       await socket.join(room);
       socket.emit('joined_chat', { chat_id: data.chat_id, room });
+
+      // Marcar mensajes del otro participante como leídos y notificar a la sala
+      const { ids, read_at } = await this.chatsService.markMessagesRead(
+        data.chat_id,
+        socket.data.userId,
+      );
+      if (ids.length > 0) {
+        this.server.to(room).emit('messages_read', { chat_id: data.chat_id, ids, read_at });
+      }
     } catch (err: any) {
       socket.emit('error', { message: err?.message ?? 'Error al unirse al chat.' });
     }
@@ -121,6 +130,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const user = { id: socket.data.userId, role: socket.data.role } as any;
       const message = await this.chatsService.saveMessage(user, dto);
+      if (!message) return;
 
       // Emitir a todos en la sala, incluido el remitente
       this.server.to(`chat-${dto.chat_id}`).emit('new_message', message);

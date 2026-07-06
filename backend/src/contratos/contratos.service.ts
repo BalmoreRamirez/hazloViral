@@ -9,13 +9,14 @@ import { DataSource, Repository } from 'typeorm';
 import { ContratoEscrow } from './entities/contrato-escrow.entity';
 import { ContratoRevisionRound } from './entities/contrato-revision-round.entity';
 import { ContratoAuditLog } from './entities/contrato-audit-log.entity';
+import { Chat } from '../chats/entities/chat.entity';
 import { Message } from '../chats/entities/message.entity';
 import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
 import { ChatGateway } from '../chats/chats.gateway';
 import { AdminService } from '../admin/admin.service';
 import { WompiService } from '../wompi/wompi.service';
-import { ContratoStatus, ProposalStatus, UserRole } from '../common/enums';
+import { ChatStatus, ContratoStatus, ProposalStatus, UserRole } from '../common/enums';
 import { User } from '../users/entities/user.entity';
 import { AcceptProposalDto } from './dto/accept-proposal.dto';
 import { RejectProposalDto } from './dto/reject-proposal.dto';
@@ -37,6 +38,8 @@ export class ContratosService {
     private readonly revisionRoundsRepo: Repository<ContratoRevisionRound>,
     @InjectRepository(ContratoAuditLog)
     private readonly auditLogRepo: Repository<ContratoAuditLog>,
+    @InjectRepository(Chat)
+    private readonly chatsRepo: Repository<Chat>,
     @InjectRepository(Message)
     private readonly messagesRepo: Repository<Message>,
     @InjectRepository(EmpresaProfile)
@@ -425,6 +428,9 @@ export class ContratosService {
     contrato.status = ContratoStatus.COMPLETED;
     if (wompiTransferId) contrato.stripe_transfer_id = wompiTransferId;
     const saved = await this.contratosRepo.save(contrato);
+
+    // Marcar el chat como completado para bloquear nuevos mensajes
+    await this.chatsRepo.update({ id: contrato.chat_id }, { status: ChatStatus.COMPLETED });
 
     await this.writeAudit(null, {
       contrato_id: saved.id,

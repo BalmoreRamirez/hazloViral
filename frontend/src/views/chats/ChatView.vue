@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
@@ -45,12 +46,17 @@ const resolveLoading = ref<number | null>(null)
 
 // Brief picker
 const showBriefPicker = ref(false)
+const sendingBrief    = ref(false)
 
 const isEmpresa   = computed(() => authStore.isEmpresa)
 const isBlocked   = computed(() => chatStore.isBlocked)
+const isCompleted = computed(() => chatStore.isCompleted)
 const blockMsg    = computed(() => chatStore.blockMessage)
 const messages    = computed(() => chatStore.messages)
 const myId        = computed(() => authStore.user?.id)
+
+// Flujo ordenado: brief → propuesta
+const hasBrief = computed(() => messages.value.some(m => m.campaignBrief != null))
 
 const counterpart = computed(() => {
   const chat = chatStore.activeChat
@@ -61,6 +67,7 @@ const counterpart = computed(() => {
       name: inf.nombre_artistico ?? 'Influencer',
       sub:  inf.ubicacion ?? '',
       initials: (inf.nombre_artistico?.[0] ?? 'I').toUpperCase(),
+      is_verified: inf.is_verified ?? false,
     } : null
   } else {
     const emp = chat.empresa
@@ -194,8 +201,11 @@ async function resolveCounter(msg: ChatMessage, action: 'accept' | 'reject') {
 function isMine(msg: ChatMessage) { return msg.sender_id === myId.value }
 
 function pickBrief(briefId: number) {
+  if (sendingBrief.value) return
+  sendingBrief.value = true
   chatStore.sendBrief(briefId)
   showBriefPicker.value = false
+  setTimeout(() => { sendingBrief.value = false }, 2000)
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -226,20 +236,30 @@ function formatTime(dt: string) {
               {{ counterpart.initials }}
             </div>
             <div class="min-w-0">
-              <p class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
+              <div class="flex items-center gap-1.5">
+                <p class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
+                <VerifiedBadge v-if="counterpart.is_verified" size="sm" />
+              </div>
               <span v-if="counterpart.sub" class="text-xs text-navy/40">{{ counterpart.sub }}</span>
             </div>
           </template>
           <p v-else class="font-display font-semibold text-navy">Chat</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <span v-if="isBlocked" class="badge-warning">Solo lectura</span>
+          <span v-if="isCompleted" class="badge-active bg-emerald-100 text-emerald-700 border-emerald-200">✅ Finalizado</span>
+          <span v-else-if="isBlocked" class="badge-warning">Solo lectura</span>
           <span v-else class="badge-active">Activo</span>
         </div>
       </div>
 
+      <!-- Banner contrato finalizado -->
+      <div v-if="isCompleted" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 text-sm text-emerald-700 flex items-center gap-2">
+        <span class="text-base">✅</span>
+        <span>El contrato de esta campaña ha sido <strong>completado exitosamente</strong>. Este chat está en solo lectura.</span>
+      </div>
+
       <!-- Alerta saldo bajo -->
-      <div v-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral">
+      <div v-else-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral">
         ⚠️ {{ blockMsg }}
         <button v-if="isEmpresa" @click="creditsStore.recharge(10)" :disabled="creditsStore.recharging"
           class="ml-2 underline font-semibold disabled:opacity-50">
@@ -389,9 +409,14 @@ function formatTime(dt: string) {
               ? 'bg-violet text-white rounded-br-sm'
               : 'bg-white text-navy border border-navy/10 rounded-bl-sm']">
               <p>{{ msg.message_text }}</p>
-              <p :class="['text-xs mt-1', isMine(msg) ? 'text-white/60' : 'text-navy/40']">
-                {{ formatTime(msg.created_at) }}
-              </p>
+              <div :class="['flex items-center gap-1 mt-1', isMine(msg) ? 'justify-end' : 'justify-start']">
+                <span :class="['text-xs', isMine(msg) ? 'text-white/60' : 'text-navy/40']">
+                  {{ formatTime(msg.created_at) }}
+                </span>
+                <!-- Doble check: solo en mensajes propios -->
+                <span v-if="isMine(msg)" class="text-[11px] leading-none tracking-[-3px]"
+                  :class="msg.read_at ? 'text-sky-300' : 'text-white/40'">✓✓</span>
+              </div>
             </div>
           </div>
         </template>
@@ -400,7 +425,7 @@ function formatTime(dt: string) {
       </div>
 
       <!-- Formulario de propuesta -->
-      <div v-if="showProposal && isEmpresa" class="card mb-3 space-y-3">
+      <div v-if="showProposal && isEmpresa && hasBrief" class="card mb-3 space-y-3">
         <p class="font-semibold text-navy text-sm">Nueva propuesta de contrato</p>
         <div class="grid grid-cols-2 gap-2">
           <div>
@@ -459,7 +484,8 @@ function formatTime(dt: string) {
         <div v-else class="divide-y divide-navy/5 max-h-48 overflow-y-auto">
           <button v-for="b in profileStore.briefs" :key="b.id"
             @click="pickBrief(b.id)"
-            class="w-full text-left px-2 py-2.5 hover:bg-violet/5 rounded-lg transition-colors">
+            :disabled="sendingBrief"
+            class="w-full text-left px-2 py-2.5 hover:bg-violet/5 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none">
             <p class="text-sm font-medium text-navy">{{ b.titulo_campana }}</p>
             <p v-if="b.objetivo_principal" class="text-xs text-navy/50 truncate mt-0.5">
               {{ b.objetivo_principal }}
@@ -470,16 +496,26 @@ function formatTime(dt: string) {
 
       <!-- Input de mensaje -->
       <div class="card py-3">
-        <div class="flex gap-2">
-          <button v-if="isEmpresa && !isBlocked" @click="showProposal = !showProposal; showBriefPicker = false"
-            class="btn-ghost text-sm px-3" title="Enviar propuesta">📝</button>
-          <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
-            class="btn-ghost text-sm px-3" title="Enviar brief">📋</button>
-          <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
-            :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
-            class="input flex-1" />
-          <button @click="send" :disabled="!text.trim() || isBlocked" class="btn-primary px-4">→</button>
+        <!-- Chat finalizado: solo lectura permanente -->
+        <div v-if="isCompleted" class="text-center text-navy/40 text-sm py-1 select-none">
+          🔒 Este chat está cerrado
         </div>
+
+        <template v-else>
+          <p v-if="isEmpresa && !isBlocked && !hasBrief" class="text-xs text-navy/50 mb-2">
+            📋 Envía primero el brief de campaña antes de proponer un contrato.
+          </p>
+          <div class="flex gap-2">
+            <button v-if="isEmpresa && !isBlocked && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
+              class="btn-ghost text-sm px-3" title="Enviar propuesta de contrato">📝</button>
+            <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
+              class="btn-ghost text-sm px-3" title="Enviar brief de campaña">📋</button>
+            <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
+              :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
+              class="input flex-1" />
+            <button @click="send" :disabled="!text.trim() || isBlocked" class="btn-primary px-4">→</button>
+          </div>
+        </template>
       </div>
     </div>
   </AppLayout>

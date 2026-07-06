@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ContratoEscrow } from './entities/contrato-escrow.entity';
 import { ContratoRevisionRound } from './entities/contrato-revision-round.entity';
 import { ContratoAuditLog } from './entities/contrato-audit-log.entity';
+import { Chat } from '../chats/entities/chat.entity';
 import { Message } from '../chats/entities/message.entity';
 import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
@@ -18,6 +19,7 @@ import { WompiModule } from '../wompi/wompi.module';
       ContratoEscrow,
       ContratoRevisionRound,
       ContratoAuditLog,
+      Chat,
       Message,
       EmpresaProfile,
       InfluencerProfile,

@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import StarRating from '@/components/StarRating.vue'
+import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { influencerApi } from '@/api/profiles'
 import { ratingsApi, type RatingSummary } from '@/api/ratings'
 
@@ -138,7 +139,10 @@ const REDES_ICON: Record<string, string> = {
               {{ inf.nombre_artistico?.[0]?.toUpperCase() }}
             </div>
             <div class="min-w-0">
-              <p class="font-display font-semibold text-navy truncate">{{ inf.nombre_artistico }}</p>
+              <div class="flex items-center gap-1.5">
+                <p class="font-display font-semibold text-navy truncate">{{ inf.nombre_artistico }}</p>
+                <VerifiedBadge v-if="inf.is_verified" size="sm" />
+              </div>
               <p class="text-xs text-navy/50">{{ inf.ubicacion || 'Sin ubicación' }}</p>
             </div>
           </div>

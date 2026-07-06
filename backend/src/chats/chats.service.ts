@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
@@ -102,8 +102,24 @@ export class ChatsService {
     });
   }
 
+  // ─── Marcar mensajes como leídos ─────────────────────────────────────────────
+  async markMessagesRead(
+    chatId: number,
+    readerUserId: number,
+  ): Promise<{ ids: number[]; read_at: Date }> {
+    const unread = await this.messagesRepo.find({
+      where: { chat_id: chatId, sender_id: Not(readerUserId), read_at: IsNull() },
+      select: { id: true },
+    });
+    if (!unread.length) return { ids: [], read_at: new Date() };
+    const ids = unread.map((m) => m.id);
+    const read_at = new Date();
+    await this.messagesRepo.update({ id: In(ids) }, { read_at });
+    return { ids, read_at };
+  }
+
   // ─── Guardar y retornar mensaje (llamado por Gateway) ────────────────────────
-  async saveMessage(user: User, dto: SendMessageDto): Promise<Message> {
+  async saveMessage(user: User, dto: SendMessageDto): Promise<Message | null> {
     const chat = await this.chatsRepo.findOne({ where: { id: dto.chat_id } });
     if (!chat) throw new NotFoundException('Chat no encontrado.');
 
@@ -126,20 +142,19 @@ export class ChatsService {
       throw new ForbiddenException('Este chat está bloqueado.');
     }
 
-    if (!dto.message_text && !dto.is_proposal) {
+    if (!dto.message_text && !dto.is_proposal && !dto.campaign_brief_id) {
       throw new BadRequestException('El mensaje no puede estar vacío.');
     }
 
-    // Propuesta de contrato: el influencer debe tener al menos 1 red verificada
+    // Propuesta de contrato: el influencer debe tener perfil verificado completo
     if (dto.is_proposal && user.role === UserRole.EMPRESA) {
       const influencer = await this.influencersRepo.findOne({
         where: { id: chat.influencer_id },
-        relations: { metrics: true },
+        relations: { metrics: true, user: true },
       });
-      const hasVerified = influencer?.metrics?.some((m) => m.is_verified) ?? false;
-      if (!hasVerified) {
+      if (!influencer?.is_verified) {
         throw new BadRequestException(
-          'Este influencer aún no tiene redes sociales verificadas. No es posible enviarle un contrato.',
+          'Este influencer aún no tiene su perfil verificado. Se requiere: documento de identidad, al menos una red social verificada, foto de perfil, correo verificado y tener 16 años o más.',
         );
       }
     }
@@ -153,7 +168,12 @@ export class ChatsService {
     if (dto.proposal_data) msg.proposal_data = dto.proposal_data;
     if (dto.campaign_brief_id) msg.campaign_brief_id = dto.campaign_brief_id;
 
-    return this.messagesRepo.save(msg);
+    const saved = await this.messagesRepo.save(msg);
+    // Recargar con relaciones para que el evento WebSocket tenga datos completos
+    return this.messagesRepo.findOne({
+      where: { id: saved.id },
+      relations: { sender: true, campaignBrief: true, contrato: true },
+    });
   }
 
   // ─── Verificar que el usuario es participante del chat ────────────────────────

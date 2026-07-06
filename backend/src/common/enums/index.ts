@@ -5,8 +5,9 @@ export enum UserRole {
 }
 
 export enum ChatStatus {
-  ACTIVE = 'active',
-  BLOCKED = 'blocked',
+  ACTIVE    = 'active',
+  BLOCKED   = 'blocked',
+  COMPLETED = 'completed',
 }
 
 export enum ContratoStatus {

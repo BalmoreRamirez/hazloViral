@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import StarRating from '@/components/StarRating.vue'
+import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { useChatStore } from '@/stores/chat'
 import { influencerApi } from '@/api/profiles'
 import { ratingsApi, type RatingSummary, type RatingItem, type MyRating } from '@/api/ratings'
@@ -118,7 +119,10 @@ async function submitRating() {
               {{ profile.nombre_artistico?.[0]?.toUpperCase() }}
             </div>
             <div class="flex-1">
-              <h1 class="text-2xl font-display font-bold text-navy">{{ profile.nombre_artistico }}</h1>
+              <div class="flex items-center gap-2">
+                <h1 class="text-2xl font-display font-bold text-navy">{{ profile.nombre_artistico }}</h1>
+                <VerifiedBadge v-if="profile.is_verified" size="lg" />
+              </div>
               <p class="text-navy/50 text-sm mt-0.5">📍 {{ profile.ubicacion || 'Sin ubicación' }}</p>
 
               <!-- Rating summary -->

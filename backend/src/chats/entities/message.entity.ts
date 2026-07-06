@@ -67,6 +67,9 @@ export class Message {
   @Column({ type: 'enum', enum: ProposalStatus, nullable: true })
   proposal_status: ProposalStatus;
 
+  @Column({ type: 'timestamp', nullable: true })
+  read_at: Date | null;
+
   @CreateDateColumn()
   created_at: Date;
 }

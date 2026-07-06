@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { chatsApi } from '@/api/chats'
+import { contractsApi } from '@/api/contracts'
 import { connectSocket, getSocket } from '@/socket'
 import { useCreditsStore } from './credits'
 
@@ -19,7 +20,7 @@ export interface ChatMessage {
   id: number; chat_id: number; sender_id: number; message_text: string | null
   is_proposal: boolean; proposal_status: string | null; proposal_data: any
   contraoferta_data: { tarifa_propuesta: number; justificacion: string } | null
-  contrato_id: number | null; created_at: string; sender?: any
+  contrato_id: number | null; created_at: string; read_at: string | null; sender?: any
   campaign_brief_id: number | null; campaignBrief: BriefSnapshot | null
 }
 
@@ -41,6 +42,7 @@ export const useChatStore = defineStore('chat', () => {
   const messages        = ref<ChatMessage[]>([])
   const isBlocked       = ref(false)
   const blockMessage    = ref('')
+  const isCompleted     = ref(false)
   const socketConnected = ref(false)
   const loadingMessages = ref(false)
   const readIds         = ref<Set<number>>(loadReadIds())
@@ -65,12 +67,21 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function enterChat(chat: ChatRoom) {
-    activeChat.value = chat
-    isBlocked.value  = false
+    activeChat.value  = chat
+    isBlocked.value   = false
+    isCompleted.value = chat.status === 'completed'
     markRead(chat.id)
     loadingMessages.value = true
     try {
       messages.value = await chatsApi.messages(chat.id)
+      // Detectar contrato completado para chats que no tienen chat.status='completed' aún
+      if (!isCompleted.value) {
+        const funded = messages.value.find(m => m.proposal_status === 'funded' && m.contrato_id)
+        if (funded) {
+          const contrato = await contractsApi.get(funded.contrato_id!).catch(() => null)
+          if (contrato?.status === 'completed') isCompleted.value = true
+        }
+      }
     } finally {
       loadingMessages.value = false
     }
@@ -82,12 +93,21 @@ export const useChatStore = defineStore('chat', () => {
     socket
       .off('joined_chat').off('new_message').off('credit_status').off('chat_blocked')
       .off('contract_created').off('proposal_countered').off('proposal_rejected')
-      .off('counter_resolved').off('contract_funded')
+      .off('counter_resolved').off('contract_funded').off('messages_read')
+      .off('contract_completed')
 
     socket.emit('join_chat', { chat_id: chat.id })
 
     socket.on('new_message', (msg: ChatMessage) => {
       if (msg.chat_id === activeChat.value?.id) messages.value.push(msg)
+    })
+
+    socket.on('messages_read', (data: { chat_id: number; ids: number[]; read_at: string }) => {
+      if (data.chat_id !== activeChat.value?.id) return
+      const idSet = new Set(data.ids)
+      messages.value.forEach(m => {
+        if (idSet.has(m.id)) m.read_at = data.read_at
+      })
     })
 
     socket.on('credit_status', (data: any) => creditsStore.updateFromSocket(data))
@@ -139,6 +159,12 @@ export const useChatStore = defineStore('chat', () => {
         if (msg) msg.proposal_status = 'funded'
       }
     })
+
+    // Contrato finalizado → chat queda en solo lectura permanente
+    socket.on('contract_completed', () => {
+      isCompleted.value = true
+      isBlocked.value   = false
+    })
   }
 
   function sendMessage(text: string) {
@@ -171,13 +197,14 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function leaveChat() {
-    activeChat.value = null
-    messages.value   = []
-    isBlocked.value  = false
+    activeChat.value  = null
+    messages.value    = []
+    isBlocked.value   = false
+    isCompleted.value = false
   }
 
   return {
-    chats, activeChat, messages, isBlocked, blockMessage,
+    chats, activeChat, messages, isBlocked, blockMessage, isCompleted,
     socketConnected, loadingMessages, readIds,
     isRead, markRead,
     loadChats, openChat, enterChat, sendMessage, sendProposal, sendBrief, addMessage, leaveChat,
