@@ -69,9 +69,22 @@ async function openChat() {
             <div class="flex items-center gap-3">
               <!-- Avatar con punto de no leído -->
               <div class="relative shrink-0">
-                <div class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center text-violet font-bold">
-                  {{ (authStore.isEmpresa ? chat.influencer?.nombre_artistico : chat.empresa?.nombre_comercial)?.[0]?.toUpperCase() ?? '?' }}
-                </div>
+                <template v-if="authStore.isEmpresa">
+                  <img v-if="chat.influencer?.user?.avatar_url"
+                    :src="chat.influencer.user.avatar_url"
+                    class="w-10 h-10 rounded-full object-cover" />
+                  <div v-else class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center text-violet font-bold">
+                    {{ chat.influencer?.nombre_artistico?.[0]?.toUpperCase() ?? '?' }}
+                  </div>
+                </template>
+                <template v-else>
+                  <img v-if="chat.empresa?.user?.avatar_url"
+                    :src="chat.empresa.user.avatar_url"
+                    class="w-10 h-10 rounded-full object-cover" />
+                  <div v-else class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center text-violet font-bold">
+                    {{ chat.empresa?.nombre_comercial?.[0]?.toUpperCase() ?? '?' }}
+                  </div>
+                </template>
                 <span v-if="!chatStore.isRead(chat.id)"
                   class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-violet border-2 border-white" />
               </div>

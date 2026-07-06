@@ -64,17 +64,19 @@ const counterpart = computed(() => {
   if (isEmpresa.value) {
     const inf = chat.influencer
     return inf ? {
-      name: inf.nombre_artistico ?? 'Influencer',
-      sub:  inf.ubicacion ?? '',
-      initials: (inf.nombre_artistico?.[0] ?? 'I').toUpperCase(),
+      name:       inf.nombre_artistico ?? 'Influencer',
+      sub:        inf.ubicacion ?? '',
+      initials:   (inf.nombre_artistico?.[0] ?? 'I').toUpperCase(),
+      avatar_url: inf.user?.avatar_url ?? null,
       is_verified: inf.is_verified ?? false,
     } : null
   } else {
     const emp = chat.empresa
     return emp ? {
-      name: emp.nombre_comercial ?? 'Empresa',
-      sub:  emp.sitio_web ?? '',
-      initials: (emp.nombre_comercial?.[0] ?? 'E').toUpperCase(),
+      name:       emp.nombre_comercial ?? 'Empresa',
+      sub:        emp.sitio_web ?? '',
+      initials:   (emp.nombre_comercial?.[0] ?? 'E').toUpperCase(),
+      avatar_url: emp.user?.avatar_url ?? null,
     } : null
   }
 })
@@ -232,7 +234,10 @@ function formatTime(dt: string) {
         <div class="flex items-center gap-3">
           <button @click="router.push('/chats')" class="text-navy/40 hover:text-navy text-lg leading-none">←</button>
           <template v-if="counterpart">
-            <div class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center text-base font-bold text-violet shrink-0">
+            <img v-if="counterpart.avatar_url"
+              :src="counterpart.avatar_url"
+              class="w-10 h-10 rounded-full object-cover shrink-0" />
+            <div v-else class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center text-base font-bold text-violet shrink-0">
               {{ counterpart.initials }}
             </div>
             <div class="min-w-0">
