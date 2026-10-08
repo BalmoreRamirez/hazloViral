@@ -251,20 +251,19 @@ function formatTime(dt: string) {
           <p v-else class="font-display font-semibold text-navy">Chat</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <span v-if="isCompleted" class="badge-active bg-emerald-100 text-emerald-700 border-emerald-200">✅ Finalizado</span>
-          <span v-else-if="isBlocked" class="badge-warning">Solo lectura</span>
+          <span v-if="isBlocked" class="badge-warning">Solo lectura</span>
           <span v-else class="badge-active">Activo</span>
         </div>
       </div>
 
-      <!-- Banner contrato finalizado -->
+      <!-- Banner contrato finalizado (solo informativo — el chat sigue activo) -->
       <div v-if="isCompleted" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 text-sm text-emerald-700 flex items-center gap-2">
         <span class="text-base">✅</span>
-        <span>El contrato de esta campaña ha sido <strong>completado exitosamente</strong>. Este chat está en solo lectura.</span>
+        <span>El contrato anterior fue <strong>completado exitosamente</strong>. Puedes iniciar una nueva campaña aquí.</span>
       </div>
 
       <!-- Alerta saldo bajo -->
-      <div v-else-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral">
+      <div v-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral">
         ⚠️ {{ blockMsg }}
         <button v-if="isEmpresa" @click="creditsStore.recharge(10)" :disabled="creditsStore.recharging"
           class="ml-2 underline font-semibold disabled:opacity-50">
@@ -501,26 +500,19 @@ function formatTime(dt: string) {
 
       <!-- Input de mensaje -->
       <div class="card py-3">
-        <!-- Chat finalizado: solo lectura permanente -->
-        <div v-if="isCompleted" class="text-center text-navy/40 text-sm py-1 select-none">
-          🔒 Este chat está cerrado
+        <p v-if="isEmpresa && !isBlocked && !hasBrief" class="text-xs text-navy/50 mb-2">
+          📋 Envía primero el brief de campaña antes de proponer un contrato.
+        </p>
+        <div class="flex gap-2">
+          <button v-if="isEmpresa && !isBlocked && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
+            class="btn-ghost text-sm px-3" title="Enviar propuesta de contrato">📝</button>
+          <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
+            class="btn-ghost text-sm px-3" title="Enviar brief de campaña">📋</button>
+          <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
+            :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
+            class="input flex-1" />
+          <button @click="send" :disabled="!text.trim() || isBlocked" class="btn-primary px-4">→</button>
         </div>
-
-        <template v-else>
-          <p v-if="isEmpresa && !isBlocked && !hasBrief" class="text-xs text-navy/50 mb-2">
-            📋 Envía primero el brief de campaña antes de proponer un contrato.
-          </p>
-          <div class="flex gap-2">
-            <button v-if="isEmpresa && !isBlocked && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
-              class="btn-ghost text-sm px-3" title="Enviar propuesta de contrato">📝</button>
-            <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
-              class="btn-ghost text-sm px-3" title="Enviar brief de campaña">📋</button>
-            <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
-              :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
-              class="input flex-1" />
-            <button @click="send" :disabled="!text.trim() || isBlocked" class="btn-primary px-4">→</button>
-          </div>
-        </template>
       </div>
     </div>
   </AppLayout>

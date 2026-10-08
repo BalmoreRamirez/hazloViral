@@ -429,8 +429,8 @@ export class ContratosService {
     if (wompiTransferId) contrato.stripe_transfer_id = wompiTransferId;
     const saved = await this.contratosRepo.save(contrato);
 
-    // Marcar el chat como completado para bloquear nuevos mensajes
-    await this.chatsRepo.update({ id: contrato.chat_id }, { status: ChatStatus.COMPLETED });
+    // Reactivar el chat para permitir nuevas campañas con el mismo influencer
+    await this.chatsRepo.update({ id: contrato.chat_id }, { status: ChatStatus.ACTIVE });
 
     await this.writeAudit(null, {
       contrato_id: saved.id,

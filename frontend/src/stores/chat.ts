@@ -69,18 +69,16 @@ export const useChatStore = defineStore('chat', () => {
   async function enterChat(chat: ChatRoom) {
     activeChat.value  = chat
     isBlocked.value   = false
-    isCompleted.value = chat.status === 'completed'
+    isCompleted.value = false
     markRead(chat.id)
     loadingMessages.value = true
     try {
       messages.value = await chatsApi.messages(chat.id)
-      // Detectar contrato completado para chats que no tienen chat.status='completed' aún
-      if (!isCompleted.value) {
-        const funded = messages.value.find(m => m.proposal_status === 'funded' && m.contrato_id)
-        if (funded) {
-          const contrato = await contractsApi.get(funded.contrato_id!).catch(() => null)
-          if (contrato?.status === 'completed') isCompleted.value = true
-        }
+      // Mostrar banner si el último contrato del chat ya fue completado
+      const funded = messages.value.find(m => m.proposal_status === 'funded' && m.contrato_id)
+      if (funded) {
+        const contrato = await contractsApi.get(funded.contrato_id!).catch(() => null)
+        if (contrato?.status === 'completed') isCompleted.value = true
       }
     } finally {
       loadingMessages.value = false

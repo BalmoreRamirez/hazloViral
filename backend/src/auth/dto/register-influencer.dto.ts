@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEmail,
@@ -49,9 +50,9 @@ export class RegisterInfluencerDto {
   direccion?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  rubro?: string;
+  @IsArray()
+  @IsString({ each: true })
+  rubros?: string[];
 
   @IsOptional()
   @Type(() => Number)

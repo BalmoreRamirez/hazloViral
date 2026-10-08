@@ -43,7 +43,7 @@ const REDES_ICON: Record<string, string> = {
 const form = ref({
   username: '', nombre_artistico: '', bio: '', ubicacion: '',
   tarifa_base: 0, disponibilidad: true,
-  tipo_identificacion: 'DUI', numero_identificacion: '', rubro: '',
+  tipo_identificacion: 'DUI', numero_identificacion: '', rubros: [] as string[],
 })
 const metricForm = ref({ red_social: 'TikTok', username: '' })
 const bankForm   = ref({ banco_nombre: '', banco_cuenta_numero: '', banco_cuenta_tipo: 'AHORROS' })
@@ -86,7 +86,7 @@ onMounted(async () => {
       disponibilidad:        esData.value.disponibilidad,
       tipo_identificacion:   esData.value.tipo_identificacion ?? 'DUI',
       numero_identificacion: esData.value.numero_identificacion ?? '',
-      rubro:                 esData.value.rubro ?? '',
+      rubros:                esData.value.rubros ?? [],
     }
     bankForm.value = {
       banco_nombre:        esData.value.banco_nombre ?? '',
@@ -142,7 +142,7 @@ function formatFollowers(n: number) {
 
       <!-- ── Profile Hero: banner + avatar overlap ──────────────────────────── -->
       <div class="relative">
-        <CoverBanner :rubro="esData?.rubro" :nombre="esData?.nombre_artistico" height="200px" />
+        <CoverBanner :rubro="esData?.rubros?.[0]" :nombre="esData?.nombre_artistico" height="200px" />
 
         <!-- Avatar overlapping the banner bottom -->
         <div class="absolute bottom-0 translate-y-1/2 left-5 z-10">
@@ -201,7 +201,7 @@ function formatFollowers(n: number) {
           <span :class="esData.disponibilidad ? 'badge-active' : 'badge-muted'">
             {{ esData.disponibilidad ? '✅ Disponible' : '🔒 No disponible' }}
           </span>
-          <span v-if="esData.rubro" class="badge-info capitalize">🏷️ {{ esData.rubro }}</span>
+          <span v-for="r in (esData.rubros ?? [])" :key="r" class="badge-info capitalize">🏷️ {{ RUBROS_LIST.find(x => x.value === r)?.label ?? r }}</span>
           <span v-if="esData.fecha_nacimiento" class="badge-muted">📅 {{ esData.fecha_nacimiento }}</span>
           <span v-if="store.metrics.length > 0" class="badge-muted">
             👥 {{ formatFollowers(totalFollowers) }} seguidores
@@ -295,11 +295,21 @@ function formatFollowers(n: number) {
           </div>
 
           <div class="field">
-            <label class="label">Rubro / nicho</label>
-            <select v-model="form.rubro" class="input">
-              <option value="">— Sin especificar —</option>
-              <option v-for="r in RUBROS_LIST" :key="r.value" :value="r.value">{{ r.label }}</option>
-            </select>
+            <label class="label">Rubro / nicho <span class="text-navy/40 font-normal">(puedes elegir varios)</span></label>
+            <div class="flex flex-wrap gap-2 mt-1">
+              <button
+                v-for="r in RUBROS_LIST" :key="r.value"
+                type="button"
+                @click="form.rubros.includes(r.value)
+                  ? form.rubros.splice(form.rubros.indexOf(r.value), 1)
+                  : form.rubros.push(r.value)"
+                :class="form.rubros.includes(r.value)
+                  ? 'bg-violet text-white border-violet'
+                  : 'bg-white text-navy/60 border-navy/15 hover:border-violet/40'"
+                class="px-3 py-1.5 rounded-full border text-xs font-medium transition-all select-none cursor-pointer">
+                {{ r.label }}
+              </button>
+            </div>
           </div>
 
           <label class="flex items-center gap-2 cursor-pointer select-none">
