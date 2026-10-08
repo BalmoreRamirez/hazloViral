@@ -180,12 +180,8 @@ Tipos de archivo aceptados: `video`, `imagen`, `banner`, `documento`.
 ---
 
 ## 7. Diseño Físico de la Base de Datos (PostgreSQL)
-## DB_HOST=localhost
-## DB_PORT=5432
-## DB_DATABASE=hazloViral
-## DB_USERNAME=developer
-## DB_PASSWORD=DevPass123
-## NODE_ENV=development
+> Configura las siguientes variables en `backend/.env` (ver `.env.example`):
+> `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `NODE_ENV`
 
 ```sql
 -- 1. Usuarios y Autenticación
