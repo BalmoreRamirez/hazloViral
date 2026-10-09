@@ -15,6 +15,15 @@ import { EmpresaProfile } from '../../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../../influencers/entities/influencer-profile.entity';
 import type { EntregableConArchivos, PublicationLink } from '../../common/types';
 
+export interface BriefSnapshot {
+  titulo_campana: string;
+  objetivo_principal: string | null;
+  tono_de_voz: string | null;
+  puntos_clave_si: string | null;
+  restricciones_no: string | null;
+  recursos_esteticos: string | null;
+}
+
 @Entity('contratos_escrow')
 @Index('idx_contratos_status', ['status'])
 export class ContratoEscrow {
@@ -71,6 +80,14 @@ export class ContratoEscrow {
 
   @Column({ default: false })
   resuelto_por_admin: boolean;
+
+  // Brief de la campaña vigente al aceptar la propuesta. Se guarda una copia porque
+  // el brief original puede editarse o eliminarse después.
+  @Column({ type: 'int', nullable: true })
+  campaign_brief_id: number | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  campaign_brief: BriefSnapshot | null;
 
   @Column({ type: 'enum', enum: ContratoStatus, default: ContratoStatus.PENDING_PAYMENT })
   status: ContratoStatus;

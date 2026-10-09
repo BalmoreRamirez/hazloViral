@@ -446,6 +446,40 @@ const TIPO_ICON: Record<string, string> = {
             </div>
           </div>
 
+          <!-- Brief de la campaña (copia guardada al aceptar la propuesta) -->
+          <div v-if="contrato.campaign_brief" class="card space-y-2">
+            <div class="flex items-center gap-2">
+              <span>📋</span>
+              <h2 class="font-semibold text-navy">Brief de la campaña</h2>
+            </div>
+            <p class="font-semibold text-navy text-sm">{{ contrato.campaign_brief.titulo_campana }}</p>
+            <div class="text-sm space-y-1.5 text-navy/70">
+              <p v-if="contrato.campaign_brief.objetivo_principal">
+                <span class="text-xs font-medium text-navy/50 uppercase tracking-wide">Objetivo:</span>
+                {{ contrato.campaign_brief.objetivo_principal }}
+              </p>
+              <p v-if="contrato.campaign_brief.tono_de_voz">
+                <span class="text-xs font-medium text-navy/50 uppercase tracking-wide">Tono:</span>
+                {{ contrato.campaign_brief.tono_de_voz }}
+              </p>
+              <p v-if="contrato.campaign_brief.puntos_clave_si">
+                <span class="text-xs font-medium text-green-700 uppercase tracking-wide">✅ Incluir:</span>
+                {{ contrato.campaign_brief.puntos_clave_si }}
+              </p>
+              <p v-if="contrato.campaign_brief.restricciones_no">
+                <span class="text-xs font-medium text-coral uppercase tracking-wide">🚫 Evitar:</span>
+                {{ contrato.campaign_brief.restricciones_no }}
+              </p>
+              <p v-if="contrato.campaign_brief.recursos_esteticos">
+                <span class="text-xs font-medium text-navy/50 uppercase tracking-wide">🎨 Recursos:</span>
+                {{ contrato.campaign_brief.recursos_esteticos }}
+              </p>
+            </div>
+            <p class="text-xs text-navy/40 pt-1 border-t border-navy/8">
+              Versión del brief vigente al aceptar la propuesta. Los entregables se revisan contra este brief.
+            </p>
+          </div>
+
           <!-- Rondas de revisión -->
           <div v-if="contractsStore.revisionRounds.length" class="card space-y-3">
             <h2 class="font-semibold text-navy">Historial de revisiones</h2>
