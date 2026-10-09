@@ -55,8 +55,27 @@ const blockMsg    = computed(() => chatStore.blockMessage)
 const messages    = computed(() => chatStore.messages)
 const myId        = computed(() => authStore.user?.id)
 
-// Flujo ordenado: brief → propuesta
-const hasBrief = computed(() => messages.value.some(m => m.campaignBrief != null))
+// Fecha del último contrato completado: lo anterior pertenece a una colaboración cerrada
+const lastCompletedAt = computed(() => chatStore.completedContracts.at(-1)?.completedAt ?? null)
+
+function isAfter(date: string, ref: string) {
+  return new Date(date).getTime() > new Date(ref).getTime()
+}
+
+// Flujo ordenado: brief → propuesta. Tras un contrato completado se exige un brief nuevo.
+const hasBrief = computed(() => messages.value.some(m =>
+  m.campaignBrief != null && (!lastCompletedAt.value || isAfter(m.created_at, lastCompletedAt.value)),
+))
+
+// Mensajes que abren una nueva colaboración (el primero después de cada contrato completado)
+const collaborationStarts = computed(() => {
+  const starts = new Map<number, number>()  // message id → número de colaboración
+  chatStore.completedContracts.forEach((c, i) => {
+    const first = messages.value.find(m => isAfter(m.created_at, c.completedAt))
+    if (first && !starts.has(first.id)) starts.set(first.id, i + 2)
+  })
+  return starts
+})
 
 const counterpart = computed(() => {
   const chat = chatStore.activeChat
@@ -251,20 +270,19 @@ function formatTime(dt: string) {
           <p v-else class="font-display font-semibold text-navy">Chat</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <span v-if="isCompleted" class="badge-active bg-emerald-100 text-emerald-700 border-emerald-200">✅ Finalizado</span>
-          <span v-else-if="isBlocked" class="badge-warning">Solo lectura</span>
+          <span v-if="isBlocked" class="badge-warning">Solo lectura</span>
           <span v-else class="badge-active">Activo</span>
         </div>
       </div>
 
-      <!-- Banner contrato finalizado -->
-      <div v-if="isCompleted" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 text-sm text-emerald-700 flex items-center gap-2">
+      <!-- Banner contrato finalizado (solo informativo — el chat sigue activo) -->
+      <div v-if="isCompleted && !hasBrief" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 text-sm text-emerald-700 flex items-center gap-2">
         <span class="text-base">✅</span>
-        <span>El contrato de esta campaña ha sido <strong>completado exitosamente</strong>. Este chat está en solo lectura.</span>
+        <span>El contrato anterior fue <strong>completado exitosamente</strong>. Puedes iniciar una nueva campaña aquí{{ isEmpresa ? ' enviando un nuevo brief' : '' }}.</span>
       </div>
 
       <!-- Alerta saldo bajo -->
-      <div v-else-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral">
+      <div v-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral">
         ⚠️ {{ blockMsg }}
         <button v-if="isEmpresa" @click="creditsStore.recharge(10)" :disabled="creditsStore.recharging"
           class="ml-2 underline font-semibold disabled:opacity-50">
@@ -277,6 +295,15 @@ function formatTime(dt: string) {
         <div v-if="chatStore.loadingMessages" class="text-center text-navy/40 py-8">Cargando…</div>
 
         <template v-for="msg in messages" :key="msg.id">
+
+          <!-- ── Separador de nueva colaboración ── -->
+          <div v-if="collaborationStarts.has(msg.id)" class="flex items-center gap-3 py-2 select-none">
+            <div class="flex-1 border-t border-navy/10" />
+            <span class="text-xs font-medium text-navy/40">
+              Nueva colaboración · #{{ collaborationStarts.get(msg.id) }}
+            </span>
+            <div class="flex-1 border-t border-navy/10" />
+          </div>
 
           <!-- ── Tarjeta de propuesta / contraoferta ── -->
           <div v-if="msg.is_proposal" class="flex justify-center">
@@ -501,26 +528,21 @@ function formatTime(dt: string) {
 
       <!-- Input de mensaje -->
       <div class="card py-3">
-        <!-- Chat finalizado: solo lectura permanente -->
-        <div v-if="isCompleted" class="text-center text-navy/40 text-sm py-1 select-none">
-          🔒 Este chat está cerrado
+        <p v-if="isEmpresa && !isBlocked && !hasBrief" class="text-xs text-navy/50 mb-2">
+          📋 {{ lastCompletedAt
+            ? 'Envía un nuevo brief de campaña para iniciar esta colaboración.'
+            : 'Envía primero el brief de campaña antes de proponer un contrato.' }}
+        </p>
+        <div class="flex gap-2">
+          <button v-if="isEmpresa && !isBlocked && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
+            class="btn-ghost text-sm px-3" title="Enviar propuesta de contrato">📝</button>
+          <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
+            class="btn-ghost text-sm px-3" title="Enviar brief de campaña">📋</button>
+          <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
+            :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
+            class="input flex-1" />
+          <button @click="send" :disabled="!text.trim() || isBlocked" class="btn-primary px-4">→</button>
         </div>
-
-        <template v-else>
-          <p v-if="isEmpresa && !isBlocked && !hasBrief" class="text-xs text-navy/50 mb-2">
-            📋 Envía primero el brief de campaña antes de proponer un contrato.
-          </p>
-          <div class="flex gap-2">
-            <button v-if="isEmpresa && !isBlocked && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
-              class="btn-ghost text-sm px-3" title="Enviar propuesta de contrato">📝</button>
-            <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
-              class="btn-ghost text-sm px-3" title="Enviar brief de campaña">📋</button>
-            <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
-              :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
-              class="input flex-1" />
-            <button @click="send" :disabled="!text.trim() || isBlocked" class="btn-primary px-4">→</button>
-          </div>
-        </template>
       </div>
     </div>
   </AppLayout>

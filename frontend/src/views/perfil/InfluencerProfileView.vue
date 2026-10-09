@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useVuelidate } from '@vuelidate/core'
+import { required, helpers } from '@vuelidate/validators'
+import { PAISES, DEPARTAMENTOS_SV, parseUbicacion, formatUbicacion } from '@/constants/ubicaciones'
+import { RUBROS_INFLUENCER as RUBROS_LIST } from '@/constants/rubros'
 import AppLayout from '@/components/AppLayout.vue'
 import AvatarUpload from '@/components/AvatarUpload.vue'
 import CoverBanner from '@/components/CoverBanner.vue'
@@ -22,16 +26,6 @@ const REDES      = ['TikTok', 'Instagram', 'YouTube', 'Facebook']
 const TIPOS_ID   = ['DUI', 'PASAPORTE']
 const TIPOS_CUENTA = ['AHORROS', 'CORRIENTE']
 
-const RUBROS_LIST = [
-  { label: '✈️ Turismo', value: 'turismo' }, { label: '🏨 Hoteles', value: 'hoteles' },
-  { label: '🗺️ Viajes', value: 'viajes' }, { label: '🍽️ Gastronomía', value: 'gastronomia' },
-  { label: '👗 Moda', value: 'moda' }, { label: '💻 Tecnología', value: 'tecnologia' },
-  { label: '💪 Fitness', value: 'fitness' }, { label: '💄 Belleza', value: 'belleza' },
-  { label: '💼 Negocios', value: 'negocios' }, { label: '🎭 Entretenimiento', value: 'entretenimiento' },
-  { label: '📚 Educación', value: 'educacion' }, { label: '📷 Fotografía', value: 'fotografia' },
-  { label: '🏥 Salud', value: 'salud' }, { label: '🎵 Música', value: 'musica' }, { label: '⚽ Deporte', value: 'deporte' },
-]
-
 const PLATFORM_COLOR: Record<string, string> = {
   TikTok: '#010101', Instagram: '#E1306C', YouTube: '#FF0000', Facebook: '#1877F2',
 }
@@ -41,10 +35,32 @@ const REDES_ICON: Record<string, string> = {
 }
 
 const form = ref({
-  username: '', nombre_artistico: '', bio: '', ubicacion: '',
+  username: '', nombre_artistico: '', bio: '', pais: '', departamento: '',
   tarifa_base: 0, disponibilidad: true,
-  tipo_identificacion: 'DUI', numero_identificacion: '', rubro: '',
+  tipo_identificacion: 'DUI', numero_identificacion: '', rubros: [] as string[],
 })
+const saveError  = ref('')
+
+const formRules = {
+  username: {
+    required: helpers.withMessage('El username es obligatorio', required),
+    formato:  helpers.withMessage('Solo letras, números y guiones bajos (3–30 caracteres)', helpers.regex(/^[a-zA-Z0-9_]{3,30}$/)),
+  },
+  nombre_artistico:      { required: helpers.withMessage('El nombre artístico es obligatorio', required) },
+  numero_identificacion: { required: helpers.withMessage('El número de documento es obligatorio', required) },
+  pais:                  { required: helpers.withMessage('El país es obligatorio', required) },
+  rubros:                { required: helpers.withMessage('Elige al menos un rubro', required) },
+}
+const v$ = useVuelidate(formRules, form)
+
+// El rubro principal es siempre el primero de la lista (define la portada)
+const rubroPrincipal = computed({
+  get: () => form.value.rubros[0] ?? '',
+  set: (value: string) => {
+    form.value.rubros = [value, ...form.value.rubros.filter(r => r !== value)]
+  },
+})
+
 const metricForm = ref({ red_social: 'TikTok', username: '' })
 const bankForm   = ref({ banco_nombre: '', banco_cuenta_numero: '', banco_cuenta_tipo: 'AHORROS' })
 
@@ -81,12 +97,12 @@ onMounted(async () => {
       username:              esData.value.username ?? '',
       nombre_artistico:      esData.value.nombre_artistico,
       bio:                   esData.value.bio ?? '',
-      ubicacion:             esData.value.ubicacion ?? '',
+      ...parseUbicacion(esData.value.ubicacion),
       tarifa_base:           Number(esData.value.tarifa_base),
       disponibilidad:        esData.value.disponibilidad,
       tipo_identificacion:   esData.value.tipo_identificacion ?? 'DUI',
       numero_identificacion: esData.value.numero_identificacion ?? '',
-      rubro:                 esData.value.rubro ?? '',
+      rubros:                esData.value.rubros ?? [],
     }
     bankForm.value = {
       banco_nombre:        esData.value.banco_nombre ?? '',
@@ -97,8 +113,16 @@ onMounted(async () => {
 })
 
 async function saveProfile() {
-  await store.updateInfluencerProfile(form.value)
-  editing.value = false
+  if (!(await v$.value.$validate())) return
+  saveError.value = ''
+  try {
+    const { pais, departamento, ...rest } = form.value
+    await store.updateInfluencerProfile({ ...rest, ubicacion: formatUbicacion(pais, departamento) })
+    editing.value = false
+  } catch (e: any) {
+    const msg = e.response?.data?.message
+    saveError.value = Array.isArray(msg) ? msg.join(' ') : (msg ?? 'No se pudieron guardar los cambios.')
+  }
 }
 
 async function addMetric() {
@@ -142,7 +166,7 @@ function formatFollowers(n: number) {
 
       <!-- ── Profile Hero: banner + avatar overlap ──────────────────────────── -->
       <div class="relative">
-        <CoverBanner :rubro="esData?.rubro" :nombre="esData?.nombre_artistico" height="200px" />
+        <CoverBanner :rubro="esData?.rubros?.[0]" :extra="(esData?.rubros?.length ?? 1) - 1" :nombre="esData?.nombre_artistico" height="200px" />
 
         <!-- Avatar overlapping the banner bottom -->
         <div class="absolute bottom-0 translate-y-1/2 left-5 z-10">
@@ -153,7 +177,7 @@ function formatFollowers(n: number) {
 
         <!-- Glass button top-right -->
         <div class="absolute top-4 right-4">
-          <button v-if="!editing" @click="editing = true"
+          <button v-if="!editing" @click="editing = true; saveError = ''; v$.$reset()"
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/25 hover:bg-black/40 backdrop-blur-sm text-white text-xs font-semibold border border-white/20 transition-all">
             ✏️ Editar perfil
           </button>
@@ -201,7 +225,8 @@ function formatFollowers(n: number) {
           <span :class="esData.disponibilidad ? 'badge-active' : 'badge-muted'">
             {{ esData.disponibilidad ? '✅ Disponible' : '🔒 No disponible' }}
           </span>
-          <span v-if="esData.rubro" class="badge-info capitalize">🏷️ {{ esData.rubro }}</span>
+          <span v-for="(r, i) in (esData.rubros ?? [])" :key="r" class="badge-info capitalize"
+            :title="i === 0 ? 'Rubro principal' : undefined">{{ i === 0 ? '⭐' : '🏷️' }} {{ RUBROS_LIST.find(x => x.value === r)?.label ?? r }}</span>
           <span v-if="esData.fecha_nacimiento" class="badge-muted">📅 {{ esData.fecha_nacimiento }}</span>
           <span v-if="store.metrics.length > 0" class="badge-muted">
             👥 {{ formatFollowers(totalFollowers) }} seguidores
@@ -261,20 +286,27 @@ function formatFollowers(n: number) {
       <!-- ── Edit Form ──────────────────────────────────────────────────────── -->
       <div v-else-if="editing" class="card pt-14">
         <h3 class="font-display font-semibold text-navy mb-5 text-base">Editar datos del perfil</h3>
-        <form @submit.prevent="saveProfile" class="space-y-4">
+        <form @submit.prevent="saveProfile" novalidate class="space-y-4">
 
           <div class="field">
             <label class="label">Username</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-navy/40 font-medium select-none">@</span>
-              <input v-model="form.username" class="input pl-7 w-full" placeholder="mario_blue"
-                pattern="^[a-zA-Z0-9_]{3,30}$" title="Solo letras, números y guiones bajos (3–30 caracteres)" />
+              <input v-model="form.username" placeholder="mario_blue"
+                :class="['input pl-7 w-full', { '!border-coral': v$.username.$error }]" />
             </div>
+            <p v-if="v$.username.$error" class="text-coral text-xs mt-1">
+              {{ v$.username.$errors[0]?.$message }}
+            </p>
           </div>
 
           <div class="field">
             <label class="label">Nombre artístico</label>
-            <input v-model="form.nombre_artistico" class="input" required />
+            <input v-model="form.nombre_artistico"
+              :class="['input', { '!border-coral': v$.nombre_artistico.$error }]" />
+            <p v-if="v$.nombre_artistico.$error" class="text-coral text-xs mt-1">
+              {{ v$.nombre_artistico.$errors[0]?.$message }}
+            </p>
           </div>
 
           <div class="field">
@@ -285,21 +317,57 @@ function formatFollowers(n: number) {
 
           <div class="grid grid-cols-2 gap-3">
             <div class="field">
-              <label class="label">Ubicación</label>
-              <input v-model="form.ubicacion" class="input" placeholder="San Salvador, El Salvador" />
+              <label class="label">País</label>
+              <select v-model="form.pais" @change="form.departamento = ''"
+                :class="['input', { '!border-coral': v$.pais.$error }]">
+                <option value="">— Selecciona —</option>
+                <option v-for="p in PAISES" :key="p">{{ p }}</option>
+              </select>
+              <p v-if="v$.pais.$error" class="text-coral text-xs mt-1">
+                {{ v$.pais.$errors[0]?.$message }}
+              </p>
             </div>
-            <div class="field">
-              <label class="label">Tarifa base (USD)</label>
-              <input v-model.number="form.tarifa_base" type="number" min="0" class="input" />
+            <div v-if="form.pais === 'El Salvador'" class="field">
+              <label class="label">Departamento</label>
+              <select v-model="form.departamento" class="input">
+                <option value="">— Selecciona —</option>
+                <option v-for="d in DEPARTAMENTOS_SV" :key="d">{{ d }}</option>
+              </select>
             </div>
           </div>
 
           <div class="field">
-            <label class="label">Rubro / nicho</label>
-            <select v-model="form.rubro" class="input">
-              <option value="">— Sin especificar —</option>
-              <option v-for="r in RUBROS_LIST" :key="r.value" :value="r.value">{{ r.label }}</option>
-            </select>
+            <label class="label">Tarifa base (USD)</label>
+            <input v-model.number="form.tarifa_base" type="number" min="0" class="input" />
+          </div>
+
+          <div class="field">
+            <label class="label">Rubro / nicho <span class="text-navy/40 font-normal">(puedes elegir varios)</span></label>
+            <div class="flex flex-wrap gap-2 mt-1">
+              <button
+                v-for="r in RUBROS_LIST" :key="r.value"
+                type="button"
+                @click="form.rubros.includes(r.value)
+                  ? form.rubros.splice(form.rubros.indexOf(r.value), 1)
+                  : form.rubros.push(r.value)"
+                :class="form.rubros.includes(r.value)
+                  ? 'bg-violet text-white border-violet'
+                  : 'bg-white text-navy/60 border-navy/15 hover:border-violet/40'"
+                class="px-3 py-1.5 rounded-full border text-xs font-medium transition-all select-none cursor-pointer">
+                <span v-if="form.rubros[0] === r.value" title="Rubro principal">⭐</span> {{ r.label }}
+              </button>
+            </div>
+            <div v-if="form.rubros.length > 1" class="flex items-center gap-2 mt-3">
+              <label class="text-sm text-navy/60 shrink-0">⭐ Rubro principal</label>
+              <select v-model="rubroPrincipal" class="input py-1.5 text-sm">
+                <option v-for="r in form.rubros" :key="r" :value="r">
+                  {{ RUBROS_LIST.find(x => x.value === r)?.label ?? r }}
+                </option>
+              </select>
+            </div>
+            <p v-if="v$.rubros.$error" class="text-coral text-xs mt-1">
+              {{ v$.rubros.$errors[0]?.$message }}
+            </p>
           </div>
 
           <label class="flex items-center gap-2 cursor-pointer select-none">
@@ -316,9 +384,15 @@ function formatFollowers(n: number) {
             </div>
             <div class="field">
               <label class="label">Número de identificación</label>
-              <input v-model="form.numero_identificacion" class="input" placeholder="00000000-0" />
+              <input v-model="form.numero_identificacion" placeholder="00000000-0"
+                :class="['input', { '!border-coral': v$.numero_identificacion.$error }]" />
+              <p v-if="v$.numero_identificacion.$error" class="text-coral text-xs mt-1">
+                {{ v$.numero_identificacion.$errors[0]?.$message }}
+              </p>
             </div>
           </div>
+
+          <p v-if="saveError" class="text-coral text-sm">{{ saveError }}</p>
 
           <div class="flex gap-2 pt-1">
             <button type="submit" :disabled="store.saving" class="btn-primary text-sm">

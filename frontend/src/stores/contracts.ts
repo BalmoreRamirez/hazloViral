@@ -35,6 +35,15 @@ export interface Contract {
   revision_round: number
   publication_links: PublicationLink[] | null
   motivo_incumplimiento: string | null
+  campaign_brief_id: number | null
+  campaign_brief: {
+    titulo_campana: string
+    objetivo_principal: string | null
+    tono_de_voz: string | null
+    puntos_clave_si: string | null
+    restricciones_no: string | null
+    recursos_esteticos: string | null
+  } | null
   status: string
   stripe_charge_id: string | null
   stripe_transfer_id: string | null

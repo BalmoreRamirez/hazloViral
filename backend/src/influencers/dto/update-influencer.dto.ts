@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
@@ -56,7 +56,7 @@ export class UpdateInfluencerDto {
   banco_cuenta_tipo?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  rubro?: string;
+  @IsArray()
+  @IsString({ each: true })
+  rubros?: string[];
 }

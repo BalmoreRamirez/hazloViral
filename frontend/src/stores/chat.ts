@@ -36,6 +36,21 @@ function saveReadIds(ids: Set<number>) {
   localStorage.setItem(readKey(), JSON.stringify([...ids]))
 }
 
+// Busca los contratos completados del chat y cuándo fueron aprobados (según el audit log)
+async function loadCompletedContracts(msgs: ChatMessage[]) {
+  const ids = [...new Set(msgs.filter(m => m.proposal_status === 'funded' && m.contrato_id).map(m => m.contrato_id!))]
+  const results = await Promise.all(ids.map(async id => {
+    const contrato = await contractsApi.get(id).catch(() => null)
+    if (contrato?.status !== 'completed') return null
+    const log: any[] = await contractsApi.getAuditLog(id).catch(() => [])
+    const approved = log.find(e => e.action === 'approved')
+    return { id, completedAt: (approved?.created_at ?? contrato.updated_at) as string }
+  }))
+  return results
+    .filter((c): c is { id: number; completedAt: string } => c !== null)
+    .sort((a, b) => a.completedAt.localeCompare(b.completedAt))
+}
+
 export const useChatStore = defineStore('chat', () => {
   const chats           = ref<ChatRoom[]>([])
   const activeChat      = ref<ChatRoom | null>(null)
@@ -43,6 +58,8 @@ export const useChatStore = defineStore('chat', () => {
   const isBlocked       = ref(false)
   const blockMessage    = ref('')
   const isCompleted     = ref(false)
+  // Contratos completados en este chat, con la fecha en que la empresa los aprobó
+  const completedContracts = ref<{ id: number; completedAt: string }[]>([])
   const socketConnected = ref(false)
   const loadingMessages = ref(false)
   const readIds         = ref<Set<number>>(loadReadIds())
@@ -69,19 +86,15 @@ export const useChatStore = defineStore('chat', () => {
   async function enterChat(chat: ChatRoom) {
     activeChat.value  = chat
     isBlocked.value   = false
-    isCompleted.value = chat.status === 'completed'
+    isCompleted.value = false
     markRead(chat.id)
     loadingMessages.value = true
     try {
       messages.value = await chatsApi.messages(chat.id)
-      // Detectar contrato completado para chats que no tienen chat.status='completed' aún
-      if (!isCompleted.value) {
-        const funded = messages.value.find(m => m.proposal_status === 'funded' && m.contrato_id)
-        if (funded) {
-          const contrato = await contractsApi.get(funded.contrato_id!).catch(() => null)
-          if (contrato?.status === 'completed') isCompleted.value = true
-        }
-      }
+      completedContracts.value = await loadCompletedContracts(messages.value)
+      // Mostrar banner si el último contrato del chat ya fue completado
+      const lastFunded = messages.value.filter(m => m.proposal_status === 'funded' && m.contrato_id).at(-1)
+      isCompleted.value = !!lastFunded && completedContracts.value.some(c => c.id === lastFunded.contrato_id)
     } finally {
       loadingMessages.value = false
     }
@@ -161,7 +174,10 @@ export const useChatStore = defineStore('chat', () => {
     })
 
     // Contrato finalizado → chat queda en solo lectura permanente
-    socket.on('contract_completed', () => {
+    socket.on('contract_completed', (data: { contrato_id: number }) => {
+      if (!completedContracts.value.some(c => c.id === data.contrato_id)) {
+        completedContracts.value.push({ id: data.contrato_id, completedAt: new Date().toISOString() })
+      }
       isCompleted.value = true
       isBlocked.value   = false
     })
@@ -201,10 +217,11 @@ export const useChatStore = defineStore('chat', () => {
     messages.value    = []
     isBlocked.value   = false
     isCompleted.value = false
+    completedContracts.value = []
   }
 
   return {
-    chats, activeChat, messages, isBlocked, blockMessage, isCompleted,
+    chats, activeChat, messages, isBlocked, blockMessage, isCompleted, completedContracts,
     socketConnected, loadingMessages, readIds,
     isRead, markRead,
     loadChats, openChat, enterChat, sendMessage, sendProposal, sendBrief, addMessage, leaveChat,

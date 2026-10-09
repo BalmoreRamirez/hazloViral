@@ -110,7 +110,7 @@ export class AuthService {
       if (dto.bio)       profile.bio       = dto.bio;
       if (dto.ubicacion) profile.ubicacion = dto.ubicacion;
       if (dto.direccion) profile.direccion = dto.direccion;
-      if (dto.rubro)     profile.rubro     = dto.rubro;
+      if (dto.rubros?.length) profile.rubros = dto.rubros;
       profile.tarifa_base = dto.tarifa_base ?? 0;
       profile.fecha_nacimiento = dto.fecha_nacimiento;
       profile.tipo_identificacion   = dto.tipo_identificacion;

@@ -5,6 +5,7 @@ const props = defineProps<{
   rubro?: string | null
   nombre?: string
   height?: string
+  extra?: number   // cantidad de rubros adicionales, se muestra como "+N"
 }>()
 
 type RubroConfig = {
@@ -265,7 +266,7 @@ const bannerHeight = computed(() => props.height ?? '180px')
     <div class="absolute top-4 left-5 flex items-center gap-2">
       <span class="text-2xl leading-none drop-shadow">{{ config.icon }}</span>
       <span class="text-white/80 text-xs font-semibold tracking-widest uppercase select-none drop-shadow">
-        {{ config.label }}
+        {{ config.label }}<template v-if="extra && extra > 0"> +{{ extra }}</template>
       </span>
     </div>
 

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, LessThan, Not, Repository } from 'typeorm';
 import { ContratoEscrow } from './entities/contrato-escrow.entity';
 import { ContratoRevisionRound } from './entities/contrato-revision-round.entity';
 import { ContratoAuditLog } from './entities/contrato-audit-log.entity';
@@ -100,6 +100,7 @@ export class ContratosService {
         contrato.contrato_pdf_url = message.proposal_data.contrato_pdf_url;
       }
       contrato.status = ContratoStatus.PENDING_PAYMENT;
+      await this.attachBrief(manager, contrato, message);
 
       const saved = await manager.save(contrato);
       message.contrato_id = saved.id;
@@ -111,7 +112,7 @@ export class ContratosService {
         action: 'proposal_accepted',
         previous_status: null,
         new_status: ContratoStatus.PENDING_PAYMENT,
-        metadata: { monto, comision, prev_proposal_status: prevStatus },
+        metadata: { monto, comision, prev_proposal_status: prevStatus, campaign_brief_id: saved.campaign_brief_id },
       });
 
       this.chatGateway.server
@@ -249,6 +250,7 @@ export class ContratosService {
         contrato.contrato_pdf_url = message.proposal_data.contrato_pdf_url;
       }
       contrato.status = ContratoStatus.PENDING_PAYMENT;
+      await this.attachBrief(manager, contrato, message);
 
       const saved = await manager.save(contrato);
       message.contrato_id = saved.id;
@@ -260,7 +262,7 @@ export class ContratosService {
         action: 'counter_accepted',
         previous_status: null,
         new_status: ContratoStatus.PENDING_PAYMENT,
-        metadata: { monto, comision },
+        metadata: { monto, comision, campaign_brief_id: saved.campaign_brief_id },
       });
 
       this.chatGateway.server
@@ -429,8 +431,8 @@ export class ContratosService {
     if (wompiTransferId) contrato.stripe_transfer_id = wompiTransferId;
     const saved = await this.contratosRepo.save(contrato);
 
-    // Marcar el chat como completado para bloquear nuevos mensajes
-    await this.chatsRepo.update({ id: contrato.chat_id }, { status: ChatStatus.COMPLETED });
+    // Reactivar el chat para permitir nuevas campañas con el mismo influencer
+    await this.chatsRepo.update({ id: contrato.chat_id }, { status: ChatStatus.ACTIVE });
 
     await this.writeAudit(null, {
       contrato_id: saved.id,
@@ -530,6 +532,26 @@ export class ContratosService {
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────────
+  // Vincula al contrato el último brief enviado en el chat antes de la propuesta
+  private async attachBrief(manager: EntityManager, contrato: ContratoEscrow, proposal: Message): Promise<void> {
+    const briefMsg = await manager.findOne(Message, {
+      where: { chat_id: proposal.chat_id, id: LessThan(proposal.id), campaign_brief_id: Not(IsNull()) },
+      relations: { campaignBrief: true },
+      order: { id: 'DESC' },
+    });
+    const brief = briefMsg?.campaignBrief;
+    if (!brief) return;
+    contrato.campaign_brief_id = brief.id;
+    contrato.campaign_brief = {
+      titulo_campana:     brief.titulo_campana,
+      objetivo_principal: brief.objetivo_principal ?? null,
+      tono_de_voz:        brief.tono_de_voz ?? null,
+      puntos_clave_si:    brief.puntos_clave_si ?? null,
+      restricciones_no:   brief.restricciones_no ?? null,
+      recursos_esteticos: brief.recursos_esteticos ?? null,
+    };
+  }
+
   private async findAndAuthorize(
     contratoId: number,
     user: User,

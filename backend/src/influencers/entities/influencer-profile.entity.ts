@@ -63,8 +63,8 @@ export class InfluencerProfile {
   @Column({ nullable: true, length: 20 })
   banco_cuenta_tipo: string; // 'CORRIENTE' | 'AHORROS'
 
-  @Column({ nullable: true, length: 50 })
-  rubro: string;  // turismo, gastronomia, moda, tecnologia, fitness, etc.
+  @Column({ type: 'jsonb', nullable: true, name: 'rubro' })
+  rubros: string[] | null;  // ['turismo', 'moda', 'fitness', ...]
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
   tarifa_base: number;
