@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email, helpers } from '@vuelidate/validators'
+import { DEPARTAMENTOS_SV } from '@/constants/ubicaciones'
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -82,13 +83,6 @@ function onRepNumeroIdInput(e: Event) {
   rep_numero_id.value = rep_tipo_id.value === 'DUI'
     ? applyDuiMask(e) : applyPasaporteMask(e)
 }
-
-const DEPARTAMENTOS_SV = [
-  'Ahuachapán', 'Cabañas', 'Chalatenango', 'Cuscatlán',
-  'La Libertad', 'La Paz', 'La Unión', 'Morazán',
-  'San Miguel', 'San Salvador', 'San Vicente',
-  'Santa Ana', 'Sonsonate', 'Usulután',
-]
 
 const esMenor = computed(() => {
   if (!fecha_nacimiento.value) return false
