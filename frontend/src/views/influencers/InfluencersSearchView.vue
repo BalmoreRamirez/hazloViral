@@ -6,6 +6,8 @@ import StarRating from '@/components/StarRating.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { influencerApi } from '@/api/profiles'
 import { ratingsApi, type RatingSummary } from '@/api/ratings'
+import { PAISES, DEPARTAMENTOS_SV, formatUbicacion } from '@/constants/ubicaciones'
+import { RUBROS_INFLUENCER } from '@/constants/rubros'
 
 const router = useRouter()
 
@@ -18,6 +20,8 @@ const summaries  = ref<Record<number, RatingSummary>>({})
 const filters = ref({
   red_social:      '',
   ubicacion:       '',
+  departamento:    '',
+  rubro:           '',
   min_seguidores:  0,
   max_tarifa:      '',
   solo_disponibles: true,
@@ -25,20 +29,14 @@ const filters = ref({
 
 const REDES = ['TikTok', 'Instagram', 'YouTube', 'Facebook']
 
-const PAISES = [
-  'Argentina','Bolivia','Brasil','Chile','Colombia','Costa Rica','Cuba',
-  'Ecuador','El Salvador','España','Estados Unidos','Guatemala','Honduras',
-  'México','Nicaragua','Panamá','Paraguay','Perú','Puerto Rico',
-  'República Dominicana','Uruguay','Venezuela','Otro',
-]
-
 async function search() {
   loading.value = true
   page.value    = 1
   try {
     const params: any = { page: 1, limit: 20 }
     if (filters.value.red_social)     params.red_social     = filters.value.red_social
-    if (filters.value.ubicacion)      params.ubicacion      = filters.value.ubicacion
+    if (filters.value.ubicacion)      params.ubicacion      = formatUbicacion(filters.value.ubicacion, filters.value.departamento)
+    if (filters.value.rubro)          params.rubro          = filters.value.rubro
     if (filters.value.min_seguidores) params.min_seguidores = filters.value.min_seguidores
     if (filters.value.max_tarifa)     params.max_tarifa     = Number(filters.value.max_tarifa)
     if (!filters.value.solo_disponibles) params.disponible  = false
@@ -59,7 +57,7 @@ async function search() {
 onMounted(search)
 
 function clearFilters() {
-  filters.value = { red_social: '', ubicacion: '', min_seguidores: 0, max_tarifa: '', solo_disponibles: true }
+  filters.value = { red_social: '', ubicacion: '', departamento: '', rubro: '', min_seguidores: 0, max_tarifa: '', solo_disponibles: true }
   search()
 }
 
@@ -96,7 +94,21 @@ const REDES_ICON: Record<string, string> = {
             <label class="label">Ubicación</label>
             <Select v-model="filters.ubicacion" :options="PAISES" filter
               placeholder="Todos los países" showClear class="w-full"
-              @change="search" />
+              @change="filters.departamento = ''; search()" />
+          </div>
+          <div v-if="filters.ubicacion === 'El Salvador'" class="field">
+            <label class="label">Departamento</label>
+            <select v-model="filters.departamento" class="input" @change="search">
+              <option value="">Todos</option>
+              <option v-for="d in DEPARTAMENTOS_SV" :key="d">{{ d }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label">Rubro</label>
+            <select v-model="filters.rubro" class="input" @change="search">
+              <option value="">Todos</option>
+              <option v-for="r in RUBROS_INFLUENCER" :key="r.value" :value="r.value">{{ r.label }}</option>
+            </select>
           </div>
           <div class="field">
             <label class="label">Min. seguidores</label>

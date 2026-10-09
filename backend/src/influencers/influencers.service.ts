@@ -18,6 +18,7 @@ import { SocialVerificationService } from './social-verification.service';
 export interface SearchInfluencerQuery {
   red_social?: string;
   ubicacion?: string;
+  rubro?: string;
   min_seguidores?: number;
   max_tarifa?: number;
   disponible?: boolean;
@@ -104,6 +105,9 @@ export class InfluencersService {
 
     if (query.ubicacion) {
       qb.andWhere('LOWER(p.ubicacion) LIKE LOWER(:ub)', { ub: `%${query.ubicacion}%` });
+    }
+    if (query.rubro) {
+      qb.andWhere('p.rubro @> CAST(:rubro AS jsonb)', { rubro: JSON.stringify([query.rubro]) });
     }
     if (query.max_tarifa !== undefined) {
       qb.andWhere('p.tarifa_base <= :tarifa', { tarifa: query.max_tarifa });

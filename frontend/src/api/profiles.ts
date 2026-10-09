@@ -17,7 +17,7 @@ export const influencerApi = {
     api.get(`/influencers/by-username/${username.replace(/^@/, '')}`).then(r => r.data),
 
   // Buscador (§4.1)
-  search: (params: { red_social?: string; ubicacion?: string; min_seguidores?: number; max_tarifa?: number; page?: number; limit?: number }) =>
+  search: (params: { red_social?: string; ubicacion?: string; rubro?: string; min_seguidores?: number; max_tarifa?: number; page?: number; limit?: number }) =>
     api.get('/influencers', { params }).then(r => r.data),
 
   // Métricas de redes sociales
