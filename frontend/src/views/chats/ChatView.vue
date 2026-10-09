@@ -55,8 +55,27 @@ const blockMsg    = computed(() => chatStore.blockMessage)
 const messages    = computed(() => chatStore.messages)
 const myId        = computed(() => authStore.user?.id)
 
-// Flujo ordenado: brief → propuesta
-const hasBrief = computed(() => messages.value.some(m => m.campaignBrief != null))
+// Fecha del último contrato completado: lo anterior pertenece a una colaboración cerrada
+const lastCompletedAt = computed(() => chatStore.completedContracts.at(-1)?.completedAt ?? null)
+
+function isAfter(date: string, ref: string) {
+  return new Date(date).getTime() > new Date(ref).getTime()
+}
+
+// Flujo ordenado: brief → propuesta. Tras un contrato completado se exige un brief nuevo.
+const hasBrief = computed(() => messages.value.some(m =>
+  m.campaignBrief != null && (!lastCompletedAt.value || isAfter(m.created_at, lastCompletedAt.value)),
+))
+
+// Mensajes que abren una nueva colaboración (el primero después de cada contrato completado)
+const collaborationStarts = computed(() => {
+  const starts = new Map<number, number>()  // message id → número de colaboración
+  chatStore.completedContracts.forEach((c, i) => {
+    const first = messages.value.find(m => isAfter(m.created_at, c.completedAt))
+    if (first && !starts.has(first.id)) starts.set(first.id, i + 2)
+  })
+  return starts
+})
 
 const counterpart = computed(() => {
   const chat = chatStore.activeChat
@@ -257,9 +276,9 @@ function formatTime(dt: string) {
       </div>
 
       <!-- Banner contrato finalizado (solo informativo — el chat sigue activo) -->
-      <div v-if="isCompleted" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 text-sm text-emerald-700 flex items-center gap-2">
+      <div v-if="isCompleted && !hasBrief" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 text-sm text-emerald-700 flex items-center gap-2">
         <span class="text-base">✅</span>
-        <span>El contrato anterior fue <strong>completado exitosamente</strong>. Puedes iniciar una nueva campaña aquí.</span>
+        <span>El contrato anterior fue <strong>completado exitosamente</strong>. Puedes iniciar una nueva campaña aquí{{ isEmpresa ? ' enviando un nuevo brief' : '' }}.</span>
       </div>
 
       <!-- Alerta saldo bajo -->
@@ -276,6 +295,15 @@ function formatTime(dt: string) {
         <div v-if="chatStore.loadingMessages" class="text-center text-navy/40 py-8">Cargando…</div>
 
         <template v-for="msg in messages" :key="msg.id">
+
+          <!-- ── Separador de nueva colaboración ── -->
+          <div v-if="collaborationStarts.has(msg.id)" class="flex items-center gap-3 py-2 select-none">
+            <div class="flex-1 border-t border-navy/10" />
+            <span class="text-xs font-medium text-navy/40">
+              Nueva colaboración · #{{ collaborationStarts.get(msg.id) }}
+            </span>
+            <div class="flex-1 border-t border-navy/10" />
+          </div>
 
           <!-- ── Tarjeta de propuesta / contraoferta ── -->
           <div v-if="msg.is_proposal" class="flex justify-center">
@@ -501,7 +529,9 @@ function formatTime(dt: string) {
       <!-- Input de mensaje -->
       <div class="card py-3">
         <p v-if="isEmpresa && !isBlocked && !hasBrief" class="text-xs text-navy/50 mb-2">
-          📋 Envía primero el brief de campaña antes de proponer un contrato.
+          📋 {{ lastCompletedAt
+            ? 'Envía un nuevo brief de campaña para iniciar esta colaboración.'
+            : 'Envía primero el brief de campaña antes de proponer un contrato.' }}
         </p>
         <div class="flex gap-2">
           <button v-if="isEmpresa && !isBlocked && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
