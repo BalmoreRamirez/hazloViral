@@ -22,6 +22,20 @@ export interface BriefSnapshot {
   puntos_clave_si: string | null;
   restricciones_no: string | null;
   recursos_esteticos: string | null;
+  // Campos añadidos en el brief extendido — null en contratos anteriores
+  presupuesto_min?: number | null;
+  presupuesto_max?: number | null;
+  publico_objetivo?: string | null;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  plataformas?: string[] | null;
+  formatos?: string | null;
+  hashtags_menciones?: string | null;
+  derechos_uso?: string | null;
+  exclusividad_dias?: number | null;
+  exclusividad_detalle?: string | null;
+  requiere_disclosure?: boolean | null;
+  archivos?: { url: string; nombre: string; tipo_archivo: string; size_bytes: number }[] | null;
 }
 
 @Entity('contratos_escrow')

@@ -7,6 +7,9 @@ export const authApi = {
   registerEmpresa: (data: {
     email: string; password: string; nombre_comercial: string; sitio_web?: string
     pais?: string; direccion?: string; rubro?: string
+    razon_social?: string; nit?: string; nrc?: string
+    telefono: string
+    representante_nombre: string
     representante_tipo_identificacion: 'DUI' | 'PASAPORTE'
     representante_numero_identificacion: string
   }) => api.post('/auth/register/empresa', data).then((r) => r.data),

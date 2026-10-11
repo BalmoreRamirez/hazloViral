@@ -11,7 +11,7 @@ import { ContratoRevisionRound } from './entities/contrato-revision-round.entity
 import { ContratoAuditLog } from './entities/contrato-audit-log.entity';
 import { Chat } from '../chats/entities/chat.entity';
 import { Message } from '../chats/entities/message.entity';
-import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
+import { EmpresaProfile, toPublicEmpresa } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
 import { ChatGateway } from '../chats/chats.gateway';
 import { AdminService } from '../admin/admin.service';
@@ -26,6 +26,7 @@ import { SubmitDeliverablesDto } from './dto/submit-deliverables.dto';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { RegisterPublicationsDto } from './dto/register-publications.dto';
 import { ReportNonComplianceDto } from './dto/report-non-compliance.dto';
+import { BRIEF_CONTENT_FIELDS } from '../campaigns/entities/campaign-brief.entity';
 
 const MAX_REVISION_ROUNDS = 3;
 
@@ -288,8 +289,27 @@ export class ContratosService {
       );
     }
 
+    // Los entregables acordados (tipo y descripción) no cambian: solo se adjuntan archivos a cada uno,
+    // emparejados por posición. Así un contrato con varios entregables no pierde ninguno.
+    const acordados = (contrato.entregables ?? []) as any[];
+    if (acordados.length > 0) {
+      if (dto.entregables.length !== acordados.length) {
+        throw new BadRequestException(
+          `Debes enviar archivos para los ${acordados.length} entregables del contrato.`,
+        );
+      }
+      const sinArchivos = dto.entregables.findIndex((e) => !e.archivos?.length);
+      if (sinArchivos >= 0) {
+        throw new BadRequestException(
+          `Falta subir archivos para el entregable "${acordados[sinArchivos].tipo}".`,
+        );
+      }
+    }
+
     const prevStatus = contrato.status;
-    contrato.entregables = dto.entregables as any;
+    contrato.entregables = (acordados.length > 0
+      ? acordados.map((e, i) => ({ tipo: e.tipo, descripcion: e.descripcion, archivos: dto.entregables[i].archivos }))
+      : dto.entregables) as any;
     contrato.status = ContratoStatus.UNDER_REVIEW;
     const saved = await this.contratosRepo.save(contrato);
 
@@ -498,20 +518,25 @@ export class ContratosService {
     }
     const influencer = await this.influencersRepo.findOne({ where: { user_id: user.id } });
     if (!influencer) return [];
-    return this.contratosRepo.find({
+    const contratos = await this.contratosRepo.find({
       where: { influencer_id: influencer.id },
-      relations: { empresa: true, chat: true },
+      relations: { empresa: { user: true }, chat: true },
       order: { created_at: 'DESC' },
     });
+    // El influencer solo ve los datos públicos de la marca (sin NIT, teléfono ni saldo)
+    return contratos.map((c) => Object.assign(c, { empresa: toPublicEmpresa(c.empresa) as any }));
   }
 
   async findOne(user: User, contratoId: number): Promise<ContratoEscrow> {
     const contrato = await this.contratosRepo.findOne({
       where: { id: contratoId },
-      relations: { empresa: true, influencer: true, chat: true },
+      relations: { empresa: { user: true }, influencer: true, chat: true },
     });
     if (!contrato) throw new NotFoundException('Contrato no encontrado.');
     await this.assertIsParticipant(contrato, user);
+    if (user.role === UserRole.INFLUENCER) {
+      contrato.empresa = toPublicEmpresa(contrato.empresa) as any;
+    }
     return contrato;
   }
 
@@ -542,14 +567,10 @@ export class ContratosService {
     const brief = briefMsg?.campaignBrief;
     if (!brief) return;
     contrato.campaign_brief_id = brief.id;
-    contrato.campaign_brief = {
-      titulo_campana:     brief.titulo_campana,
-      objetivo_principal: brief.objetivo_principal ?? null,
-      tono_de_voz:        brief.tono_de_voz ?? null,
-      puntos_clave_si:    brief.puntos_clave_si ?? null,
-      restricciones_no:   brief.restricciones_no ?? null,
-      recursos_esteticos: brief.recursos_esteticos ?? null,
-    };
+    // Snapshot inmutable: incluye condiciones comerciales (derechos de uso, exclusividad)
+    contrato.campaign_brief = Object.fromEntries(
+      BRIEF_CONTENT_FIELDS.map((f) => [f, (brief as any)[f] ?? null]),
+    ) as unknown as ContratoEscrow['campaign_brief'];
   }
 
   private async findAndAuthorize(

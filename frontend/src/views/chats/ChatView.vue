@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
+import BriefDetails from '@/components/BriefDetails.vue'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
@@ -10,6 +11,8 @@ import { useContractsStore } from '@/stores/contracts'
 import { useProfileStore } from '@/stores/profile'
 import type { ChatMessage } from '@/stores/chat'
 import { uploadContratoPdf } from '@/api/chats'
+import { useVuelidate } from '@vuelidate/core'
+import { required, helpers } from '@vuelidate/validators'
 
 const route          = useRoute()
 const router         = useRouter()
@@ -26,8 +29,17 @@ const msgEnd      = ref<HTMLDivElement | null>(null)
 // Proposal form
 const showProposal  = ref(false)
 const propTarifa    = ref(500)
-const propTipo      = ref('TikTok')
-const propDesc      = ref('')
+// Varios entregables por propuesta (ej. 1 TikTok + 1 Reel de Instagram)
+const PLATAFORMAS_PROPUESTA = ['TikTok', 'Instagram', 'Facebook', 'YouTube']
+const propEntregables = ref([{ tipo: 'TikTok', descripcion: '' }])
+function addEntregable() {
+  const usadas = propEntregables.value.map(e => e.tipo)
+  const siguiente = PLATAFORMAS_PROPUESTA.find(p => !usadas.includes(p)) ?? 'TikTok'
+  propEntregables.value.push({ tipo: siguiente, descripcion: '' })
+}
+function removeEntregable(i: number) {
+  propEntregables.value.splice(i, 1)
+}
 const propPlazo     = ref('')
 const propPdfFile   = ref<File | null>(null)
 const propPdfError  = ref('')
@@ -96,6 +108,8 @@ const counterpart = computed(() => {
       sub:        emp.sitio_web ?? '',
       initials:   (emp.nombre_comercial?.[0] ?? 'E').toUpperCase(),
       avatar_url: emp.user?.avatar_url ?? null,
+      is_verified: emp.is_verified ?? false,
+      profile_url: `/empresas/${emp.id}`,
     } : null
   }
 })
@@ -137,21 +151,41 @@ function onPdfChange(e: Event) {
   propPdfFile.value = file
 }
 
+// ─── Validación de la propuesta (mismo patrón que los formularios de perfil) ──
+const todayIso = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en hora local
+const propForm = computed(() => ({ tarifa: propTarifa.value, entregables: propEntregables.value, plazo: propPlazo.value }))
+const propRules = {
+  tarifa: {
+    required: helpers.withMessage('La tarifa es obligatoria', required),
+    positiva: helpers.withMessage('La tarifa debe ser mayor a $0', (v: number) => Number(v) > 0),
+  },
+  entregables: {
+    completos: helpers.withMessage('Describe cada entregable',
+      (v: { descripcion: string }[]) => v.length > 0 && v.every(e => e.descripcion.trim())),
+  },
+  plazo: {
+    required: helpers.withMessage('La fecha límite es obligatoria', required),
+    futura:   helpers.withMessage('La fecha límite no puede estar en el pasado', (v: string) => !v || v >= todayIso),
+  },
+}
+const pv$ = useVuelidate(propRules, propForm)
+
 async function sendProposal() {
-  if (!propTarifa.value || !propDesc.value || !propPlazo.value) return
+  if (!(await pv$.value.$validate())) return
   propLoading.value = true
   try {
     let pdfUrl: string | undefined
     if (propPdfFile.value) pdfUrl = await uploadContratoPdf(propPdfFile.value)
     chatStore.sendProposal({
       tarifa: propTarifa.value,
-      entregables: [{ tipo: propTipo.value, descripcion: propDesc.value }],
+      entregables: propEntregables.value.map(e => ({ tipo: e.tipo, descripcion: e.descripcion.trim() })),
       plazo: propPlazo.value,
       ...(pdfUrl ? { contrato_pdf_url: pdfUrl } : {}),
     })
     showProposal.value = false
-    propDesc.value = ''
+    propEntregables.value = [{ tipo: 'TikTok', descripcion: '' }]
     propPdfFile.value = null
+    pv$.value.$reset()
   } catch {
     propPdfError.value = 'Error al subir el PDF. Intenta de nuevo.'
   } finally {
@@ -261,7 +295,10 @@ function formatTime(dt: string) {
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-1.5">
-                <p class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
+                <RouterLink v-if="counterpart.profile_url" :to="counterpart.profile_url"
+                  class="font-display font-semibold text-navy leading-tight hover:text-violet"
+                  title="Ver perfil de la marca">{{ counterpart.name }}</RouterLink>
+                <p v-else class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
                 <VerifiedBadge v-if="counterpart.is_verified" size="sm" />
               </div>
               <span v-if="counterpart.sub" class="text-xs text-navy/40">{{ counterpart.sub }}</span>
@@ -331,7 +368,7 @@ function formatTime(dt: string) {
                   "{{ msg.contraoferta_data.justificacion }}"
                 </p>
                 <template v-else-if="msg.proposal_data">
-                  <p>📦 {{ msg.proposal_data.entregables?.[0]?.tipo }}: {{ msg.proposal_data.entregables?.[0]?.descripcion }}</p>
+                  <p v-for="(e, i) in msg.proposal_data.entregables ?? []" :key="i">📦 <strong>{{ e.tipo }}:</strong> {{ e.descripcion }}</p>
                   <p>📅 Plazo: {{ msg.proposal_data.plazo }}</p>
                   <a v-if="msg.proposal_data.contrato_pdf_url" :href="msg.proposal_data.contrato_pdf_url" target="_blank"
                     class="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-lg bg-violet/10 text-violet text-xs font-medium hover:bg-violet/20 transition-colors">
@@ -410,28 +447,7 @@ function formatTime(dt: string) {
                 <span class="ml-auto text-xs text-amber-600">{{ formatTime(msg.created_at) }}</span>
               </div>
               <p class="font-semibold text-navy text-sm">{{ msg.campaignBrief.titulo_campana }}</p>
-              <div class="text-xs space-y-1 text-navy/70">
-                <p v-if="msg.campaignBrief.objetivo_principal">
-                  <span class="font-medium text-navy/50 uppercase tracking-wide">Objetivo:</span>
-                  {{ msg.campaignBrief.objetivo_principal }}
-                </p>
-                <p v-if="msg.campaignBrief.tono_de_voz">
-                  <span class="font-medium text-navy/50 uppercase tracking-wide">Tono:</span>
-                  {{ msg.campaignBrief.tono_de_voz }}
-                </p>
-                <p v-if="msg.campaignBrief.puntos_clave_si">
-                  <span class="font-medium text-green-700 uppercase tracking-wide">✅ Incluir:</span>
-                  {{ msg.campaignBrief.puntos_clave_si }}
-                </p>
-                <p v-if="msg.campaignBrief.restricciones_no">
-                  <span class="font-medium text-coral uppercase tracking-wide">🚫 Evitar:</span>
-                  {{ msg.campaignBrief.restricciones_no }}
-                </p>
-                <p v-if="msg.campaignBrief.recursos_esteticos">
-                  <span class="font-medium text-navy/50 uppercase tracking-wide">🎨 Recursos:</span>
-                  {{ msg.campaignBrief.recursos_esteticos }}
-                </p>
-              </div>
+              <BriefDetails :brief="msg.campaignBrief" />
             </div>
           </div>
 
@@ -456,30 +472,52 @@ function formatTime(dt: string) {
         <div ref="msgEnd" />
       </div>
 
+      <!-- Error devuelto por el servidor (antes se perdía en silencio) -->
+      <div v-if="chatStore.socketError"
+        class="mb-3 flex items-start gap-2 bg-coral/10 border border-coral/20 rounded-lg px-3 py-2 text-sm text-coral">
+        <span>⚠️</span>
+        <span class="flex-1">{{ chatStore.socketError }}</span>
+        <button @click="chatStore.socketError = null" class="text-coral/60 hover:text-coral" title="Cerrar">✕</button>
+      </div>
+
       <!-- Formulario de propuesta -->
       <div v-if="showProposal && isEmpresa && hasBrief" class="card mb-3 space-y-3">
         <p class="font-semibold text-navy text-sm">Nueva propuesta de contrato</p>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="label">Tarifa (USD)</label>
-            <input v-model.number="propTarifa" type="number" min="1" class="input" required />
+            <label class="label">Tarifa total (USD)</label>
+            <input v-model.number="propTarifa" type="number" min="1" required
+              :class="['input', { '!border-coral': pv$.tarifa.$error }]" />
+            <p v-if="pv$.tarifa.$error" class="text-coral text-xs mt-1">{{ pv$.tarifa.$errors[0]?.$message }}</p>
           </div>
           <div>
-            <label class="label">Tipo de entregable</label>
-            <select v-model="propTipo" class="input" required>
-              <option>TikTok</option><option>Instagram</option>
-              <option>YouTube</option><option>Twitter</option>
-            </select>
+            <label class="label">Fecha límite</label>
+            <input v-model="propPlazo" type="date" required :min="todayIso"
+              :class="['input', { '!border-coral': pv$.plazo.$error }]" />
+            <p v-if="pv$.plazo.$error" class="text-coral text-xs mt-1">{{ pv$.plazo.$errors[0]?.$message }}</p>
           </div>
         </div>
-        <div>
-          <label class="label">Descripción del entregable</label>
-          <textarea v-model="propDesc" class="input" rows="3"
-            placeholder="Describe el contenido esperado, formato, menciones requeridas…" required />
-        </div>
-        <div>
-          <label class="label">Fecha límite</label>
-          <input v-model="propPlazo" type="date" class="input" required />
+
+        <!-- Entregables: uno por plataforma/pieza -->
+        <div class="space-y-2">
+          <label class="label">Entregables <span class="text-coral">*</span></label>
+          <div v-for="(e, i) in propEntregables" :key="i" class="flex items-start gap-2">
+            <select v-model="e.tipo" class="input w-32 shrink-0">
+              <option v-for="pl in PLATAFORMAS_PROPUESTA" :key="pl">{{ pl }}</option>
+            </select>
+            <div class="flex-1">
+              <textarea v-model="e.descripcion" rows="2"
+                placeholder="Ej.: 1 video de 60s mencionando la marca y el código de descuento"
+                :class="['input', { '!border-coral': pv$.entregables.$dirty && !e.descripcion.trim() }]" />
+              <p v-if="pv$.entregables.$dirty && !e.descripcion.trim()" class="text-coral text-xs mt-1">
+                Describe este entregable
+              </p>
+            </div>
+            <button v-if="propEntregables.length > 1" type="button" @click="removeEntregable(i)"
+              class="text-navy/30 hover:text-coral text-sm mt-2" title="Quitar entregable">✕</button>
+          </div>
+          <button type="button" @click="addEntregable"
+            class="text-sm font-semibold text-violet hover:text-violet/80">+ Agregar otro entregable</button>
         </div>
         <div>
           <label class="label">Contrato PDF <span class="text-navy/40 font-normal">(opcional, máx. 10 MB)</span></label>
@@ -495,6 +533,7 @@ function formatTime(dt: string) {
           </label>
           <p v-if="propPdfError" class="text-coral text-xs mt-1">{{ propPdfError }}</p>
         </div>
+        <p v-if="pv$.$error" class="text-coral text-sm">Revisa los campos marcados en rojo.</p>
         <div class="flex gap-2">
           <button @click="sendProposal" :disabled="propLoading" class="btn-primary text-sm">
             {{ propLoading ? 'Enviando…' : 'Enviar propuesta' }}

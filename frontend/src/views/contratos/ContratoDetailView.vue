@@ -2,6 +2,8 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import BriefDetails from '@/components/BriefDetails.vue'
+import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { useContractsStore } from '@/stores/contracts'
 import { useAuthStore } from '@/stores/auth'
 import { connectSocket } from '@/socket'
@@ -23,9 +25,20 @@ const activeTab = ref<'detalle' | 'auditoría'>('detalle')
 // Entregables — uploader
 const uploadingFiles = ref(false)
 const uploadError    = ref('')
-const pendingFiles   = ref<{ file: File; uploaded: ArchivoEntregable | null }[]>([])
-const delivTipo      = ref('TikTok')
-const delivDesc      = ref('')
+type PendingFile = { file: File; uploaded: ArchivoEntregable | null }
+// Archivos por entregable (mismo índice que contrato.entregables)
+const pendingByIdx   = ref<PendingFile[][]>([])
+// Entregables acordados; los contratos antiguos sin lista usan un único espacio genérico
+const delivSlots = computed(() =>
+  contrato.value?.entregables?.length
+    ? contrato.value.entregables.map((e: any) => ({ tipo: e.tipo, descripcion: e.descripcion ?? '' }))
+    : [{ tipo: 'Contenido', descripcion: '' }],
+)
+function filesFor(i: number): PendingFile[] {
+  return (pendingByIdx.value[i] ??= [])
+}
+const allPending  = computed(() => pendingByIdx.value.flat())
+const missingIdx  = computed(() => delivSlots.value.findIndex((_, i) => !(pendingByIdx.value[i]?.length)))
 const submitting     = ref(false)
 
 // Cambios
@@ -112,9 +125,10 @@ onUnmounted(() => {
 })
 
 // ── File upload helpers ────────────────────────────────────────────────────
-function onFilesSelected(e: Event) {
+function onFilesSelected(idx: number, e: Event) {
   const files = Array.from((e.target as HTMLInputElement).files ?? [])
-  files.forEach(f => pendingFiles.value.push({ file: f, uploaded: null }))
+  const list = filesFor(idx)
+  files.forEach(f => list.push({ file: f, uploaded: null }))
   ;(e.target as HTMLInputElement).value = ''
 }
 
@@ -123,7 +137,7 @@ async function uploadPendingFiles() {
   uploadingFiles.value = true
   try {
     await Promise.all(
-      pendingFiles.value
+      allPending.value
         .filter(p => !p.uploaded)
         .map(async (p) => {
           const result = await contractsApi.uploadFile(p.file)
@@ -137,26 +151,30 @@ async function uploadPendingFiles() {
   }
 }
 
-function removePendingFile(i: number) {
-  pendingFiles.value.splice(i, 1)
+function removePendingFile(idx: number, i: number) {
+  filesFor(idx).splice(i, 1)
 }
 
 async function submitDeliverables() {
-  if (pendingFiles.value.some(p => !p.uploaded)) {
+  // Cada entregable acordado necesita al menos un archivo
+  if (missingIdx.value >= 0) {
+    uploadError.value = `Falta subir archivos para "${delivSlots.value[missingIdx.value]!.tipo}".`
+    return
+  }
+  if (allPending.value.some(p => !p.uploaded)) {
     await uploadPendingFiles()
     if (uploadError.value) return
   }
   if (!contrato.value) return
   submitting.value = true
   try {
-    const entregables: EntregableConArchivos[] = [{
-      tipo: delivTipo.value,
-      descripcion: delivDesc.value,
-      archivos: pendingFiles.value.map(p => p.uploaded!),
-    }]
+    const entregables: EntregableConArchivos[] = delivSlots.value.map((s, i) => ({
+      tipo: s.tipo,
+      descripcion: s.descripcion,
+      archivos: filesFor(i).map(p => p.uploaded!),
+    }))
     await contractsStore.submitDeliverables(contrato.value.id, entregables)
-    pendingFiles.value = []
-    delivDesc.value = ''
+    pendingByIdx.value = []
   } catch (e: any) {
     alert(e.response?.data?.message ?? 'Error al enviar entregables.')
   } finally {
@@ -305,7 +323,10 @@ const TIPO_ICON: Record<string, string> = {
                 <div class="w-6 h-6 rounded-full bg-violet/20 flex items-center justify-center text-xs font-bold text-violet">
                   {{ (contrato.empresa?.nombre_comercial?.[0] ?? 'E').toUpperCase() }}
                 </div>
-                <span class="font-medium text-navy">{{ contrato.empresa?.nombre_comercial ?? 'Empresa' }}</span>
+                <RouterLink v-if="contrato.empresa?.id" :to="`/empresas/${contrato.empresa.id}`"
+                  class="font-medium text-navy hover:text-violet">{{ contrato.empresa.nombre_comercial ?? 'Empresa' }}</RouterLink>
+                <span v-else class="font-medium text-navy">Empresa</span>
+                <VerifiedBadge v-if="contrato.empresa?.is_verified" size="sm" />
               </div>
               <span class="text-navy/30">→</span>
               <div class="flex items-center gap-1.5">
@@ -453,28 +474,7 @@ const TIPO_ICON: Record<string, string> = {
               <h2 class="font-semibold text-navy">Brief de la campaña</h2>
             </div>
             <p class="font-semibold text-navy text-sm">{{ contrato.campaign_brief.titulo_campana }}</p>
-            <div class="text-sm space-y-1.5 text-navy/70">
-              <p v-if="contrato.campaign_brief.objetivo_principal">
-                <span class="text-xs font-medium text-navy/50 uppercase tracking-wide">Objetivo:</span>
-                {{ contrato.campaign_brief.objetivo_principal }}
-              </p>
-              <p v-if="contrato.campaign_brief.tono_de_voz">
-                <span class="text-xs font-medium text-navy/50 uppercase tracking-wide">Tono:</span>
-                {{ contrato.campaign_brief.tono_de_voz }}
-              </p>
-              <p v-if="contrato.campaign_brief.puntos_clave_si">
-                <span class="text-xs font-medium text-green-700 uppercase tracking-wide">✅ Incluir:</span>
-                {{ contrato.campaign_brief.puntos_clave_si }}
-              </p>
-              <p v-if="contrato.campaign_brief.restricciones_no">
-                <span class="text-xs font-medium text-coral uppercase tracking-wide">🚫 Evitar:</span>
-                {{ contrato.campaign_brief.restricciones_no }}
-              </p>
-              <p v-if="contrato.campaign_brief.recursos_esteticos">
-                <span class="text-xs font-medium text-navy/50 uppercase tracking-wide">🎨 Recursos:</span>
-                {{ contrato.campaign_brief.recursos_esteticos }}
-              </p>
-            </div>
+            <BriefDetails :brief="contrato.campaign_brief" class="text-sm" />
             <p class="text-xs text-navy/40 pt-1 border-t border-navy/8">
               Versión del brief vigente al aceptar la propuesta. Los entregables se revisan contra este brief.
             </p>
@@ -531,41 +531,34 @@ const TIPO_ICON: Record<string, string> = {
                     ? `La empresa solicitó cambios (ronda ${contrato.revision_round}/${MAX_ROUNDS}). Sube los archivos corregidos.`
                     : 'El pago está asegurado. Sube tus archivos de entregables.' }}
                 </p>
-                <div class="grid grid-cols-2 gap-2">
+                <!-- Un bloque de subida por cada entregable acordado -->
+                <div v-for="(slot, idx) in delivSlots" :key="idx"
+                  class="rounded-lg border border-navy/10 p-3 space-y-2">
                   <div>
-                    <label class="label">Tipo de entregable</label>
-                    <select v-model="delivTipo" class="input">
-                      <option>TikTok</option><option>Instagram</option>
-                      <option>YouTube</option><option>Twitter</option>
-                    </select>
+                    <p class="text-sm font-semibold text-navy">{{ TIPO_ICON[slot.tipo] ?? '📦' }} {{ slot.tipo }}</p>
+                    <p v-if="slot.descripcion" class="text-xs text-navy/50">{{ slot.descripcion }}</p>
                   </div>
-                  <div>
-                    <label class="label">Descripción</label>
-                    <input v-model="delivDesc" class="input" placeholder="Descripción del entregable…" />
-                  </div>
-                </div>
-                <div>
-                  <label class="label">Archivos (video, imagen, banner, PDF, ZIP)</label>
                   <label class="flex items-center gap-2 cursor-pointer">
                     <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-navy/20 text-sm text-navy/50 hover:border-violet/40 transition-colors">
                       <span>📎</span> Seleccionar archivos…
                     </div>
                     <input type="file" multiple class="hidden"
                       accept="video/*,image/*,application/pdf,application/zip"
-                      @change="onFilesSelected" />
+                      @change="onFilesSelected(idx, $event)" />
                   </label>
-                  <div v-if="pendingFiles.length" class="mt-2 space-y-1">
-                    <div v-for="(p, i) in pendingFiles" :key="i"
+                  <div v-if="pendingByIdx[idx]?.length" class="space-y-1">
+                    <div v-for="(p, i) in pendingByIdx[idx]" :key="i"
                       class="flex items-center gap-2 text-xs text-navy/70 bg-slate rounded px-2 py-1">
                       <span>{{ p.uploaded ? '✅' : '⏳' }}</span>
                       <span class="flex-1 truncate">{{ p.file.name }}</span>
-                      <button @click="removePendingFile(i)" class="text-coral hover:text-coral/70">✕</button>
+                      <button @click="removePendingFile(idx, i)" class="text-coral hover:text-coral/70">✕</button>
                     </div>
                   </div>
-                  <p v-if="uploadError" class="text-coral text-xs mt-1">{{ uploadError }}</p>
                 </div>
+                <p class="text-xs text-navy/40">Formatos: video, imagen, banner, PDF o ZIP. Cada entregable necesita al menos un archivo.</p>
+                <p v-if="uploadError" class="text-coral text-xs">{{ uploadError }}</p>
                 <button @click="submitDeliverables"
-                  :disabled="submitting || uploadingFiles || !pendingFiles.length"
+                  :disabled="submitting || uploadingFiles || !allPending.length"
                   class="btn-primary text-sm disabled:opacity-50">
                   {{ submitting ? 'Enviando…' : uploadingFiles ? 'Subiendo archivos…' : '📤 Enviar entregables' }}
                 </button>
@@ -659,6 +652,10 @@ const TIPO_ICON: Record<string, string> = {
             <div v-if="contrato.status === 'completed'" class="bg-green-50 border border-green-200 rounded-lg p-4">
               <p class="text-green-700 font-semibold">✅ Contrato completado exitosamente.</p>
               <p class="text-green-600 text-sm mt-1">El pago fue liberado al influencer.</p>
+              <RouterLink v-if="!isEmpresa && contrato.empresa?.id" :to="`/empresas/${contrato.empresa.id}`"
+                class="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:text-violet/80 mt-2">
+                ⭐ Califica tu experiencia con {{ contrato.empresa.nombre_comercial }}
+              </RouterLink>
             </div>
 
           </div>

@@ -62,6 +62,11 @@ export class AuthService {
       if (dto.pais)       profile.pais       = dto.pais;
       if (dto.direccion)  profile.direccion  = dto.direccion;
       if (dto.rubro)      profile.rubro      = dto.rubro;
+      if (dto.razon_social) profile.razon_social = dto.razon_social;
+      if (dto.nit)          profile.nit          = dto.nit;
+      if (dto.nrc)          profile.nrc          = dto.nrc;
+      profile.telefono                            = dto.telefono;
+      profile.representante_nombre                = dto.representante_nombre;
       profile.representante_tipo_identificacion   = dto.representante_tipo_identificacion;
       profile.representante_numero_identificacion = dto.representante_numero_identificacion;
       profile.balance_creditos = WELCOME_BONUS; // §5.1 Bono de bienvenida

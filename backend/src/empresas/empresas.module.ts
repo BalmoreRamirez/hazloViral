@@ -4,9 +4,10 @@ import { EmpresaProfile } from './entities/empresa-profile.entity';
 import { EmpresasService } from './empresas.service';
 import { EmpresasController } from './empresas.controller';
 import { AuthModule } from '../auth/auth.module';
+import { ContratoEscrow } from '../contratos/entities/contrato-escrow.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([EmpresaProfile]), AuthModule],
+  imports: [TypeOrmModule.forFeature([EmpresaProfile, ContratoEscrow]), AuthModule],
   controllers: [EmpresasController],
   providers: [EmpresasService],
   exports: [TypeOrmModule, EmpresasService],

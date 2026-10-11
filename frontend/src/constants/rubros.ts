@@ -7,3 +7,10 @@ export const RUBROS_INFLUENCER = [
   { label: '📚 Educación', value: 'educacion' }, { label: '📷 Fotografía', value: 'fotografia' },
   { label: '🏥 Salud', value: 'salud' }, { label: '🎵 Música', value: 'musica' }, { label: '⚽ Deporte', value: 'deporte' },
 ]
+
+// Las marcas usan el mismo catálogo de rubros que los influencers
+export const RUBROS = RUBROS_INFLUENCER
+
+export function rubroLabel(value: string | null | undefined): string {
+  return RUBROS.find(r => r.value === value)?.label ?? (value ?? '')
+}

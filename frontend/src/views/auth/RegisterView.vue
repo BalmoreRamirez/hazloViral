@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email, helpers } from '@vuelidate/validators'
 import { DEPARTAMENTOS_SV } from '@/constants/ubicaciones'
+import { RUBROS } from '@/constants/rubros'
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -20,8 +21,11 @@ const departamento = ref(''); const direccion   = ref('')
 const rubro        = ref('')
 // Empresa
 const nombre_comercial = ref(''); const sitio_web = ref('')
+const telefono      = ref('')
+const rep_nombre    = ref('')
 const rep_tipo_id   = ref<'DUI' | 'PASAPORTE'>('DUI')
 const rep_numero_id = ref('')
+const razon_social  = ref(''); const nit = ref(''); const nrc = ref('')
 // Influencer
 const username         = ref('')
 const nombre_artistico = ref(''); const bio = ref('')
@@ -29,23 +33,7 @@ const tarifa_base      = ref(0);  const fecha_nacimiento = ref('')
 const tipo_identificacion   = ref<'DUI' | 'PASAPORTE'>('DUI')
 const numero_identificacion = ref('')
 
-const RUBROS_LIST = [
-  { label: '✈️ Turismo',        value: 'turismo' },
-  { label: '🏨 Hoteles',        value: 'hoteles' },
-  { label: '🗺️ Viajes',         value: 'viajes' },
-  { label: '🍽️ Gastronomía',    value: 'gastronomia' },
-  { label: '👗 Moda',           value: 'moda' },
-  { label: '💻 Tecnología',     value: 'tecnologia' },
-  { label: '💪 Fitness',        value: 'fitness' },
-  { label: '💄 Belleza',        value: 'belleza' },
-  { label: '💼 Negocios',       value: 'negocios' },
-  { label: '🎭 Entretenimiento', value: 'entretenimiento' },
-  { label: '📚 Educación',      value: 'educacion' },
-  { label: '📷 Fotografía',     value: 'fotografia' },
-  { label: '🏥 Salud',          value: 'salud' },
-  { label: '🎵 Música',         value: 'musica' },
-  { label: '⚽ Deporte',        value: 'deporte' },
-]
+const RUBROS_LIST = RUBROS
 // Tutor (menores)
 const tutor_nombre       = ref(''); const tutor_documento_id = ref('')
 const tutor_email        = ref(''); const tutor_autorizacion = ref(false)
@@ -130,6 +118,13 @@ const rules = computed(() => {
       ...base,
       nombre_comercial: { required: helpers.withMessage('El nombre comercial es obligatorio', required) },
       sitio_web:        { urlValida },
+      telefono: {
+        required: helpers.withMessage('El teléfono de contacto es obligatorio', required),
+        formato:  helpers.withMessage('Teléfono inválido — ej. +503 7000-0000', helpers.regex(/^\+?[\d\s-]{8,20}$/)),
+      },
+      rep_nombre: { required: helpers.withMessage('El nombre del representante legal es obligatorio', required) },
+      nit: { formato: helpers.withMessage('NIT inválido — formato: 0000-000000-000-0', helpers.regex(/^(\d{4}-?\d{6}-?\d{3}-?\d|\d{8}-?\d)$/)) },
+      nrc: { formato: helpers.withMessage('NRC inválido — formato: 000000-0', helpers.regex(/^\d{1,7}-?\d$/)) },
       rep_numero_id: {
         required: helpers.withMessage('El número de documento es obligatorio', required),
         ...(rep_tipo_id.value === 'DUI' ? { duiValido } : {}),
@@ -167,7 +162,7 @@ const rules = computed(() => {
 
 const v$ = useVuelidate(rules, {
   email_, password,
-  nombre_comercial, sitio_web, rep_numero_id,
+  nombre_comercial, sitio_web, rep_numero_id, telefono, rep_nombre, nit, nrc,
   username, nombre_artistico, fecha_nacimiento, numero_identificacion,
   tutor_nombre, tutor_documento_id, tutor_email, tutor_autorizacion,
 })
@@ -191,6 +186,11 @@ async function submit() {
         pais:       departamento.value ? `${departamento.value}, El Salvador` : 'El Salvador',
         direccion:  direccion.value  || undefined,
         rubro:      rubro.value      || undefined,
+        telefono:     telefono.value,
+        razon_social: razon_social.value || undefined,
+        nit:          nit.value          || undefined,
+        nrc:          nrc.value          || undefined,
+        representante_nombre:                rep_nombre.value,
         representante_tipo_identificacion:   rep_tipo_id.value,
         representante_numero_identificacion: rep_numero_id.value,
       })
@@ -345,7 +345,27 @@ async function submit() {
               <label class="label">Dirección (opcional)</label>
               <input v-model="direccion" class="input" placeholder="Colonia, calle, municipio…" />
             </div>
-            <!-- Documento de identidad (representante legal) -->
+            <div>
+              <label class="label">Teléfono / WhatsApp de contacto</label>
+              <input
+                v-model="telefono" type="tel" required placeholder="+503 7000-0000"
+                :class="['input', { '!border-coral': v$.telefono?.$error }]"
+                @blur="v$.telefono?.$touch()" />
+              <p v-if="v$.telefono?.$error" class="text-coral text-xs mt-1">
+                {{ v$.telefono.$errors[0]?.$message }}
+              </p>
+            </div>
+            <!-- Representante legal -->
+            <div>
+              <label class="label">Nombre del representante legal</label>
+              <input
+                v-model="rep_nombre" required placeholder="Nombre Apellido"
+                :class="['input', { '!border-coral': v$.rep_nombre?.$error }]"
+                @blur="v$.rep_nombre?.$touch()" />
+              <p v-if="v$.rep_nombre?.$error" class="text-coral text-xs mt-1">
+                {{ v$.rep_nombre.$errors[0]?.$message }}
+              </p>
+            </div>
             <div>
               <label class="label">Documento de identidad del representante</label>
               <div class="grid grid-cols-2 gap-3">
@@ -371,6 +391,32 @@ async function submit() {
                 </div>
               </div>
             </div>
+            <!-- Datos fiscales (opcionales en el registro, necesarios para la insignia de marca verificada) -->
+            <details class="rounded-lg border border-navy/10 p-3">
+              <summary class="text-sm font-medium text-navy cursor-pointer">
+                Datos fiscales <span class="text-navy/40 font-normal">— opcional ahora, necesario para facturar y verificar tu marca</span>
+              </summary>
+              <div class="space-y-3 mt-3">
+                <div>
+                  <label class="label">Razón social</label>
+                  <input v-model="razon_social" class="input" placeholder="Mi Marca S.A. de C.V." />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="label">NIT</label>
+                    <input v-model="nit" placeholder="0614-010190-101-1"
+                      :class="['input', { '!border-coral': v$.nit?.$error }]" @blur="v$.nit?.$touch()" />
+                    <p v-if="v$.nit?.$error" class="text-coral text-xs mt-1">{{ v$.nit.$errors[0]?.$message }}</p>
+                  </div>
+                  <div>
+                    <label class="label">NRC</label>
+                    <input v-model="nrc" placeholder="123456-7"
+                      :class="['input', { '!border-coral': v$.nrc?.$error }]" @blur="v$.nrc?.$touch()" />
+                    <p v-if="v$.nrc?.$error" class="text-coral text-xs mt-1">{{ v$.nrc.$errors[0]?.$message }}</p>
+                  </div>
+                </div>
+              </div>
+            </details>
             <div class="bg-violet/10 rounded-lg p-3 text-sm text-violet">
               🎁 Recibirás <strong>$10.00 en créditos</strong> al completar el registro.
             </div>

@@ -41,3 +41,40 @@ export const ratingsApi = {
     return data
   },
 }
+
+// ─── Calificaciones de marcas (las otorgan influencers con contrato completado) ──
+export interface EmpresaRatingItem {
+  id: number
+  estrellas: number
+  comentario: string | null
+  created_at: string
+  updated_at: string
+  influencer_nombre: string
+}
+
+export interface MyEmpresaRating {
+  rating: MyRating | null
+  puede_calificar: boolean
+}
+
+export const empresaRatingsApi = {
+  async getSummary(empresaId: number): Promise<RatingSummary> {
+    const { data } = await api.get(`/empresas/${empresaId}/ratings/summary`)
+    return data
+  },
+
+  async getAll(empresaId: number): Promise<EmpresaRatingItem[]> {
+    const { data } = await api.get(`/empresas/${empresaId}/ratings`)
+    return data
+  },
+
+  async getMine(empresaId: number): Promise<MyEmpresaRating> {
+    const { data } = await api.get(`/empresas/${empresaId}/ratings/mine`)
+    return data
+  },
+
+  async upsert(empresaId: number, payload: { estrellas: number; comentario?: string }): Promise<MyRating> {
+    const { data } = await api.post(`/empresas/${empresaId}/ratings`, payload)
+    return data
+  },
+}
