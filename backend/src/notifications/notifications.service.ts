@@ -19,7 +19,7 @@ export class NotificationsService {
     // Gmail exige que el from coincida con la cuenta autenticada.
     // Si SMTP_FROM es un dominio propio (no gmail.com), se usa el user como remitente real.
     const configuredFrom = config.get<string>('SMTP_FROM');
-    this.fromAddress = configuredFrom ?? user ?? 'no-reply@hazloviral.com';
+    this.fromAddress = configuredFrom ?? user ?? 'no-reply@influsmart.com';
 
     if (host && user && pass) {
       this.transporter = nodemailer.createTransport({
@@ -50,10 +50,10 @@ export class NotificationsService {
     verifyUrl: string;
   }): Promise<void> {
     const { email, verifyUrl } = opts;
-    const subject = 'Verifica tu correo — hazloViral';
+    const subject = 'Verifica tu correo — InfluSmart';
     const html = `
       <p>Hola,</p>
-      <p>Gracias por registrarte en <strong>hazloViral</strong>. Solo un paso más:</p>
+      <p>Gracias por registrarte en <strong>InfluSmart</strong>. Solo un paso más:</p>
       <p>
         <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">
           Verificar mi correo
@@ -73,7 +73,7 @@ export class NotificationsService {
 
     try {
       await this.transporter.sendMail({
-        from: `"hazloViral" <${this.smtpUser}>`,
+        from: `"InfluSmart" <${this.smtpUser}>`,
         to: email,
         subject,
         html,
@@ -90,10 +90,10 @@ export class NotificationsService {
     resetUrl: string;
   }): Promise<void> {
     const { email, resetUrl } = opts;
-    const subject = 'Recupera tu contraseña — hazloViral';
+    const subject = 'Recupera tu contraseña — InfluSmart';
     const html = `
       <p>Hola,</p>
-      <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong>hazloViral</strong>.</p>
+      <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong>InfluSmart</strong>.</p>
       <p>
         <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">
           Restablecer contraseña
@@ -115,7 +115,7 @@ export class NotificationsService {
 
     try {
       await this.transporter.sendMail({
-        from: `"hazloViral" <${this.smtpUser}>`,
+        from: `"InfluSmart" <${this.smtpUser}>`,
         to: email,
         subject,
         html,
@@ -135,13 +135,13 @@ export class NotificationsService {
   }): Promise<void> {
     const { tutorEmail, tutorNombre, influencerNombre, influencerEmail } = opts;
 
-    const subject = `Autorización de registro en hazloViral — ${influencerNombre}`;
+    const subject = `Autorización de registro en InfluSmart — ${influencerNombre}`;
     const html = `
       <p>Estimado/a <strong>${tutorNombre}</strong>,</p>
       <p>
         Le informamos que el/la menor de edad <strong>${influencerNombre}</strong>
         (<a href="mailto:${influencerEmail}">${influencerEmail}</a>) ha sido registrado/a
-        en la plataforma <strong>hazloViral</strong> como influencer.
+        en la plataforma <strong>InfluSmart</strong> como influencer.
       </p>
       <p>
         Al completar el registro, usted confirmó bajo declaración jurada actuar como
@@ -150,7 +150,7 @@ export class NotificationsService {
       <p>
         Cualquier contrato o acuerdo económico generado por esta cuenta estará vinculado
         a su representación legal. Para consultas, escríbanos a
-        <a href="mailto:soporte@hazloviral.com">soporte@hazloviral.com</a>.
+        <a href="mailto:soporte@influsmart.com">soporte@influsmart.com</a>.
       </p>
       <p style="color:#888;font-size:12px;">
         Si usted no autorizó este registro, contáctenos de inmediato.
@@ -168,7 +168,7 @@ export class NotificationsService {
 
     try {
       await this.transporter.sendMail({
-        from: `"hazloViral" <${this.smtpUser}>`,
+        from: `"InfluSmart" <${this.smtpUser}>`,
         to:   tutorEmail,
         subject,
         html,

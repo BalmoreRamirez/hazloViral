@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BrandName from '@/components/BrandName.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
@@ -48,7 +49,7 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
     <!-- Navbar -->
     <header class="bg-navy text-white px-6 py-3 flex items-center justify-between shadow-lg">
       <div class="flex items-center gap-3">
-        <span class="text-violet font-display font-bold text-xl tracking-tight">hazloViral</span>
+        <RouterLink to="/dashboard" class="text-xl"><BrandName /></RouterLink>
         <nav class="hidden sm:flex items-center gap-1 ml-6">
           <RouterLink to="/dashboard" :class="navLinkClass">Dashboard</RouterLink>
 

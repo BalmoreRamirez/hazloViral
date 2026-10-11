@@ -598,7 +598,7 @@ const TIPO_ICON: Record<string, string> = {
                   <p class="flex items-center gap-1.5 font-semibold text-warning mb-1"><i class="pi pi-exclamation-triangle" aria-hidden="true" />Rondas de revisión agotadas</p>
                   <p class="text-warning text-xs mb-2">
                     Usaste las {{ MAX_ROUNDS }} rondas disponibles. Si el trabajo entregado sigue sin cumplir el acuerdo,
-                    puedes reportar un incumplimiento para que el equipo de hazloViral intervenga.
+                    puedes reportar un incumplimiento para que el equipo de InfluSmart intervenga.
                   </p>
                   <button @click="showNonCompliance = !showNonCompliance"
                     class="btn-ghost text-xs border-coral/40 text-coral-text hover:bg-coral/5">

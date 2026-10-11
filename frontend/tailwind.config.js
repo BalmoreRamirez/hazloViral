@@ -1,5 +1,5 @@
 /**
- * hazloViral — Configuración Tailwind CSS
+ * InfluSmart — Configuración Tailwind CSS
  * Paleta "Corporate-Pop" definida en claude.md §3
  *
  * Primary   Deep Navy   #0F172A  — fondos, nav, textos ejecutivos

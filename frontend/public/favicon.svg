@@ -7,6 +7,6 @@
   </defs>
   <!-- Rounded background -->
   <rect width="32" height="32" rx="7" fill="url(#bg)"/>
-  <!-- Lightning bolt — "hazloViral" -->
+  <!-- Lightning bolt — "InfluSmart" -->
   <path d="M19 3 L9 18 L15.5 18 L13 29 L23 14 L16.5 14 Z" fill="white" fill-opacity="0.95"/>
 </svg>

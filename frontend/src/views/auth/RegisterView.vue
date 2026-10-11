@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BrandName from '@/components/BrandName.vue'
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -228,7 +229,7 @@ async function submit() {
   <div class="min-h-screen bg-navy flex items-center justify-center p-4">
     <div class="w-full max-w-lg">
       <div class="text-center mb-8">
-        <h1 class="text-4xl font-display font-bold text-white mb-1">hazloViral</h1>
+        <h1 class="text-4xl mb-1"><BrandName /></h1>
         <p class="text-slate/60">Crea tu cuenta</p>
       </div>
 

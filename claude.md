@@ -1,4 +1,4 @@
-# Especificación Técnica de Requerimientos: Plataforma de Influencer Marketing (Latam)
+# Especificación Técnica de Requerimientos: InfluSmart — Plataforma de Influencer Marketing (Latam)
 **Archivo de Configuración y Contexto para IA / Desarrollo (V1) - Stack: NestJS, Vue.js, PostgreSQL**
 
 ---
@@ -149,7 +149,7 @@ Mensajes estructurados en JSON inyectados en el chat. El ciclo de negociación o
   "tarifa": 500,
   "entregables": [{ "tipo": "TikTok", "descripcion": "Video de 60s mencionando la marca" }],
   "plazo": "2026-07-30",
-  "contrato_pdf_url": "https://cdn.hazloviral.com/contratos/abc123.pdf"
+  "contrato_pdf_url": "https://cdn.influsmart.com/contratos/abc123.pdf"
 }
 ```
 
@@ -168,7 +168,7 @@ Mensajes estructurados en JSON inyectados en el chat. El ciclo de negociación o
     "tipo": "TikTok",
     "descripcion": "Video de 60s con mención de producto",
     "archivos": [
-      { "url": "https://cdn.hazloviral.com/entregables/video.mp4", "tipo_archivo": "video", "nombre": "tiktok_draft.mp4", "size_bytes": 52428800 }
+      { "url": "https://cdn.influsmart.com/entregables/video.mp4", "tipo_archivo": "video", "nombre": "tiktok_draft.mp4", "size_bytes": 52428800 }
     ]
   }
 ]
