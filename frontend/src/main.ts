@@ -7,7 +7,7 @@ import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
 import { definePreset } from '@primeuix/themes'
 
-const HazloViralPreset = definePreset(Aura, {
+const InfluSmartPreset = definePreset(Aura, {
   semantic: {
     primary: {
       50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
@@ -96,7 +96,7 @@ app.use(router)
 // ── PrimeVue con tema Aura ────────────────────────────────────────────────────
 app.use(PrimeVue, {
   theme: {
-    preset: HazloViralPreset,
+    preset: InfluSmartPreset,
     options: {
       darkModeSelector: '.dark',
       cssLayer: {

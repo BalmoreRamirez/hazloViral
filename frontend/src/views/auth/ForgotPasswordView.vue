@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BrandName from '@/components/BrandName.vue'
 import { ref } from 'vue'
 import { authApi } from '@/api/auth'
 
@@ -39,7 +40,7 @@ async function submit() {
             </div>
           </div>
         </div>
-        <h1 class="text-4xl font-display font-bold text-white mb-1">hazloViral</h1>
+        <h1 class="text-4xl mb-1"><BrandName /></h1>
       </div>
 
       <div class="card">

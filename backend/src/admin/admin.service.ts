@@ -133,7 +133,7 @@ export class AdminService implements OnApplicationBootstrap {
   }
 
   private async seedAdminUser(): Promise<void> {
-    const ADMIN_EMAIL = 'admin@hazloviral.com';
+    const ADMIN_EMAIL = 'admin@influsmart.com';
     const exists = await this.usersRepo.existsBy({ email: ADMIN_EMAIL });
     if (exists) return;
 

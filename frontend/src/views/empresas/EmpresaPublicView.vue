@@ -108,7 +108,7 @@ async function submitRating() {
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted mt-1">
               <span v-if="profile.rubro">{{ rubroLabel(profile.rubro) }}</span>
               <span v-if="profile.pais" class="inline-flex items-center gap-1.5"><i class="pi pi-map-marker" aria-hidden="true" />{{ profile.pais }}</span>
-              <span v-if="profile.miembro_desde">En HazloViral desde {{ formatDate(profile.miembro_desde) }}</span>
+              <span v-if="profile.miembro_desde">En InfluSmart desde {{ formatDate(profile.miembro_desde) }}</span>
             </div>
             <div v-if="summary?.total" class="flex items-center gap-2 mt-2">
               <StarRating :model-value="Math.round(summary.promedio ?? 0)" readonly size="sm" />
