@@ -71,7 +71,7 @@ export class ChatsService {
       if (!empresa) return [];
       return this.chatsRepo.find({
         where: { empresa_id: empresa.id },
-        relations: { influencer: { user: true } },
+        relations: { influencer: { user: true, metrics: true } },
         order: { created_at: 'DESC' },
       });
     }
