@@ -71,9 +71,9 @@ async function submit() {
         <!-- Estado: contraseña restablecida -->
         <template v-if="success">
           <div class="text-center py-4">
-            <div class="text-5xl mb-4">✅</div>
+            <i class="pi pi-check-circle block text-5xl mb-4 text-success" aria-hidden="true" />
             <h2 class="text-xl font-display font-semibold text-navy mb-2">¡Contraseña restablecida!</h2>
-            <p class="text-navy/60 text-sm mb-6">Ya puedes iniciar sesión con tu nueva contraseña.</p>
+            <p class="text-ink-muted text-sm mb-6">Ya puedes iniciar sesión con tu nueva contraseña.</p>
             <button class="btn-primary w-full" @click="router.push('/login')">Ir al login</button>
           </div>
         </template>
@@ -81,7 +81,7 @@ async function submit() {
         <!-- Estado: formulario -->
         <template v-else>
           <h2 class="text-xl font-display font-semibold text-navy mb-2">Nueva contraseña</h2>
-          <p class="text-navy/50 text-sm mb-6">Elige una contraseña que cumpla todos los requisitos.</p>
+          <p class="text-ink-muted text-sm mb-6">Elige una contraseña que cumpla todos los requisitos.</p>
 
           <form @submit.prevent="submit" class="space-y-4">
             <div>
@@ -91,7 +91,7 @@ async function submit() {
               <!-- Checklist de seguridad -->
               <div v-if="newPassword" class="mt-2 space-y-1">
                 <p v-for="r in pwdStrength" :key="r.key"
-                  :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-green-600' : 'text-navy/40']">
+                  :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-success' : 'text-ink-muted']">
                   <span class="font-bold">{{ r.ok ? '✓' : '○' }}</span> {{ r.label }}
                 </p>
               </div>
@@ -101,7 +101,7 @@ async function submit() {
               <Password v-model="confirm" toggleMask fluid :feedback="false" />
             </div>
 
-            <div v-if="error" class="bg-coral/10 text-coral text-sm p-3 rounded-lg">{{ error }}</div>
+            <div v-if="error" class="bg-coral/10 text-coral-text text-sm p-3 rounded-lg">{{ error }}</div>
 
             <button type="submit" class="btn-primary w-full" :disabled="loading || !token">
               {{ loading ? 'Guardando…' : 'Restablecer contraseña' }}
@@ -109,7 +109,7 @@ async function submit() {
           </form>
         </template>
 
-        <p class="text-center text-sm text-navy/50 mt-5">
+        <p class="text-center text-sm text-ink-muted mt-5">
           <RouterLink to="/login" class="text-violet font-semibold">← Volver al login</RouterLink>
         </p>
       </div>

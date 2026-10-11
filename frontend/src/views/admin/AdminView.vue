@@ -48,7 +48,7 @@ async function toggleUser(id: number, current: boolean) {
   finally { togglingId.value = null }
 }
 
-const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', empresa: 'bg-navy/10 text-navy', influencer: 'bg-green-100 text-green-700' }
+const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', empresa: 'bg-navy/10 text-navy', influencer: 'bg-success-tint text-success' }
 </script>
 
 <template>
@@ -57,31 +57,31 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
       <!-- Header -->
       <div>
         <h1 class="text-2xl font-display font-bold text-navy">Panel de Administración</h1>
-        <p class="text-navy/50 text-sm mt-1">Control global de la plataforma hazloViral</p>
+        <p class="text-ink-muted text-sm mt-1">Control global de la plataforma hazloViral</p>
       </div>
 
       <!-- Stats -->
       <div v-if="adminStore.stats" class="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div v-for="(val, key) in adminStore.stats" :key="key" class="card text-center py-4">
           <p class="text-2xl font-bold"
-            :class="key === 'incumplimientos' && val > 0 ? 'text-coral' : 'text-violet'">{{ val }}</p>
-          <p class="text-xs text-navy/50 mt-1 capitalize">{{ key }}</p>
+            :class="key === 'incumplimientos' && val > 0 ? 'text-coral-text' : 'text-violet'">{{ val }}</p>
+          <p class="text-xs text-ink-muted mt-1 capitalize">{{ key }}</p>
         </div>
       </div>
 
       <!-- Settings -->
       <div class="card">
         <h2 class="font-display font-semibold text-navy mb-4 flex items-center gap-2">
-          ⚙️ Parámetros económicos
+          <i class="pi pi-cog" aria-hidden="true" /> Parámetros económicos
           <span class="text-xs badge-info">global_settings</span>
         </h2>
-        <div v-if="adminStore.loading" class="text-center py-6 text-navy/40">Cargando…</div>
+        <div v-if="adminStore.loading" class="text-center py-6 text-ink-muted">Cargando…</div>
         <div v-else class="divide-y divide-navy/5">
           <div v-for="s in adminStore.settings" :key="s.key"
             class="py-3 flex items-center justify-between gap-4">
             <div class="flex-1 min-w-0">
               <p class="font-mono text-sm font-semibold text-navy">{{ s.key }}</p>
-              <p class="text-xs text-navy/40 truncate">{{ s.description }}</p>
+              <p class="text-xs text-ink-muted truncate">{{ s.description }}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <template v-if="editingKey === s.key">
@@ -105,13 +105,13 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
       <!-- Incumplimientos -->
       <div class="card">
         <h2 class="font-display font-semibold text-navy mb-4 flex items-center gap-2">
-          🚫 Contratos en incumplimiento
+          <i class="pi pi-ban" aria-hidden="true" /> Contratos en incumplimiento
           <span v-if="adminStore.incumplimientos.filter(i => !i.resuelto_por_admin).length"
-            class="text-xs bg-coral/20 text-coral px-2 py-0.5 rounded-full font-bold">
+            class="text-xs bg-coral/20 text-coral-text px-2 py-0.5 rounded-full font-bold">
             {{ adminStore.incumplimientos.filter(i => !i.resuelto_por_admin).length }} sin resolver
           </span>
         </h2>
-        <div v-if="!adminStore.incumplimientos.length" class="text-navy/40 text-sm text-center py-4">
+        <div v-if="!adminStore.incumplimientos.length" class="text-ink-muted text-sm text-center py-4">
           No hay contratos en incumplimiento.
         </div>
         <div v-else class="divide-y divide-navy/5 space-y-0">
@@ -120,15 +120,15 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 flex-wrap mb-1">
                   <span class="font-semibold text-sm text-navy">Contrato #{{ inc.id }}</span>
-                  <span class="text-xs text-navy/40">
+                  <span class="text-xs text-ink-muted">
                     {{ inc.empresa?.nombre_comercial ?? '—' }} → {{ inc.influencer?.nombre_artistico ?? '—' }}
                   </span>
                   <span class="badge-info text-xs">${{ Number(inc.monto_total).toFixed(2) }} USD</span>
-                  <span v-if="inc.resuelto_por_admin" class="badge-active text-xs">✅ Resuelto</span>
-                  <span v-else class="text-xs bg-coral/10 text-coral px-1.5 py-0.5 rounded font-medium">⏳ Pendiente</span>
+                  <span v-if="inc.resuelto_por_admin" class="badge-active text-xs inline-flex items-center gap-1"><i class="pi pi-check-circle text-xs" aria-hidden="true" />Resuelto</span>
+                  <span v-else class="text-xs bg-coral/10 text-coral-text px-1.5 py-0.5 rounded font-medium inline-flex items-center gap-1"><i class="pi pi-clock text-xs" aria-hidden="true" />Pendiente</span>
                 </div>
-                <p class="text-sm text-navy/70 mb-1"><span class="font-medium">Motivo:</span> {{ inc.motivo_incumplimiento }}</p>
-                <p v-if="inc.resolucion_admin" class="text-sm text-green-700 bg-green-50 rounded px-2 py-1 mt-1">
+                <p class="text-sm text-ink-muted mb-1"><span class="font-medium">Motivo:</span> {{ inc.motivo_incumplimiento }}</p>
+                <p v-if="inc.resolucion_admin" class="text-sm text-success bg-success-tint rounded px-2 py-1 mt-1">
                   <span class="font-medium">Resolución admin:</span> {{ inc.resolucion_admin }}
                 </p>
               </div>
@@ -158,7 +158,7 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
 
       <!-- Users -->
       <div class="card">
-        <h2 class="font-display font-semibold text-navy mb-4">👥 Gestión de usuarios</h2>
+        <h2 class="font-display font-semibold text-navy mb-4 flex items-center gap-2"><i class="pi pi-users" aria-hidden="true" />Gestión de usuarios</h2>
         <div class="divide-y divide-navy/5">
           <div v-for="u in adminStore.users" :key="u.id"
             class="py-3 flex items-center justify-between gap-3">
@@ -172,8 +172,8 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
                   <span :class="['text-xs px-1.5 py-0.5 rounded font-medium', ROLE_BADGE[u.role]]">
                     {{ u.role }}
                   </span>
-                  <span v-if="u.profile?.nombre_comercial" class="text-xs text-navy/40">{{ u.profile.nombre_comercial }}</span>
-                  <span v-else-if="u.profile?.nombre_artistico" class="text-xs text-navy/40">{{ u.profile.nombre_artistico }}</span>
+                  <span v-if="u.profile?.nombre_comercial" class="text-xs text-ink-muted">{{ u.profile.nombre_comercial }}</span>
+                  <span v-else-if="u.profile?.nombre_artistico" class="text-xs text-ink-muted">{{ u.profile.nombre_artistico }}</span>
                 </div>
               </div>
             </div>
@@ -184,7 +184,7 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
               <button v-if="u.role !== 'admin'"
                 @click="toggleUser(u.id, u.is_active)"
                 :disabled="togglingId === u.id"
-                :class="['text-xs font-semibold transition-colors', u.is_active ? 'text-coral hover:text-coral/70' : 'text-violet hover:text-violet/70']">
+                :class="['text-xs font-semibold transition-colors', u.is_active ? 'text-coral-text hover:text-coral-text' : 'text-violet hover:text-violet/70']">
                 {{ togglingId === u.id ? '…' : u.is_active ? 'Desactivar' : 'Activar' }}
               </button>
             </div>

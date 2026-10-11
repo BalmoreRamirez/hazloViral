@@ -12,14 +12,14 @@ type RubroConfig = {
   label: string
   gradient: string
   pattern: string
-  icon: string
+  icon: string        // clase de PrimeIcons (p.ej. 'pi-map')
   accentColor: string
 }
 
 const RUBROS: Record<string, RubroConfig> = {
   turismo: {
     label: 'Turismo',
-    icon: '✈️',
+    icon: 'pi-map',
     accentColor: '#0ea5e9',
     gradient: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0ea5e9 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">
@@ -33,7 +33,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   hoteles: {
     label: 'Hoteles',
-    icon: '🏨',
+    icon: 'pi-building',
     accentColor: '#d97706',
     gradient: 'linear-gradient(135deg, #78350f 0%, #b45309 45%, #d97706 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
@@ -45,7 +45,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   viajes: {
     label: 'Viajes',
-    icon: '🗺️',
+    icon: 'pi-send',
     accentColor: '#10b981',
     gradient: 'linear-gradient(135deg, #064e3b 0%, #065f46 45%, #059669 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
@@ -58,7 +58,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   gastronomia: {
     label: 'Gastronomía',
-    icon: '🍽️',
+    icon: 'pi-shopping-bag',
     accentColor: '#ef4444',
     gradient: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 45%, #ef4444 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50">
@@ -74,7 +74,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   moda: {
     label: 'Moda',
-    icon: '👗',
+    icon: 'pi-shopping-bag',
     accentColor: '#ec4899',
     gradient: 'linear-gradient(135deg, #4a044e 0%, #86198f 45%, #ec4899 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">
@@ -86,7 +86,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   tecnologia: {
     label: 'Tecnología',
-    icon: '💻',
+    icon: 'pi-desktop',
     accentColor: '#6366f1',
     gradient: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 45%, #6366f1 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
@@ -103,7 +103,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   fitness: {
     label: 'Fitness',
-    icon: '💪',
+    icon: 'pi-heart',
     accentColor: '#f97316',
     gradient: 'linear-gradient(135deg, #431407 0%, #c2410c 45%, #f97316 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
@@ -115,7 +115,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   belleza: {
     label: 'Belleza',
-    icon: '💄',
+    icon: 'pi-sparkles',
     accentColor: '#f43f5e',
     gradient: 'linear-gradient(135deg, #4c0519 0%, #be123c 45%, #f43f5e 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">
@@ -130,7 +130,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   negocios: {
     label: 'Negocios',
-    icon: '💼',
+    icon: 'pi-briefcase',
     accentColor: '#64748b',
     gradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #334155 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">
@@ -143,7 +143,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   entretenimiento: {
     label: 'Entretenimiento',
-    icon: '🎭',
+    icon: 'pi-video',
     accentColor: '#a855f7',
     gradient: 'linear-gradient(135deg, #2e1065 0%, #6d28d9 45%, #a855f7 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
@@ -156,7 +156,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   educacion: {
     label: 'Educación',
-    icon: '📚',
+    icon: 'pi-book',
     accentColor: '#0891b2',
     gradient: 'linear-gradient(135deg, #164e63 0%, #0e7490 45%, #0891b2 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50">
@@ -168,7 +168,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   fotografia: {
     label: 'Fotografía',
-    icon: '📷',
+    icon: 'pi-camera',
     accentColor: '#78716c',
     gradient: 'linear-gradient(135deg, #1c1917 0%, #292524 45%, #44403c 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">
@@ -180,7 +180,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   salud: {
     label: 'Salud',
-    icon: '🏥',
+    icon: 'pi-heart-fill',
     accentColor: '#22c55e',
     gradient: 'linear-gradient(135deg, #052e16 0%, #166534 45%, #16a34a 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
@@ -191,7 +191,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   musica: {
     label: 'Música',
-    icon: '🎵',
+    icon: 'pi-headphones',
     accentColor: '#8b5cf6',
     gradient: 'linear-gradient(135deg, #1e0048 0%, #4c1d95 45%, #7c3aed 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
@@ -203,7 +203,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   deporte: {
     label: 'Deporte',
-    icon: '⚽',
+    icon: 'pi-trophy',
     accentColor: '#84cc16',
     gradient: 'linear-gradient(135deg, #1a2e05 0%, #3f6212 45%, #65a30d 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
@@ -215,7 +215,7 @@ const RUBROS: Record<string, RubroConfig> = {
   },
   default: {
     label: 'General',
-    icon: '⚡',
+    icon: 'pi-bolt',
     accentColor: '#7c3aed',
     gradient: 'linear-gradient(135deg, #1e0a3c 0%, #4c1d95 45%, #7c3aed 100%)',
     pattern: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
@@ -264,7 +264,7 @@ const bannerHeight = computed(() => props.height ?? '180px')
 
     <!-- Label + icon top-left -->
     <div class="absolute top-4 left-5 flex items-center gap-2">
-      <span class="text-2xl leading-none drop-shadow">{{ config.icon }}</span>
+      <i :class="['pi', config.icon, 'text-2xl leading-none text-white/90 drop-shadow']" aria-hidden="true" />
       <span class="text-white/80 text-xs font-semibold tracking-widest uppercase select-none drop-shadow">
         {{ config.label }}<template v-if="extra && extra > 0"> +{{ extra }}</template>
       </span>

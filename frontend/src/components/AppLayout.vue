@@ -54,7 +54,7 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
 
           <!-- Links para empresa -->
           <template v-if="user?.role === 'empresa'">
-            <RouterLink to="/influencers"    :class="navLinkClass">🔍 Buscar</RouterLink>
+            <RouterLink to="/influencers"    :class="navLinkClass"><span class="inline-flex items-center gap-1.5"><i class="pi pi-search" aria-hidden="true" />Buscar</span></RouterLink>
             <RouterLink to="/chats"          :class="navLinkClass">Chats</RouterLink>
             <RouterLink to="/contratos"      :class="navLinkClass">Contratos</RouterLink>
             <RouterLink to="/perfil/empresa" :class="navLinkClass">Mi perfil</RouterLink>
@@ -69,7 +69,7 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
 
           <!-- Link exclusivo admin -->
           <RouterLink v-if="isAdmin" to="/admin" :class="navLinkClass">
-            ⚙️ Admin
+            <span class="inline-flex items-center gap-1.5"><i class="pi pi-cog" aria-hidden="true" />Admin</span>
           </RouterLink>
         </nav>
       </div>
@@ -78,8 +78,9 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
         <!-- Balance de créditos (solo empresa) -->
         <template v-if="authStore.isEmpresa && balance">
           <RouterLink to="/dashboard" class="flex items-center gap-2 text-sm" title="Saldo disponible — clic para recargar">
-            <span :class="isLow ? 'text-coral font-semibold' : 'text-slate/80'">
-              {{ isLow ? '⚠️' : '💰' }} ${{ balance.balance_creditos.toFixed(2) }} USD
+            <span class="inline-flex items-center gap-1.5" :class="isLow ? 'text-coral-text font-semibold' : 'text-slate/80'">
+              <i :class="['pi', isLow ? 'pi-exclamation-triangle' : 'pi-wallet']" aria-hidden="true" />
+              ${{ balance.balance_creditos.toFixed(2) }} USD
             </span>
           </RouterLink>
         </template>
@@ -88,7 +89,7 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
           <span class="text-sm text-slate/60 hidden sm:block">{{ user?.email }}</span>
           <span class="badge-info">{{ user?.role }}</span>
           <AvatarUpload :name="user?.email ?? ''" size="sm" />
-          <button @click="logout" class="text-slate/50 hover:text-coral text-sm transition-colors">
+          <button @click="logout" class="text-slate/50 hover:text-coral-text text-sm transition-colors">
             Salir
           </button>
         </div>
@@ -96,18 +97,18 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
     </header>
 
     <!-- Alerta email no verificado -->
-    <div v-if="emailUnverified" class="bg-amber-50 border-b border-amber-200 px-6 py-2">
+    <div v-if="emailUnverified" class="bg-warning-tint border-b border-amber-200 px-6 py-2">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="text-amber-800 text-sm font-medium">
-          📧 Verifica tu correo electrónico para activar todas las funciones de la plataforma.
+        <p class="text-warning text-sm font-medium">
+          <i class="pi pi-envelope mr-1.5" aria-hidden="true" />Verifica tu correo electrónico para activar todas las funciones de la plataforma.
         </p>
         <div class="flex items-center gap-3">
-          <span v-if="resendDone && !devVerifyUrl" class="text-green-700 text-xs font-medium">¡Enviado! Revisa tu bandeja.</span>
+          <span v-if="resendDone && !devVerifyUrl" class="text-success text-xs font-medium">¡Enviado! Revisa tu bandeja.</span>
           <a v-if="devVerifyUrl" :href="devVerifyUrl" class="text-xs text-violet underline font-medium">
             [dev] Verificar ahora →
           </a>
           <button v-if="!resendDone" @click="resendVerification" :disabled="resendLoading"
-            class="text-xs text-amber-700 border border-amber-400 rounded px-2 py-1 hover:bg-amber-100 transition-colors">
+            class="text-xs text-warning border border-amber-400 rounded px-2 py-1 hover:bg-warning-tint transition-colors">
             {{ resendLoading ? 'Enviando…' : 'Reenviar correo' }}
           </button>
         </div>
@@ -116,11 +117,11 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
 
     <!-- Alerta saldo bajo (claude.md §5.1) -->
     <div v-if="isLow" class="bg-coral/10 border-b border-coral/30 px-6 py-2 flex items-center justify-between">
-      <p class="text-coral text-sm font-medium">
-        ⚠️ Saldo bajo el mínimo (te faltan ${{ balance?.deficit.toFixed(2) }} USD).
+      <p class="text-coral-text text-sm font-medium">
+        <i class="pi pi-exclamation-triangle mr-1.5" aria-hidden="true" />Saldo bajo el mínimo (te faltan ${{ balance?.deficit.toFixed(2) }} USD).
         Los chats están en <strong>solo lectura</strong>.
       </p>
-      <RouterLink to="/dashboard" class="text-sm underline text-coral font-semibold">Recargar saldo →</RouterLink>
+      <RouterLink to="/dashboard" class="text-sm underline text-coral-text font-semibold">Recargar saldo →</RouterLink>
     </div>
 
     <main class="flex-1 px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">

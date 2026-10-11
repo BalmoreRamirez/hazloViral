@@ -234,16 +234,16 @@ async function submit() {
 
       <!-- Estado: registro exitoso -->
       <div v-if="registered" class="card text-center py-6">
-        <div class="text-5xl mb-4">📬</div>
+        <i class="pi pi-envelope block text-5xl mb-4 text-violet" aria-hidden="true" />
         <h2 class="text-xl font-display font-semibold text-navy mb-2">¡Cuenta creada!</h2>
-        <p class="text-navy/60 text-sm mb-1">
+        <p class="text-ink-muted text-sm mb-1">
           Enviamos un correo de verificación a <strong>{{ email_ }}</strong>.
         </p>
-        <p class="text-navy/40 text-xs mb-5">Haz clic en el enlace del correo para activar tu cuenta. Expira en 24 h.</p>
+        <p class="text-ink-muted text-xs mb-5">Haz clic en el enlace del correo para activar tu cuenta. Expira en 24 h.</p>
 
         <!-- Solo en desarrollo cuando SMTP no entrega -->
-        <div v-if="devVerifyUrl" class="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-left">
-          <p class="text-xs font-semibold text-amber-700 mb-1">⚠️ Modo desarrollo</p>
+        <div v-if="devVerifyUrl" class="mb-5 p-3 bg-warning-tint border border-amber-200 rounded-lg text-left">
+          <p class="text-xs font-semibold text-warning mb-1 flex items-center gap-1.5"><i class="pi pi-exclamation-triangle" aria-hidden="true" />Modo desarrollo</p>
           <a :href="devVerifyUrl" class="text-xs text-violet break-all underline">Verificar ahora →</a>
         </div>
 
@@ -258,9 +258,10 @@ async function submit() {
           <button v-for="r in ['empresa','influencer']" :key="r"
             type="button"
             @click="role = r as any"
-            :class="['flex-1 py-2 rounded-md text-sm font-semibold transition-all',
-              role === r ? 'bg-violet text-white shadow' : 'text-navy/50 hover:text-navy']">
-            {{ r === 'empresa' ? '🏢 Soy una Marca' : '⭐ Soy Influencer' }}
+            :class="['flex-1 py-2 rounded-md text-sm font-semibold transition-all inline-flex items-center justify-center gap-2',
+              role === r ? 'bg-violet text-white shadow' : 'text-ink-muted hover:text-navy']">
+            <i :class="['pi', r === 'empresa' ? 'pi-building' : 'pi-star']" aria-hidden="true" />
+            {{ r === 'empresa' ? 'Soy una Marca' : 'Soy Influencer' }}
           </button>
         </div>
 
@@ -274,7 +275,7 @@ async function submit() {
                 v-model="email_" type="email" required
                 :class="['input', { '!border-coral': v$.email_.$error }]"
                 @blur="v$.email_.$touch()" />
-              <p v-if="v$.email_.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.email_.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.email_.$errors[0]?.$message }}
               </p>
             </div>
@@ -287,11 +288,11 @@ async function submit() {
               <!-- Checklist de seguridad -->
               <div v-if="password" class="mt-2 space-y-1">
                 <p v-for="r in pwdStrength" :key="r.key"
-                  :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-green-600' : 'text-navy/40']">
+                  :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-success' : 'text-ink-muted']">
                   <span class="font-bold">{{ r.ok ? '✓' : '○' }}</span> {{ r.label }}
                 </p>
               </div>
-              <p v-if="v$.password.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.password.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.password.$errors[0]?.$message }}
               </p>
             </div>
@@ -305,7 +306,7 @@ async function submit() {
                 v-model="nombre_comercial" required
                 :class="['input', { '!border-coral': v$.nombre_comercial?.$error }]"
                 @blur="v$.nombre_comercial?.$touch()" />
-              <p v-if="v$.nombre_comercial?.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.nombre_comercial?.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.nombre_comercial.$errors[0]?.$message }}
               </p>
             </div>
@@ -315,7 +316,7 @@ async function submit() {
                 v-model="sitio_web" type="url" placeholder="https://"
                 :class="['input', { '!border-coral': v$.sitio_web?.$error }]"
                 @blur="v$.sitio_web?.$touch()" />
-              <p v-if="v$.sitio_web?.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.sitio_web?.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.sitio_web.$errors[0]?.$message }}
               </p>
             </div>
@@ -329,8 +330,8 @@ async function submit() {
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="label">País</label>
-                <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-navy/60">
-                  🇸🇻 <span class="font-medium text-navy/80">El Salvador</span>
+                <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-ink-muted">
+                  <i class="pi pi-map-marker" aria-hidden="true" /> <span class="font-medium text-navy/80">El Salvador</span>
                 </div>
               </div>
               <div>
@@ -351,7 +352,7 @@ async function submit() {
                 v-model="telefono" type="tel" required placeholder="+503 7000-0000"
                 :class="['input', { '!border-coral': v$.telefono?.$error }]"
                 @blur="v$.telefono?.$touch()" />
-              <p v-if="v$.telefono?.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.telefono?.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.telefono.$errors[0]?.$message }}
               </p>
             </div>
@@ -362,7 +363,7 @@ async function submit() {
                 v-model="rep_nombre" required placeholder="Nombre Apellido"
                 :class="['input', { '!border-coral': v$.rep_nombre?.$error }]"
                 @blur="v$.rep_nombre?.$touch()" />
-              <p v-if="v$.rep_nombre?.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.rep_nombre?.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.rep_nombre.$errors[0]?.$message }}
               </p>
             </div>
@@ -373,7 +374,7 @@ async function submit() {
                   <button v-for="t in TIPOS_ID" :key="t" type="button"
                     @click="rep_tipo_id = t; rep_numero_id = ''; v$.rep_numero_id?.$reset()"
                     :class="['flex-1 py-1.5 rounded-md text-xs font-semibold transition-all',
-                      rep_tipo_id === t ? 'bg-violet text-white shadow' : 'text-navy/50 hover:text-navy']">
+                      rep_tipo_id === t ? 'bg-violet text-white shadow' : 'text-ink-muted hover:text-navy']">
                     {{ t }}
                   </button>
                 </div>
@@ -385,16 +386,16 @@ async function submit() {
                     :class="['input', { '!border-coral': v$.rep_numero_id?.$error }]"
                     @input="onRepNumeroIdInput"
                     @blur="v$.rep_numero_id?.$touch()" />
-                  <p v-if="v$.rep_numero_id?.$error" class="text-coral text-xs mt-1">
+                  <p v-if="v$.rep_numero_id?.$error" class="text-coral-text text-xs mt-1">
                     {{ v$.rep_numero_id.$errors[0]?.$message }}
                   </p>
                 </div>
               </div>
             </div>
             <!-- Datos fiscales (opcionales en el registro, necesarios para la insignia de marca verificada) -->
-            <details class="rounded-lg border border-navy/10 p-3">
+            <details class="rounded-lg border border-border p-3">
               <summary class="text-sm font-medium text-navy cursor-pointer">
-                Datos fiscales <span class="text-navy/40 font-normal">— opcional ahora, necesario para facturar y verificar tu marca</span>
+                Datos fiscales <span class="text-ink-muted font-normal">— opcional ahora, necesario para facturar y verificar tu marca</span>
               </summary>
               <div class="space-y-3 mt-3">
                 <div>
@@ -406,34 +407,34 @@ async function submit() {
                     <label class="label">NIT</label>
                     <input v-model="nit" placeholder="0614-010190-101-1"
                       :class="['input', { '!border-coral': v$.nit?.$error }]" @blur="v$.nit?.$touch()" />
-                    <p v-if="v$.nit?.$error" class="text-coral text-xs mt-1">{{ v$.nit.$errors[0]?.$message }}</p>
+                    <p v-if="v$.nit?.$error" class="text-coral-text text-xs mt-1">{{ v$.nit.$errors[0]?.$message }}</p>
                   </div>
                   <div>
                     <label class="label">NRC</label>
                     <input v-model="nrc" placeholder="123456-7"
                       :class="['input', { '!border-coral': v$.nrc?.$error }]" @blur="v$.nrc?.$touch()" />
-                    <p v-if="v$.nrc?.$error" class="text-coral text-xs mt-1">{{ v$.nrc.$errors[0]?.$message }}</p>
+                    <p v-if="v$.nrc?.$error" class="text-coral-text text-xs mt-1">{{ v$.nrc.$errors[0]?.$message }}</p>
                   </div>
                 </div>
               </div>
             </details>
             <div class="bg-violet/10 rounded-lg p-3 text-sm text-violet">
-              🎁 Recibirás <strong>$10.00 en créditos</strong> al completar el registro.
+              <i class="pi pi-gift mr-1.5" aria-hidden="true" />Recibirás <strong>$10.00 en créditos</strong> al completar el registro.
             </div>
           </template>
 
           <!-- ── Influencer ─────────────────────────────────────────────────── -->
           <template v-else>
             <div>
-              <label class="label">Username <span class="text-navy/40 font-normal text-xs">— así te encontrarán las empresas</span></label>
+              <label class="label">Username <span class="text-ink-muted font-normal text-xs">— así te encontrarán las empresas</span></label>
               <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-navy/40 font-medium select-none">@</span>
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted font-medium select-none">@</span>
                 <input
                   v-model="username" required placeholder="mario_blue"
                   :class="['input pl-7 w-full', { '!border-coral': v$.username?.$error }]"
                   @blur="v$.username?.$touch()" />
               </div>
-              <p v-if="v$.username?.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.username?.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.username.$errors[0]?.$message }}
               </p>
             </div>
@@ -443,7 +444,7 @@ async function submit() {
                 v-model="nombre_artistico" required
                 :class="['input', { '!border-coral': v$.nombre_artistico?.$error }]"
                 @blur="v$.nombre_artistico?.$touch()" />
-              <p v-if="v$.nombre_artistico?.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.nombre_artistico?.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.nombre_artistico.$errors[0]?.$message }}
               </p>
             </div>
@@ -457,8 +458,8 @@ async function submit() {
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="label">País</label>
-                <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-navy/60">
-                  🇸🇻 <span class="font-medium text-navy/80">El Salvador</span>
+                <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-ink-muted">
+                  <i class="pi pi-map-marker" aria-hidden="true" /> <span class="font-medium text-navy/80">El Salvador</span>
                 </div>
               </div>
               <div>
@@ -485,7 +486,7 @@ async function submit() {
                 v-model="fecha_nacimiento" type="date" required
                 :class="['input', { '!border-coral': v$.fecha_nacimiento?.$error }]"
                 @blur="v$.fecha_nacimiento?.$touch()" />
-              <p v-if="v$.fecha_nacimiento?.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.fecha_nacimiento?.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.fecha_nacimiento.$errors[0]?.$message }}
               </p>
             </div>
@@ -497,7 +498,7 @@ async function submit() {
                   <button v-for="t in TIPOS_ID" :key="t" type="button"
                     @click="tipo_identificacion = t; numero_identificacion = ''; v$.numero_identificacion?.$reset()"
                     :class="['flex-1 py-1.5 rounded-md text-xs font-semibold transition-all',
-                      tipo_identificacion === t ? 'bg-violet text-white shadow' : 'text-navy/50 hover:text-navy']">
+                      tipo_identificacion === t ? 'bg-violet text-white shadow' : 'text-ink-muted hover:text-navy']">
                     {{ t }}
                   </button>
                 </div>
@@ -509,7 +510,7 @@ async function submit() {
                     :class="['input', { '!border-coral': v$.numero_identificacion?.$error }]"
                     @input="onNumeroIdInput"
                     @blur="v$.numero_identificacion?.$touch()" />
-                  <p v-if="v$.numero_identificacion?.$error" class="text-coral text-xs mt-1">
+                  <p v-if="v$.numero_identificacion?.$error" class="text-coral-text text-xs mt-1">
                     {{ v$.numero_identificacion.$errors[0]?.$message }}
                   </p>
                 </div>
@@ -522,8 +523,8 @@ async function submit() {
 
             <!-- Tutor si es menor -->
             <template v-if="esMenor">
-              <div class="bg-coral/10 border border-coral/30 rounded-lg p-3 text-sm text-coral">
-                ⚠️ Eres menor de 18 años. Se requieren los datos de tu tutor legal.
+              <div class="bg-coral/10 border border-coral/30 rounded-lg p-3 text-sm text-coral-text">
+                <i class="pi pi-exclamation-triangle mr-1.5" aria-hidden="true" />Eres menor de 18 años. Se requieren los datos de tu tutor legal.
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
@@ -532,7 +533,7 @@ async function submit() {
                     v-model="tutor_nombre" required
                     :class="['input', { '!border-coral': v$.tutor_nombre?.$error }]"
                     @blur="v$.tutor_nombre?.$touch()" />
-                  <p v-if="v$.tutor_nombre?.$error" class="text-coral text-xs mt-1">
+                  <p v-if="v$.tutor_nombre?.$error" class="text-coral-text text-xs mt-1">
                     {{ v$.tutor_nombre.$errors[0]?.$message }}
                   </p>
                 </div>
@@ -542,7 +543,7 @@ async function submit() {
                     v-model="tutor_documento_id" required
                     :class="['input', { '!border-coral': v$.tutor_documento_id?.$error }]"
                     @blur="v$.tutor_documento_id?.$touch()" />
-                  <p v-if="v$.tutor_documento_id?.$error" class="text-coral text-xs mt-1">
+                  <p v-if="v$.tutor_documento_id?.$error" class="text-coral-text text-xs mt-1">
                     {{ v$.tutor_documento_id.$errors[0]?.$message }}
                   </p>
                 </div>
@@ -553,20 +554,20 @@ async function submit() {
                   v-model="tutor_email" type="email" required
                   :class="['input', { '!border-coral': v$.tutor_email?.$error }]"
                   @blur="v$.tutor_email?.$touch()" />
-                <p v-if="v$.tutor_email?.$error" class="text-coral text-xs mt-1">
+                <p v-if="v$.tutor_email?.$error" class="text-coral-text text-xs mt-1">
                   {{ v$.tutor_email.$errors[0]?.$message }}
                 </p>
               </div>
               <div>
                 <label class="flex items-start gap-2 text-sm cursor-pointer"
-                  :class="{ 'text-coral': v$.tutor_autorizacion?.$error }">
+                  :class="{ 'text-coral-text': v$.tutor_autorizacion?.$error }">
                   <input
                     v-model="tutor_autorizacion" type="checkbox" required
                     class="mt-0.5 rounded"
                     @change="v$.tutor_autorizacion?.$touch()" />
                   <span>El tutor legal autoriza la cuenta y co-titularidad financiera.</span>
                 </label>
-                <p v-if="v$.tutor_autorizacion?.$error" class="text-coral text-xs mt-1">
+                <p v-if="v$.tutor_autorizacion?.$error" class="text-coral-text text-xs mt-1">
                   {{ v$.tutor_autorizacion.$errors[0]?.$message }}
                 </p>
               </div>
@@ -574,14 +575,14 @@ async function submit() {
           </template>
 
           <!-- Error de servidor -->
-          <div v-if="error" class="bg-coral/10 text-coral text-sm p-3 rounded-lg">{{ error }}</div>
+          <div v-if="error" class="bg-coral/10 text-coral-text text-sm p-3 rounded-lg">{{ error }}</div>
 
           <button type="submit" class="btn-primary w-full" :disabled="loading">
             {{ loading ? 'Creando cuenta…' : 'Crear cuenta' }}
           </button>
         </form>
 
-        <p class="text-center text-sm text-navy/50 mt-4">
+        <p class="text-center text-sm text-ink-muted mt-4">
           ¿Ya tienes cuenta?
           <RouterLink to="/login" class="text-violet font-semibold">Iniciar sesión</RouterLink>
         </p>
