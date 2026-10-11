@@ -29,7 +29,7 @@ const ratingError  = ref('')
 const ratingDone   = ref(false)
 
 const REDES_ICON: Record<string, string> = {
-  TikTok: '🎵', Instagram: '📸', YouTube: '▶️', Facebook: '👤',
+  TikTok: 'pi-tiktok', Instagram: 'pi-instagram', YouTube: 'pi-youtube', Facebook: 'pi-facebook',
 }
 
 function formatFollowers(n: number) {
@@ -103,12 +103,12 @@ async function submitRating() {
 
 <template>
   <AppLayout>
-    <div v-if="loading" class="text-center py-16 text-navy/40">Cargando perfil…</div>
+    <div v-if="loading" class="text-center py-16 text-ink-muted">Cargando perfil…</div>
 
     <template v-else-if="profile">
       <div class="space-y-5">
         <!-- Back -->
-        <button @click="router.back()" class="text-navy/40 hover:text-navy text-sm flex items-center gap-1">
+        <button @click="router.back()" class="text-ink-muted hover:text-navy text-sm flex items-center gap-1">
           ← Volver al buscador
         </button>
 
@@ -123,7 +123,7 @@ async function submitRating() {
                 <h1 class="text-2xl font-display font-bold text-navy">{{ profile.nombre_artistico }}</h1>
                 <VerifiedBadge v-if="profile.is_verified" size="lg" />
               </div>
-              <p class="text-navy/50 text-sm mt-0.5">📍 {{ profile.ubicacion || 'Sin ubicación' }}</p>
+              <p class="text-ink-muted text-sm mt-0.5 flex items-center gap-1.5"><i class="pi pi-map-marker text-xs" aria-hidden="true" /> {{ profile.ubicacion || 'Sin ubicación' }}</p>
 
               <!-- Rating summary -->
               <div v-if="summary && summary.total > 0" class="flex items-center gap-2 mt-1.5">
@@ -132,32 +132,34 @@ async function submitRating() {
                     :class="s === 'filled' ? 'text-amber-400' : 'text-navy/20'" class="text-lg leading-none">★</span>
                 </span>
                 <span class="font-bold text-navy text-sm">{{ summary.promedio }}</span>
-                <span class="text-navy/50 text-xs">({{ summary.total }} reseña{{ summary.total !== 1 ? 's' : '' }})</span>
+                <span class="text-ink-muted text-xs">({{ summary.total }} reseña{{ summary.total !== 1 ? 's' : '' }})</span>
               </div>
               <div v-else-if="summary" class="mt-1.5">
-                <span class="text-navy/40 text-xs italic">Sin calificaciones aún</span>
+                <span class="text-ink-muted text-xs italic">Sin calificaciones aún</span>
               </div>
 
-              <p v-if="profile.bio" class="text-sm text-navy/70 mt-2">{{ profile.bio }}</p>
+              <p v-if="profile.bio" class="text-sm text-ink-muted mt-2">{{ profile.bio }}</p>
               <div class="flex flex-wrap gap-2 mt-3">
-                <span class="badge-info text-sm">💰 ${{ Number(profile.tarifa_base).toFixed(0) }} USD / campaña</span>
-                <span :class="profile.disponibilidad ? 'badge-active' : 'badge-muted'">
-                  {{ profile.disponibilidad ? '✅ Disponible' : '🔒 No disponible' }}
+                <span class="badge-info text-sm inline-flex items-center gap-1.5"><i class="pi pi-dollar" aria-hidden="true" /> ${{ Number(profile.tarifa_base).toFixed(0) }} USD / campaña</span>
+                <span :class="profile.disponibilidad ? 'badge-active' : 'badge-muted'" class="inline-flex items-center gap-1.5">
+                  <i :class="['pi', profile.disponibilidad ? 'pi-check-circle' : 'pi-lock']" aria-hidden="true" />
+                  {{ profile.disponibilidad ? 'Disponible' : 'No disponible' }}
                 </span>
               </div>
             </div>
           </div>
 
           <!-- CTA: iniciar chat (solo empresa) -->
-          <div v-if="authStore.isEmpresa" class="mt-5 pt-4 border-t border-navy/10">
-            <button @click="startChat" :disabled="chatting || !profile.disponibilidad" class="btn-primary w-full sm:w-auto">
-              {{ chatting ? 'Abriendo chat…' : '💬 Iniciar chat' }}
+          <div v-if="authStore.isEmpresa" class="mt-5 pt-4 border-t border-border">
+            <button @click="startChat" :disabled="chatting || !profile.disponibilidad" class="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2">
+              <i v-if="!chatting" class="pi pi-comments" aria-hidden="true" />
+              {{ chatting ? 'Abriendo chat…' : 'Iniciar chat' }}
             </button>
-            <p v-if="chatError" class="text-coral text-sm mt-2">{{ chatError }}</p>
-            <p v-if="!profile.disponibilidad" class="text-navy/40 text-xs mt-1">
+            <p v-if="chatError" class="text-coral-text text-sm mt-2">{{ chatError }}</p>
+            <p v-if="!profile.disponibilidad" class="text-ink-muted text-xs mt-1">
               Este influencer no está disponible actualmente.
             </p>
-            <p v-else class="text-navy/40 text-xs mt-1">Costo: 1 crédito por chat nuevo.</p>
+            <p v-else class="text-ink-muted text-xs mt-1">Costo: 1 crédito por chat nuevo.</p>
           </div>
         </div>
 
@@ -166,8 +168,8 @@ async function submitRating() {
           <h2 class="font-display font-semibold text-navy mb-4">Redes sociales</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div v-for="m in profile.metrics" :key="m.id"
-              class="flex items-center gap-3 bg-slate rounded-xl p-3 border border-navy/8">
-              <span class="text-2xl">{{ REDES_ICON[m.red_social] ?? '📱' }}</span>
+              class="flex items-center gap-3 bg-slate rounded-xl p-3 border border-border">
+              <i :class="['pi', REDES_ICON[m.red_social] ?? 'pi-mobile', 'text-2xl']" aria-hidden="true" />
               <div class="flex-1">
                 <div class="flex items-center gap-1.5">
                   <p class="font-semibold text-navy text-sm">{{ m.red_social }}</p>
@@ -175,17 +177,17 @@ async function submitRating() {
                     class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-violet text-white text-[9px] font-bold"
                     title="Seguidores verificados automáticamente">✓</span>
                 </div>
-                <p class="text-xs text-navy/50">@{{ m.username }}</p>
+                <p class="text-xs text-ink-muted">@{{ m.username }}</p>
               </div>
               <div class="text-right">
                 <p class="font-bold text-navy">{{ formatFollowers(m.seguidores) }}</p>
-                <p v-if="m.engagement_rate > 0" class="text-xs text-green-600 font-semibold">{{ m.engagement_rate }}% eng</p>
+                <p v-if="m.engagement_rate > 0" class="text-xs text-success font-semibold">{{ m.engagement_rate }}% eng</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-else class="card text-center py-6 text-navy/40 text-sm">
+        <div v-else class="card text-center py-6 text-ink-muted text-sm">
           Este influencer aún no ha cargado métricas de redes sociales.
         </div>
 
@@ -194,12 +196,12 @@ async function submitRating() {
           <h2 class="font-display font-semibold text-navy mb-1">
             {{ myRating ? 'Tu calificación' : 'Calificar influencer' }}
           </h2>
-          <p class="text-navy/50 text-xs mb-4">
+          <p class="text-ink-muted text-xs mb-4">
             {{ myRating ? 'Puedes actualizar tu calificación en cualquier momento.' : 'Comparte tu experiencia trabajando con este influencer.' }}
           </p>
 
-          <div v-if="ratingDone && !ratingError" class="flex items-center gap-2 text-green-600 text-sm mb-3">
-            <span>✅</span> Calificación guardada correctamente.
+          <div v-if="ratingDone && !ratingError" class="flex items-center gap-2 text-success text-sm mb-3">
+            <i class="pi pi-check-circle" aria-hidden="true" /> Calificación guardada correctamente.
           </div>
 
           <div class="space-y-3">
@@ -208,11 +210,11 @@ async function submitRating() {
               <StarRating v-model="ratingForm.estrellas" size="lg" />
             </div>
             <div class="field">
-              <label class="label text-xs">Comentario <span class="text-navy/40 font-normal">(opcional)</span></label>
+              <label class="label text-xs">Comentario <span class="text-ink-muted font-normal">(opcional)</span></label>
               <textarea v-model="ratingForm.comentario" rows="3" maxlength="500"
                 placeholder="¿Cómo fue tu experiencia trabajando con este influencer?"
                 class="input resize-none" />
-              <p class="text-navy/40 text-xs text-right mt-1">{{ ratingForm.comentario.length }}/500</p>
+              <p class="text-ink-muted text-xs text-right mt-1">{{ ratingForm.comentario.length }}/500</p>
             </div>
             <div class="flex items-center gap-3">
               <button
@@ -222,7 +224,7 @@ async function submitRating() {
               >
                 {{ savingRating ? 'Guardando…' : myRating ? 'Actualizar calificación' : 'Enviar calificación' }}
               </button>
-              <p v-if="ratingError" class="text-coral text-sm">{{ ratingError }}</p>
+              <p v-if="ratingError" class="text-coral-text text-sm">{{ ratingError }}</p>
             </div>
           </div>
         </div>
@@ -230,25 +232,25 @@ async function submitRating() {
         <!-- Reseñas de otras empresas -->
         <div v-if="reviews.length" class="card">
           <h2 class="font-display font-semibold text-navy mb-4">
-            Reseñas <span class="text-navy/40 font-normal text-sm">({{ reviews.length }})</span>
+            Reseñas <span class="text-ink-muted font-normal text-sm">({{ reviews.length }})</span>
           </h2>
           <div class="space-y-4">
             <div v-for="r in reviews" :key="r.id"
-              class="border border-navy/8 rounded-xl p-4 bg-slate/50">
+              class="border border-border rounded-xl p-4 bg-slate/50">
               <div class="flex items-start justify-between gap-2">
                 <div>
                   <p class="font-semibold text-navy text-sm">{{ r.empresa_nombre }}</p>
-                  <p class="text-navy/40 text-xs mt-0.5">{{ formatDate(r.created_at) }}</p>
+                  <p class="text-ink-muted text-xs mt-0.5">{{ formatDate(r.created_at) }}</p>
                 </div>
                 <StarRating :model-value="r.estrellas" readonly size="sm" />
               </div>
-              <p v-if="r.comentario" class="text-sm text-navy/70 mt-2">{{ r.comentario }}</p>
+              <p v-if="r.comentario" class="text-sm text-ink-muted mt-2">{{ r.comentario }}</p>
             </div>
           </div>
         </div>
       </div>
     </template>
 
-    <div v-else class="card text-center py-8 text-navy/40">Influencer no encontrado.</div>
+    <div v-else class="card text-center py-8 text-ink-muted">Influencer no encontrado.</div>
   </AppLayout>
 </template>

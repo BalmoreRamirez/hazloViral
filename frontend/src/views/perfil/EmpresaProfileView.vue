@@ -322,22 +322,22 @@ function confirmDelete(id: number, titulo: string) {
 
       <!-- ── Verificación de marca ─────────────────────────────────────────── -->
       <div v-if="p" class="card border"
-        :class="p.is_verified ? 'bg-violet/5 border-violet/20' : 'bg-amber-50 border-amber-200'">
+        :class="p.is_verified ? 'bg-violet/5 border-violet/20' : 'bg-warning-tint border-amber-200'">
         <div class="flex items-start gap-3">
           <VerifiedBadge v-if="p.is_verified" size="md" />
-          <i v-else class="pi pi-shield text-amber-600 text-xl mt-0.5" />
+          <i v-else class="pi pi-shield text-warning text-xl mt-0.5" />
           <div class="flex-1">
             <p class="font-semibold text-navy">
               {{ p.is_verified ? 'Marca verificada' : 'Completa tu perfil para obtener la insignia de marca verificada' }}
             </p>
-            <p class="text-xs text-navy/50 mt-0.5">
+            <p class="text-xs text-ink-muted mt-0.5">
               {{ p.is_verified
                 ? 'Los influencers ven la insignia en tu perfil público y en el chat. Genera confianza y mejora la tasa de respuesta.'
                 : 'Los influencers responden más rápido a marcas verificadas. Te falta:' }}
             </p>
             <ul v-if="!p.is_verified" class="mt-2 space-y-1 text-sm">
-              <li v-for="item in pendientes" :key="item" class="flex items-center gap-2 text-navy/70">
-                <i class="pi pi-circle text-[0.5rem] text-amber-600" />{{ item }}
+              <li v-for="item in pendientes" :key="item" class="flex items-center gap-2 text-ink-muted">
+                <i class="pi pi-circle text-[0.5rem] text-warning" />{{ item }}
               </li>
             </ul>
           </div>
@@ -356,17 +356,18 @@ function confirmDelete(id: number, titulo: string) {
             />
             <div>
               <h2 class="font-display font-semibold text-navy text-lg flex items-center gap-2">
-                🏢 Datos de la empresa
+                <i class="pi pi-building" aria-hidden="true" />
+                Datos de la empresa
                 <VerifiedBadge v-if="p?.is_verified" size="sm" />
               </h2>
-              <p class="text-xs text-navy/40">Haz clic en la imagen para subir el logo de tu marca</p>
+              <p class="text-xs text-ink-muted">Haz clic en la imagen para subir el logo de tu marca</p>
             </div>
           </div>
           <Button v-if="!editing" @click="startEdit"
             label="Editar" icon="pi pi-pencil" severity="secondary" size="small" outlined />
         </div>
 
-        <div v-if="store.loading" class="py-6 text-center text-navy/40 text-sm">
+        <div v-if="store.loading" class="py-6 text-center text-ink-muted text-sm">
           <i class="pi pi-spin pi-spinner mr-2" />Cargando…
         </div>
 
@@ -387,7 +388,7 @@ function confirmDelete(id: number, titulo: string) {
               <div class="sm:col-span-2">
                 <dt class="label">Descripción</dt>
                 <dd v-if="p.descripcion" class="text-navy whitespace-pre-line">{{ p.descripcion }}</dd>
-                <dd v-else class="text-navy/40 italic">Cuéntale a los influencers quién es tu marca</dd>
+                <dd v-else class="text-ink-muted italic">Cuéntale a los influencers quién es tu marca</dd>
               </div>
               <div class="sm:col-span-2">
                 <dt class="label">Ubicación</dt>
@@ -397,7 +398,7 @@ function confirmDelete(id: number, titulo: string) {
           </section>
 
           <!-- Presencia online -->
-          <section class="border-t border-navy/8 pt-4">
+          <section class="border-t border-border pt-4">
             <h3 class="section-title">Presencia online</h3>
             <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div v-for="link in [
@@ -409,15 +410,15 @@ function confirmDelete(id: number, titulo: string) {
                 <dd>
                   <a v-if="link.url" :href="link.url" target="_blank" rel="noopener"
                     class="text-violet underline hover:text-violet/80 break-all">{{ link.url }}</a>
-                  <span v-else class="text-navy/40 italic">No configurado</span>
+                  <span v-else class="text-ink-muted italic">No configurado</span>
                 </dd>
               </div>
             </dl>
           </section>
 
           <!-- Contacto y facturación -->
-          <section class="border-t border-navy/8 pt-4">
-            <h3 class="section-title">Contacto y facturación <span class="font-normal text-navy/40">— privado, no visible para influencers</span></h3>
+          <section class="border-t border-border pt-4">
+            <h3 class="section-title">Contacto y facturación <span class="font-normal text-ink-muted">— privado, no visible para influencers</span></h3>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <dt class="label">Teléfono / WhatsApp</dt>
@@ -445,33 +446,33 @@ function confirmDelete(id: number, titulo: string) {
           </section>
 
           <!-- Representante legal -->
-          <section class="border-t border-navy/8 pt-4">
+          <section class="border-t border-border pt-4">
             <h3 class="section-title">Representante legal</h3>
             <template v-if="p.representante_nombre">
               <p class="font-semibold text-navy">{{ p.representante_nombre }}</p>
-              <p class="text-navy/50 mt-0.5">
+              <p class="text-ink-muted mt-0.5">
                 {{ p.representante_tipo_identificacion }}: {{ p.representante_numero_identificacion }}
               </p>
             </template>
-            <p v-else class="text-amber-700 text-xs font-medium">Agrega el nombre del representante legal para firmar contratos.</p>
+            <p v-else class="text-warning text-xs font-medium">Agrega el nombre del representante legal para firmar contratos.</p>
           </section>
 
           <!-- Créditos -->
-          <section class="border-t border-navy/8 pt-4">
+          <section class="border-t border-border pt-4">
             <h3 class="section-title">Saldo</h3>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <dt class="label">Saldo disponible</dt>
                 <dd class="font-bold text-2xl"
-                  :class="Number(p.balance_creditos) > Number(p.umbral_creditos) ? 'text-violet' : 'text-coral'">
+                  :class="Number(p.balance_creditos) > Number(p.umbral_creditos) ? 'text-violet' : 'text-coral-text'">
                   ${{ Number(p.balance_creditos).toFixed(2) }}
-                  <span class="text-sm font-normal text-navy/40"> USD</span>
+                  <span class="text-sm font-normal text-ink-muted"> USD</span>
                 </dd>
               </div>
               <div>
                 <dt class="label">Saldo mínimo para chatear</dt>
                 <dd class="font-semibold text-navy">${{ Number(p.umbral_creditos).toFixed(2) }} USD</dd>
-                <dd class="text-xs text-navy/40 mt-0.5">Definido por la plataforma. Por debajo de este monto tus chats pasan a solo lectura.</dd>
+                <dd class="text-xs text-ink-muted mt-0.5">Definido por la plataforma. Por debajo de este monto tus chats pasan a solo lectura.</dd>
               </div>
             </dl>
           </section>
@@ -486,7 +487,7 @@ function confirmDelete(id: number, titulo: string) {
                 <label class="label">Nombre comercial</label>
                 <input v-model="form.nombre_comercial" required maxlength="255"
                   :class="['input', { '!border-coral': pv$.nombre_comercial.$error }]" />
-                <p v-if="pv$.nombre_comercial.$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$.nombre_comercial.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.nombre_comercial.$errors[0]?.$message }}
                 </p>
               </div>
@@ -497,13 +498,13 @@ function confirmDelete(id: number, titulo: string) {
                   <option value="">— Selecciona —</option>
                   <option v-for="r in RUBROS" :key="r.value" :value="r.value">{{ r.label }}</option>
                 </select>
-                <p v-if="pv$.rubro.$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$.rubro.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.rubro.$errors[0]?.$message }}
                 </p>
               </div>
             </div>
             <div class="field">
-              <label class="label">Descripción de la marca <span class="text-navy/40 font-normal text-xs">— visible en tu perfil público</span></label>
+              <label class="label">Descripción de la marca <span class="text-ink-muted font-normal text-xs">— visible en tu perfil público</span></label>
               <textarea v-model="form.descripcion" class="input" rows="3" maxlength="1000"
                 placeholder="Qué vende tu marca, a quién le habla y qué tipo de colaboraciones buscas…" />
             </div>
@@ -515,7 +516,7 @@ function confirmDelete(id: number, titulo: string) {
                   <option value="">— Selecciona —</option>
                   <option v-for="pa in PAISES" :key="pa" :value="pa">{{ pa }}</option>
                 </select>
-                <p v-if="pv$.pais.$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$.pais.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.pais.$errors[0]?.$message }}
                 </p>
               </div>
@@ -533,7 +534,7 @@ function confirmDelete(id: number, titulo: string) {
             </div>
           </section>
 
-          <section class="space-y-4 border-t border-navy/8 pt-4">
+          <section class="space-y-4 border-t border-border pt-4">
             <h3 class="section-title">Presencia online</h3>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div v-for="f in ([
@@ -544,29 +545,29 @@ function confirmDelete(id: number, titulo: string) {
                 <label class="label">{{ f.label }}</label>
                 <input v-model="form[f.key]" type="url" :placeholder="f.placeholder"
                   :class="['input', { '!border-coral': pv$[f.key].$error }]" />
-                <p v-if="pv$[f.key].$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$[f.key].$error" class="text-coral-text text-xs mt-1">
                   {{ pv$[f.key].$errors[0]?.$message }}
                 </p>
               </div>
             </div>
           </section>
 
-          <section class="space-y-4 border-t border-navy/8 pt-4">
+          <section class="space-y-4 border-t border-border pt-4">
             <h3 class="section-title">Contacto y facturación</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="field">
                 <label class="label">Teléfono / WhatsApp</label>
                 <input v-model="form.telefono" type="tel" required placeholder="+503 7000-0000"
                   :class="['input', { '!border-coral': pv$.telefono.$error }]" />
-                <p v-if="pv$.telefono.$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$.telefono.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.telefono.$errors[0]?.$message }}
                 </p>
               </div>
               <div class="field">
-                <label class="label">Correo de facturación <span class="text-navy/40 font-normal text-xs">— si es distinto a tu correo de acceso</span></label>
+                <label class="label">Correo de facturación <span class="text-ink-muted font-normal text-xs">— si es distinto a tu correo de acceso</span></label>
                 <input v-model="form.email_facturacion" type="email" placeholder="facturacion@tumarca.com"
                   :class="['input', { '!border-coral': pv$.email_facturacion.$error }]" />
-                <p v-if="pv$.email_facturacion.$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$.email_facturacion.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.email_facturacion.$errors[0]?.$message }}
                 </p>
               </div>
@@ -578,28 +579,28 @@ function confirmDelete(id: number, titulo: string) {
                 <label class="label">NIT</label>
                 <input v-model="form.nit" placeholder="0614-010190-101-1"
                   :class="['input', { '!border-coral': pv$.nit.$error }]" />
-                <p v-if="pv$.nit.$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$.nit.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.nit.$errors[0]?.$message }}
                 </p>
               </div>
               <div class="field">
-                <label class="label">NRC <span class="text-navy/40 font-normal text-xs">— para crédito fiscal</span></label>
+                <label class="label">NRC <span class="text-ink-muted font-normal text-xs">— para crédito fiscal</span></label>
                 <input v-model="form.nrc" placeholder="123456-7"
                   :class="['input', { '!border-coral': pv$.nrc.$error }]" />
-                <p v-if="pv$.nrc.$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$.nrc.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.nrc.$errors[0]?.$message }}
                 </p>
               </div>
             </div>
           </section>
 
-          <section class="space-y-4 border-t border-navy/8 pt-4">
+          <section class="space-y-4 border-t border-border pt-4">
             <h3 class="section-title">Representante legal</h3>
             <div class="field">
               <label class="label">Nombre completo del representante</label>
               <input v-model="form.representante_nombre" required placeholder="Nombre Apellido"
                 :class="['input', { '!border-coral': pv$.representante_nombre.$error }]" />
-              <p v-if="pv$.representante_nombre.$error" class="text-coral text-xs mt-1">
+              <p v-if="pv$.representante_nombre.$error" class="text-coral-text text-xs mt-1">
                 {{ pv$.representante_nombre.$errors[0]?.$message }}
               </p>
             </div>
@@ -616,15 +617,15 @@ function confirmDelete(id: number, titulo: string) {
                 <input v-model="form.representante_numero_identificacion" required
                   :placeholder="form.representante_tipo_identificacion === 'DUI' ? '00000000-0' : 'A00000000'"
                   :class="['input', { '!border-coral': pv$.representante_numero_identificacion.$error }]" />
-                <p v-if="pv$.representante_numero_identificacion.$error" class="text-coral text-xs mt-1">
+                <p v-if="pv$.representante_numero_identificacion.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.representante_numero_identificacion.$errors[0]?.$message }}
                 </p>
               </div>
             </div>
           </section>
 
-          <p v-if="pv$.$error" class="text-coral text-sm">Revisa los campos marcados en rojo.</p>
-          <p v-else-if="profileError" class="text-coral text-sm">{{ profileError }}</p>
+          <p v-if="pv$.$error" class="text-coral-text text-sm">Revisa los campos marcados en rojo.</p>
+          <p v-else-if="profileError" class="text-coral-text text-sm">{{ profileError }}</p>
           <div class="flex gap-2 pt-1">
             <Button type="submit" :loading="store.saving" label="Guardar cambios" icon="pi pi-check" size="small" />
             <Button type="button" @click="editing = false" label="Cancelar" icon="pi pi-times" severity="secondary" outlined size="small" />
@@ -636,16 +637,17 @@ function confirmDelete(id: number, titulo: string) {
       <div class="card">
         <div class="flex items-center justify-between mb-2">
           <div>
-            <h2 class="font-display font-semibold text-navy text-lg">📋 Briefs de campaña</h2>
-            <p class="text-xs mt-0.5 text-navy/40">Reutilizables para adjuntar en chats con influencers</p>
+            <h2 class="font-display font-semibold text-navy text-lg inline-flex items-center gap-2"><i class="pi pi-clipboard" aria-hidden="true" /> Briefs de campaña</h2>
+            <p class="text-xs mt-0.5 text-ink-muted">Reutilizables para adjuntar en chats con influencers</p>
           </div>
           <Button @click="openNewBrief" label="Nuevo brief" icon="pi pi-plus" size="small" />
         </div>
 
         <!-- Formulario de brief -->
         <div v-if="showBriefForm" class="border border-violet/20 rounded-xl p-5 my-4 space-y-5 bg-violet/5">
-          <p class="font-semibold text-navy">
-            {{ editingBrief ? '✏️ Editar brief' : '➕ Nuevo brief de campaña' }}
+          <p class="font-semibold text-navy inline-flex items-center gap-2">
+            <i :class="['pi', editingBrief ? 'pi-pencil' : 'pi-plus']" aria-hidden="true" />
+            {{ editingBrief ? 'Editar brief' : 'Nuevo brief de campaña' }}
           </p>
 
           <!-- 1. La campaña -->
@@ -655,7 +657,7 @@ function confirmDelete(id: number, titulo: string) {
               <label class="label">Título de la campaña</label>
               <input v-model="briefForm.titulo_campana" required maxlength="255" placeholder="Lanzamiento Producto X…"
                 :class="['input', { '!border-coral': bv$.titulo_campana.$error }]" />
-              <p v-if="bv$.titulo_campana.$error" class="text-coral text-xs mt-1">
+              <p v-if="bv$.titulo_campana.$error" class="text-coral-text text-xs mt-1">
                 {{ bv$.titulo_campana.$errors[0]?.$message }}
               </p>
             </div>
@@ -664,7 +666,7 @@ function confirmDelete(id: number, titulo: string) {
               <textarea v-model="briefForm.objetivo_principal" rows="2" required
                 placeholder="Aumentar reconocimiento de marca, generar ventas con código de descuento…"
                 :class="['input', { '!border-coral': bv$.objetivo_principal.$error }]" />
-              <p v-if="bv$.objetivo_principal.$error" class="text-coral text-xs mt-1">
+              <p v-if="bv$.objetivo_principal.$error" class="text-coral-text text-xs mt-1">
                 {{ bv$.objetivo_principal.$errors[0]?.$message }}
               </p>
             </div>
@@ -684,17 +686,17 @@ function confirmDelete(id: number, titulo: string) {
           <section class="space-y-4 border-t border-violet/10 pt-4">
             <h3 class="section-title">2. Entregables y calendario</h3>
             <div class="field">
-              <label class="label">Plataformas <span class="text-coral">*</span></label>
+              <label class="label">Plataformas <span class="text-coral-text">*</span></label>
               <div class="flex flex-wrap gap-2 rounded-lg" :class="{ 'ring-1 ring-coral p-1': bv$.plataformas.$error }">
                 <button v-for="pl in PLATAFORMAS_BRIEF" :key="pl" type="button" @click="togglePlataforma(pl)"
                   class="px-3 py-1.5 rounded-full text-sm border transition-colors"
                   :class="briefForm.plataformas.includes(pl)
                     ? 'bg-violet text-white border-violet'
-                    : 'bg-white text-navy/70 border-navy/15 hover:border-violet/40'">
+                    : 'bg-white text-ink-muted border-navy/15 hover:border-violet/40'">
                   {{ pl }}
                 </button>
               </div>
-              <p v-if="bv$.plataformas.$error" class="text-coral text-xs mt-1">
+              <p v-if="bv$.plataformas.$error" class="text-coral-text text-xs mt-1">
                 {{ bv$.plataformas.$errors[0]?.$message }}
               </p>
             </div>
@@ -711,7 +713,7 @@ function confirmDelete(id: number, titulo: string) {
                 <label class="label">Fecha de fin</label>
                 <input v-model="briefForm.fecha_fin" type="date" :min="briefForm.fecha_inicio || undefined"
                   :class="['input', { '!border-coral': bv$.fecha_fin.$error }]" />
-                <p v-if="bv$.fecha_fin.$error" class="text-coral text-xs mt-1">
+                <p v-if="bv$.fecha_fin.$error" class="text-coral-text text-xs mt-1">
                   {{ bv$.fecha_fin.$errors[0]?.$message }}
                 </p>
               </div>
@@ -722,11 +724,11 @@ function confirmDelete(id: number, titulo: string) {
           <section class="space-y-4 border-t border-violet/10 pt-4">
             <h3 class="section-title">3. Contenido</h3>
             <div class="field">
-              <label class="label">✅ ¿Qué debe incluir el contenido?</label>
+              <label class="label"><i class="pi pi-check-circle text-success mr-1.5" aria-hidden="true" />¿Qué debe incluir el contenido?</label>
               <textarea v-model="briefForm.puntos_clave_si" class="input" rows="2" placeholder="Mostrar el producto en uso natural…" />
             </div>
             <div class="field">
-              <label class="label">❌ ¿Qué debe evitar el contenido?</label>
+              <label class="label"><i class="pi pi-times-circle text-coral-text mr-1.5" aria-hidden="true" />¿Qué debe evitar el contenido?</label>
               <textarea v-model="briefForm.restricciones_no" class="input" rows="2" placeholder="No mencionar a la competencia…" />
             </div>
             <div class="field">
@@ -751,7 +753,7 @@ function confirmDelete(id: number, titulo: string) {
                 <label class="label">Presupuesto máximo (USD)</label>
                 <input v-model.number="briefForm.presupuesto_max" type="number" min="0" step="10" placeholder="500"
                   :class="['input', { '!border-coral': bv$.presupuesto_max.$error }]" />
-                <p v-if="bv$.presupuesto_max.$error" class="text-coral text-xs mt-1">
+                <p v-if="bv$.presupuesto_max.$error" class="text-coral-text text-xs mt-1">
                   {{ bv$.presupuesto_max.$errors[0]?.$message }}
                 </p>
               </div>
@@ -767,7 +769,7 @@ function confirmDelete(id: number, titulo: string) {
                 <label class="label">Exclusividad (días sin trabajar con la competencia)</label>
                 <input v-model.number="briefForm.exclusividad_dias" type="number" min="0" max="365" placeholder="0 = sin exclusividad"
                   :class="['input', { '!border-coral': bv$.exclusividad_dias.$error }]" />
-                <p v-if="bv$.exclusividad_dias.$error" class="text-coral text-xs mt-1">
+                <p v-if="bv$.exclusividad_dias.$error" class="text-coral-text text-xs mt-1">
                   {{ bv$.exclusividad_dias.$errors[0]?.$message }}
                 </p>
               </div>
@@ -786,13 +788,13 @@ function confirmDelete(id: number, titulo: string) {
               <input v-model="briefForm.recursos_esteticos" class="input" placeholder="Link a Figma, moodboard, paleta de colores…" />
             </div>
             <div class="field">
-              <label class="label">Archivos <span class="text-navy/40 font-normal text-xs">— logos, guía de marca, moodboard (imágenes, PDF o ZIP)</span></label>
+              <label class="label">Archivos <span class="text-ink-muted font-normal text-xs">— logos, guía de marca, moodboard (imágenes, PDF o ZIP)</span></label>
               <div class="flex flex-wrap items-center gap-2">
                 <div v-for="(f, idx) in briefForm.archivos" :key="f.url"
-                  class="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg border border-navy/10 bg-white text-xs">
+                  class="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg border border-border bg-white text-xs">
                   <i :class="f.tipo_archivo === 'documento' ? 'pi pi-file' : 'pi pi-image'" class="text-violet" />
                   <span class="max-w-[160px] truncate">{{ f.nombre }}</span>
-                  <button type="button" @click="removeArchivo(idx)" class="text-navy/40 hover:text-coral px-1" title="Quitar">
+                  <button type="button" @click="removeArchivo(idx)" class="text-ink-muted hover:text-coral-text px-1" title="Quitar">
                     <i class="pi pi-times text-[0.65rem]" />
                   </button>
                 </div>
@@ -807,8 +809,8 @@ function confirmDelete(id: number, titulo: string) {
             </div>
           </section>
 
-          <p v-if="bv$.$error" class="text-coral text-sm">Revisa los campos marcados en rojo.</p>
-          <p v-else-if="briefError" class="text-coral text-sm">{{ briefError }}</p>
+          <p v-if="bv$.$error" class="text-coral-text text-sm">Revisa los campos marcados en rojo.</p>
+          <p v-else-if="briefError" class="text-coral-text text-sm">{{ briefError }}</p>
           <div class="flex gap-2 pt-1">
             <Button @click="saveBrief" :loading="savingBrief" :disabled="uploading"
               :label="editingBrief ? 'Actualizar brief' : 'Crear brief'"
@@ -824,7 +826,7 @@ function confirmDelete(id: number, titulo: string) {
         <div v-if="store.briefs.length === 0 && !showBriefForm" class="text-center py-10">
           <i class="pi pi-file-edit text-4xl mb-3 block text-violet-light" />
           <p class="font-semibold text-navy">Aún no tienes briefs</p>
-          <p class="text-sm mt-1 text-navy/40">Crea uno para adjuntarlo en chats con influencers</p>
+          <p class="text-sm mt-1 text-ink-muted">Crea uno para adjuntarlo en chats con influencers</p>
           <Button @click="openNewBrief" label="Crear primer brief" icon="pi pi-plus"
             class="mt-4" size="small" severity="secondary" outlined />
         </div>

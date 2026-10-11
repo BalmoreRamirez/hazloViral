@@ -42,12 +42,22 @@ export default {
           DEFAULT: '#F8FAFC', // Surface — fondo de tarjetas y contenedores
           dark:    '#E2E8F0',
         },
+        // Tokens del sistema de diseño (contraste AA revisado) — espejo de @theme en main.css
+        ink: { DEFAULT: '#0F172A', muted: '#475569' },
+        'surface-sunken': '#F1F5F9',
+        border: { DEFAULT: '#E2E8F0', strong: '#8B95A5' },
+        'violet-tint': '#EDE9FE',
+        'coral-text': '#BE123C',
+        'coral-tint': '#FFE4E6',
+        danger: '#E11D48',
+        success: { DEFAULT: '#15803D', tint: '#DCFCE7' },
+        warning: { DEFAULT: '#B45309', tint: '#FEF3C7' },
       },
 
       // ── Tipografía (claude.md §3.2) ─────────────────────────────────────────
       fontFamily: {
-        body:    ['Inter', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
-        display: ['Lexend', 'Clash Display', 'system-ui', 'sans-serif'],
+        body:    ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Bricolage Grotesque', 'Lexend', 'system-ui', 'sans-serif'],
       },
 
       // ── Sombras personalizadas ───────────────────────────────────────────────

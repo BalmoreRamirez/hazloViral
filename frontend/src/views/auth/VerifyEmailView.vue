@@ -46,15 +46,15 @@ onMounted(async () => {
       <div class="card text-center py-6">
         <!-- Cargando -->
         <template v-if="status === 'loading'">
-          <div class="text-4xl mb-4 animate-pulse">📧</div>
-          <p class="text-navy/60">Verificando tu correo…</p>
+          <i class="pi pi-envelope block text-4xl mb-4 animate-pulse text-violet" aria-hidden="true" />
+          <p class="text-ink-muted">Verificando tu correo…</p>
         </template>
 
         <!-- Éxito -->
         <template v-else-if="status === 'ok'">
-          <div class="text-5xl mb-4">✅</div>
+          <i class="pi pi-check-circle block text-5xl mb-4 text-success" aria-hidden="true" />
           <h2 class="text-xl font-display font-semibold text-navy mb-2">¡Correo verificado!</h2>
-          <p class="text-navy/60 text-sm mb-6">Tu cuenta está activa y lista para usar.</p>
+          <p class="text-ink-muted text-sm mb-6">Tu cuenta está activa y lista para usar.</p>
           <button class="btn-primary w-full" @click="router.push(auth.isAuthenticated ? '/dashboard' : '/login')">
             {{ auth.isAuthenticated ? 'Ir al dashboard' : 'Iniciar sesión' }}
           </button>
@@ -62,9 +62,9 @@ onMounted(async () => {
 
         <!-- Error -->
         <template v-else>
-          <div class="text-5xl mb-4">❌</div>
+          <i class="pi pi-times-circle block text-5xl mb-4 text-coral-text" aria-hidden="true" />
           <h2 class="text-xl font-display font-semibold text-navy mb-2">No se pudo verificar</h2>
-          <p class="text-navy/60 text-sm mb-6">{{ message }}</p>
+          <p class="text-ink-muted text-sm mb-6">{{ message }}</p>
           <div class="space-y-2">
             <button v-if="auth.isAuthenticated" class="btn-primary w-full"
               @click="router.push('/dashboard')">

@@ -25,8 +25,13 @@ Plataforma web responsive que conecta marcas con influencers en Latinoamérica. 
 *   **Fondo de Superficies (Light Slate - `#F8FAFC`):** Fondo para tarjetas de perfiles, contenedores de chat y secciones internas para un contraste limpio.
 
 ### 3.2 Tipografía
-*   **Cuerpo y Datos (Inter o Plus Jakarta Sans):** Alta legibilidad en pantallas móviles para mensajería, métricas y contratos.
-*   **Títulos y Encabezados (Lexend o Clash Display):** Estilo geométrico para nombres de influencers y títulos de dashboards.
+*   **Cuerpo y Datos (Plus Jakarta Sans):** Alta legibilidad en pantallas móviles para mensajería, métricas y contratos. Cifras tabulares en montos.
+*   **Títulos y Encabezados (Bricolage Grotesque):** Personalidad editorial para nombres de influencers, marcas y títulos de dashboards, sin perder seriedad en contratos.
+
+### 3.3 Reglas de uso (sistema de diseño)
+*   **Contraste AA:** el texto secundario usa `text-ink-muted` (no `text-navy/40`–`/70`). El coral solo marca (iconos, bordes, puntos); el texto de error usa `text-coral-text`. Los botones destructivos usan `bg-danger`. Los bordes de controles usan `border-border-strong`.
+*   **Estados:** `success` / `warning` / `violet` (info) / `coral-text` (peligro) con sus `*-tint` de fondo, y siempre con palabra o icono.
+*   **Iconos, no emojis:** la interfaz usa PrimeIcons (`<i class="pi pi-..." aria-hidden="true" />`). Los emojis quedan solo para el contenido que escriben los usuarios en el chat.
 
 ---
 

@@ -61,14 +61,14 @@ async function submit() {
             <Password v-model="password" toggleMask fluid :feedback="false" />
           </div>
 
-          <div v-if="error" class="bg-coral/10 text-coral text-sm p-3 rounded-lg">{{ error }}</div>
+          <div v-if="error" class="bg-coral/10 text-coral-text text-sm p-3 rounded-lg">{{ error }}</div>
 
           <button type="submit" class="btn-primary w-full" :disabled="loading">
             {{ loading ? 'Entrando…' : 'Entrar' }}
           </button>
         </form>
 
-        <p class="text-center text-sm text-navy/50 mt-4">
+        <p class="text-center text-sm text-ink-muted mt-4">
           ¿No tienes cuenta?
           <RouterLink to="/register" class="text-violet font-semibold">Regístrate</RouterLink>
         </p>

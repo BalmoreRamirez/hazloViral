@@ -31,7 +31,7 @@ const PLATFORM_COLOR: Record<string, string> = {
 }
 
 const REDES_ICON: Record<string, string> = {
-  TikTok: '🎵', Instagram: '📸', YouTube: '▶️', Facebook: '👤',
+  TikTok: 'pi-tiktok', Instagram: 'pi-instagram', YouTube: 'pi-youtube', Facebook: 'pi-facebook',
 }
 
 const form = ref({
@@ -179,7 +179,7 @@ function formatFollowers(n: number) {
         <div class="absolute top-4 right-4">
           <button v-if="!editing" @click="editing = true; saveError = ''; v$.$reset()"
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/25 hover:bg-black/40 backdrop-blur-sm text-white text-xs font-semibold border border-white/20 transition-all">
-            ✏️ Editar perfil
+            <i class="pi pi-pencil" aria-hidden="true" /> Editar perfil
           </button>
           <button v-else @click="editing = false"
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/25 hover:bg-black/40 backdrop-blur-sm text-white text-xs font-semibold border border-white/20 transition-all">
@@ -189,7 +189,7 @@ function formatFollowers(n: number) {
       </div>
 
       <!-- ── Loading ────────────────────────────────────────────────────────── -->
-      <div v-if="store.loading" class="card pt-14 py-8 text-center text-navy/40 text-sm">
+      <div v-if="store.loading" class="card pt-14 py-8 text-center text-ink-muted text-sm">
         <span class="animate-pulse">Cargando perfil…</span>
       </div>
 
@@ -206,8 +206,8 @@ function formatFollowers(n: number) {
               <VerifiedBadge v-if="esData.is_verified" size="md" />
             </div>
             <p v-if="esData.username" class="text-violet font-medium text-sm mt-0.5">@{{ esData.username }}</p>
-            <p v-if="esData.ubicacion" class="text-navy/50 text-sm mt-0.5 flex items-center gap-1">
-              <span class="text-xs">📍</span> {{ esData.ubicacion }}
+            <p v-if="esData.ubicacion" class="text-ink-muted text-sm mt-0.5 flex items-center gap-1">
+              <i class="pi pi-map-marker text-xs" aria-hidden="true" /> {{ esData.ubicacion }}
             </p>
           </div>
           <!-- Tarifa pill -->
@@ -218,18 +218,19 @@ function formatFollowers(n: number) {
         </div>
 
         <!-- Bio -->
-        <p v-if="esData.bio" class="text-sm text-navy/70 leading-relaxed mb-4">{{ esData.bio }}</p>
+        <p v-if="esData.bio" class="text-sm text-ink-muted leading-relaxed mb-4">{{ esData.bio }}</p>
 
         <!-- Status + tags -->
         <div class="flex flex-wrap gap-1.5 mb-4">
-          <span :class="esData.disponibilidad ? 'badge-active' : 'badge-muted'">
-            {{ esData.disponibilidad ? '✅ Disponible' : '🔒 No disponible' }}
+          <span :class="esData.disponibilidad ? 'badge-active' : 'badge-muted'" class="inline-flex items-center gap-1.5">
+            <i :class="['pi', esData.disponibilidad ? 'pi-check-circle' : 'pi-lock']" aria-hidden="true" />
+            {{ esData.disponibilidad ? 'Disponible' : 'No disponible' }}
           </span>
-          <span v-for="(r, i) in (esData.rubros ?? [])" :key="r" class="badge-info capitalize"
-            :title="i === 0 ? 'Rubro principal' : undefined">{{ i === 0 ? '⭐' : '🏷️' }} {{ RUBROS_LIST.find(x => x.value === r)?.label ?? r }}</span>
-          <span v-if="esData.fecha_nacimiento" class="badge-muted">📅 {{ esData.fecha_nacimiento }}</span>
-          <span v-if="store.metrics.length > 0" class="badge-muted">
-            👥 {{ formatFollowers(totalFollowers) }} seguidores
+          <span v-for="(r, i) in (esData.rubros ?? [])" :key="r" class="badge-info capitalize inline-flex items-center gap-1.5"
+            :title="i === 0 ? 'Rubro principal' : undefined"><i :class="['pi', i === 0 ? 'pi-star' : 'pi-tag']" aria-hidden="true" /> {{ RUBROS_LIST.find(x => x.value === r)?.label ?? r }}</span>
+          <span v-if="esData.fecha_nacimiento" class="badge-muted inline-flex items-center gap-1.5"><i class="pi pi-calendar" aria-hidden="true" /> {{ esData.fecha_nacimiento }}</span>
+          <span v-if="store.metrics.length > 0" class="badge-muted inline-flex items-center gap-1.5">
+            <i class="pi pi-users" aria-hidden="true" /> {{ formatFollowers(totalFollowers) }} seguidores
           </span>
         </div>
 
@@ -238,43 +239,43 @@ function formatFollowers(n: number) {
           <StarRating :model-value="Math.round(ownSummary.promedio ?? 0)" readonly size="sm" />
           <template v-if="ownSummary.total > 0">
             <span class="font-bold text-navy text-sm">{{ ownSummary.promedio }}</span>
-            <span class="text-navy/50 text-xs">({{ ownSummary.total }} reseña{{ ownSummary.total !== 1 ? 's' : '' }})</span>
+            <span class="text-ink-muted text-xs">({{ ownSummary.total }} reseña{{ ownSummary.total !== 1 ? 's' : '' }})</span>
           </template>
         </div>
 
         <!-- Verificación de perfil -->
         <div v-if="verificationChecklist"
-          :class="esData.is_verified ? 'bg-violet/5 border-violet/20' : 'bg-amber-50 border-amber-200'"
+          :class="esData.is_verified ? 'bg-violet/5 border-violet/20' : 'bg-warning-tint border-amber-200'"
           class="rounded-xl border p-3 mb-4">
           <div class="flex items-center gap-2 mb-2">
             <VerifiedBadge v-if="esData.is_verified" size="sm" />
-            <span v-else class="text-amber-500 text-sm leading-none">⚠️</span>
-            <p class="text-xs font-semibold" :class="esData.is_verified ? 'text-violet' : 'text-amber-700'">
+            <i v-else class="pi pi-exclamation-triangle text-warning text-sm leading-none" aria-hidden="true" />
+            <p class="text-xs font-semibold" :class="esData.is_verified ? 'text-violet' : 'text-warning'">
               {{ esData.is_verified ? 'Perfil verificado — apareces en búsquedas' : 'Perfil incompleto — no apareces en búsquedas ni puedes ser contratado' }}
             </p>
           </div>
           <ul class="space-y-1">
             <li v-for="req in verificationChecklist" :key="req.label" class="flex items-center gap-2 text-xs">
-              <span :class="req.ok ? 'text-emerald-500' : 'text-coral'">{{ req.ok ? '✓' : '✗' }}</span>
-              <span :class="req.ok ? 'text-navy/60' : 'text-navy/80 font-medium'">{{ req.label }}</span>
+              <i :class="['pi', req.ok ? 'pi-check-circle text-success' : 'pi-circle text-ink-muted']" aria-hidden="true" />
+              <span :class="req.ok ? 'text-ink-muted' : 'text-navy/80 font-medium'">{{ req.label }}</span>
             </li>
           </ul>
         </div>
 
         <!-- Identification + tutor -->
-        <div class="border-t border-navy/8 pt-3 space-y-3">
+        <div class="border-t border-border pt-3 space-y-3">
           <div v-if="esData.numero_identificacion">
-            <span class="badge-muted text-xs">🪪 {{ esData.tipo_identificacion }}: {{ esData.numero_identificacion }}</span>
+            <span class="badge-muted text-xs inline-flex items-center gap-1.5"><i class="pi pi-id-card" aria-hidden="true" /> {{ esData.tipo_identificacion }}: {{ esData.numero_identificacion }}</span>
           </div>
-          <p v-else class="text-xs text-coral/70 font-medium">⚠️ Número de identificación no registrado</p>
+          <p v-else class="text-xs text-coral-text font-medium inline-flex items-center gap-1.5"><i class="pi pi-exclamation-triangle" aria-hidden="true" /> Número de identificación no registrado</p>
 
           <div v-if="esData.tutor_nombre"
             class="bg-coral/5 border border-coral/20 rounded-xl p-3 text-sm flex items-start gap-3">
-            <span class="text-lg mt-0.5">👨‍👦</span>
+            <i class="pi pi-users text-lg mt-0.5 text-coral-text" aria-hidden="true" />
             <div>
-              <p class="font-semibold text-coral text-xs uppercase tracking-wide mb-0.5">Representante legal</p>
-              <p class="text-navy/70 text-sm">{{ esData.tutor_nombre }}</p>
-              <p class="text-navy/40 text-xs">{{ esData.tutor_email }}</p>
+              <p class="font-semibold text-coral-text text-xs uppercase tracking-wide mb-0.5">Representante legal</p>
+              <p class="text-ink-muted text-sm">{{ esData.tutor_nombre }}</p>
+              <p class="text-ink-muted text-xs">{{ esData.tutor_email }}</p>
               <span :class="esData.tutor_autorizacion ? 'badge-active' : 'badge-warning'" class="mt-1.5 inline-flex text-xs">
                 {{ esData.tutor_autorizacion ? 'Autorizado' : 'Pendiente de autorización' }}
               </span>
@@ -291,11 +292,11 @@ function formatFollowers(n: number) {
           <div class="field">
             <label class="label">Username</label>
             <div class="relative">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-navy/40 font-medium select-none">@</span>
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted font-medium select-none">@</span>
               <input v-model="form.username" placeholder="mario_blue"
                 :class="['input pl-7 w-full', { '!border-coral': v$.username.$error }]" />
             </div>
-            <p v-if="v$.username.$error" class="text-coral text-xs mt-1">
+            <p v-if="v$.username.$error" class="text-coral-text text-xs mt-1">
               {{ v$.username.$errors[0]?.$message }}
             </p>
           </div>
@@ -304,7 +305,7 @@ function formatFollowers(n: number) {
             <label class="label">Nombre artístico</label>
             <input v-model="form.nombre_artistico"
               :class="['input', { '!border-coral': v$.nombre_artistico.$error }]" />
-            <p v-if="v$.nombre_artistico.$error" class="text-coral text-xs mt-1">
+            <p v-if="v$.nombre_artistico.$error" class="text-coral-text text-xs mt-1">
               {{ v$.nombre_artistico.$errors[0]?.$message }}
             </p>
           </div>
@@ -323,7 +324,7 @@ function formatFollowers(n: number) {
                 <option value="">— Selecciona —</option>
                 <option v-for="p in PAISES" :key="p">{{ p }}</option>
               </select>
-              <p v-if="v$.pais.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.pais.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.pais.$errors[0]?.$message }}
               </p>
             </div>
@@ -342,7 +343,7 @@ function formatFollowers(n: number) {
           </div>
 
           <div class="field">
-            <label class="label">Rubro / nicho <span class="text-navy/40 font-normal">(puedes elegir varios)</span></label>
+            <label class="label">Rubro / nicho <span class="text-ink-muted font-normal">(puedes elegir varios)</span></label>
             <div class="flex flex-wrap gap-2 mt-1">
               <button
                 v-for="r in RUBROS_LIST" :key="r.value"
@@ -352,27 +353,27 @@ function formatFollowers(n: number) {
                   : form.rubros.push(r.value)"
                 :class="form.rubros.includes(r.value)
                   ? 'bg-violet text-white border-violet'
-                  : 'bg-white text-navy/60 border-navy/15 hover:border-violet/40'"
+                  : 'bg-white text-ink-muted border-navy/15 hover:border-violet/40'"
                 class="px-3 py-1.5 rounded-full border text-xs font-medium transition-all select-none cursor-pointer">
-                <span v-if="form.rubros[0] === r.value" title="Rubro principal">⭐</span> {{ r.label }}
+                <i v-if="form.rubros[0] === r.value" class="pi pi-star text-[10px]" title="Rubro principal" aria-hidden="true" /> {{ r.label }}
               </button>
             </div>
             <div v-if="form.rubros.length > 1" class="flex items-center gap-2 mt-3">
-              <label class="text-sm text-navy/60 shrink-0">⭐ Rubro principal</label>
+              <label class="text-sm text-ink-muted shrink-0 inline-flex items-center gap-1.5"><i class="pi pi-star" aria-hidden="true" /> Rubro principal</label>
               <select v-model="rubroPrincipal" class="input py-1.5 text-sm">
                 <option v-for="r in form.rubros" :key="r" :value="r">
                   {{ RUBROS_LIST.find(x => x.value === r)?.label ?? r }}
                 </option>
               </select>
             </div>
-            <p v-if="v$.rubros.$error" class="text-coral text-xs mt-1">
+            <p v-if="v$.rubros.$error" class="text-coral-text text-xs mt-1">
               {{ v$.rubros.$errors[0]?.$message }}
             </p>
           </div>
 
           <label class="flex items-center gap-2 cursor-pointer select-none">
             <input v-model="form.disponibilidad" type="checkbox" class="rounded accent-violet" />
-            <span class="text-sm font-medium text-navy/70">Disponible para nuevas campañas</span>
+            <span class="text-sm font-medium text-ink-muted">Disponible para nuevas campañas</span>
           </label>
 
           <div class="grid grid-cols-2 gap-3">
@@ -386,13 +387,13 @@ function formatFollowers(n: number) {
               <label class="label">Número de identificación</label>
               <input v-model="form.numero_identificacion" placeholder="00000000-0"
                 :class="['input', { '!border-coral': v$.numero_identificacion.$error }]" />
-              <p v-if="v$.numero_identificacion.$error" class="text-coral text-xs mt-1">
+              <p v-if="v$.numero_identificacion.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.numero_identificacion.$errors[0]?.$message }}
               </p>
             </div>
           </div>
 
-          <p v-if="saveError" class="text-coral text-sm">{{ saveError }}</p>
+          <p v-if="saveError" class="text-coral-text text-sm">{{ saveError }}</p>
 
           <div class="flex gap-2 pt-1">
             <button type="submit" :disabled="store.saving" class="btn-primary text-sm">
@@ -408,7 +409,7 @@ function formatFollowers(n: number) {
         <div class="flex items-center justify-between mb-4">
           <div>
             <h2 class="font-display font-semibold text-navy">Redes sociales</h2>
-            <p class="text-xs text-navy/40 mt-0.5">
+            <p class="text-xs text-ink-muted mt-0.5">
               <template v-if="store.metrics.length > 0">
                 {{ formatFollowers(totalFollowers) }} seguidores en
                 {{ store.metrics.length }} plataforma{{ store.metrics.length > 1 ? 's' : '' }}
@@ -424,7 +425,7 @@ function formatFollowers(n: number) {
         <!-- Formulario nueva métrica -->
         <div v-if="showMetricForm"
           class="border border-violet/20 rounded-xl p-4 mb-4 bg-violet/5 space-y-3">
-          <p class="text-xs text-navy/50">
+          <p class="text-xs text-ink-muted">
             Los seguidores se obtienen automáticamente para Instagram, TikTok y Facebook.
           </p>
           <div class="grid grid-cols-2 gap-3">
@@ -446,27 +447,27 @@ function formatFollowers(n: number) {
             </button>
             <button @click="showMetricForm = false; metricError = ''" class="btn-ghost text-sm">Cancelar</button>
           </div>
-          <p v-if="metricError" class="text-coral text-sm">{{ metricError }}</p>
+          <p v-if="metricError" class="text-coral-text text-sm">{{ metricError }}</p>
         </div>
 
         <!-- Empty state -->
         <div v-if="store.metrics.length === 0 && !showMetricForm"
-          class="text-center py-10 text-navy/40 text-sm">
-          <p class="text-3xl mb-2">📱</p>
-          <p class="font-medium text-navy/50">Sin redes sociales vinculadas</p>
+          class="text-center py-10 text-ink-muted text-sm">
+          <i class="pi pi-mobile text-3xl mb-2 block" aria-hidden="true" />
+          <p class="font-medium text-ink-muted">Sin redes sociales vinculadas</p>
           <p class="text-xs mt-1">Agrega tus cuentas para que las marcas te encuentren</p>
         </div>
 
         <!-- Metric cards -->
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div v-for="m in store.metrics" :key="m.id"
-            class="relative flex items-center gap-3 p-3.5 bg-white rounded-xl border border-navy/8 hover:shadow-sm transition-shadow overflow-hidden"
+            class="relative flex items-center gap-3 p-3.5 bg-white rounded-xl border border-border hover:shadow-sm transition-shadow overflow-hidden"
             :style="{ borderLeftWidth: '3px', borderLeftColor: PLATFORM_COLOR[m.red_social] ?? '#7C3AED' }">
 
             <!-- Platform icon -->
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
               :style="{ background: (PLATFORM_COLOR[m.red_social] ?? '#7C3AED') + '18' }">
-              {{ REDES_ICON[m.red_social] ?? '📱' }}
+              <i :class="['pi', REDES_ICON[m.red_social] ?? 'pi-mobile']" aria-hidden="true" />
             </div>
 
             <div class="flex-1 min-w-0">
@@ -476,22 +477,22 @@ function formatFollowers(n: number) {
                 <span v-if="m.is_verified"
                   class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-violet text-white text-[9px] font-bold"
                   title="Verificado">✓</span>
-                <span v-else class="text-[10px] text-navy/30 bg-navy/5 px-1.5 py-0.5 rounded">sin verificar</span>
+                <span v-else class="text-[10px] text-ink-muted bg-navy/5 px-1.5 py-0.5 rounded">sin verificar</span>
               </div>
 
-              <p class="text-xs text-navy/50 mb-1.5">@{{ m.username }}</p>
+              <p class="text-xs text-ink-muted mb-1.5">@{{ m.username }}</p>
 
               <!-- Stats row -->
               <div class="flex items-center gap-2">
                 <span class="text-sm font-bold text-navy">{{ formatFollowers(m.seguidores) }}</span>
-                <span class="text-xs text-navy/40">seguidores</span>
+                <span class="text-xs text-ink-muted">seguidores</span>
                 <span v-if="m.engagement_rate > 0"
-                  class="ml-auto text-xs font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
-                  ⚡ {{ m.engagement_rate }}%
+                  class="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-success bg-success-tint px-1.5 py-0.5 rounded-full">
+                  <i class="pi pi-bolt text-[10px]" aria-hidden="true" /> {{ m.engagement_rate }}%
                 </span>
               </div>
 
-              <p v-if="m.verified_at" class="text-[10px] text-navy/30 mt-1">
+              <p v-if="m.verified_at" class="text-[10px] text-ink-muted mt-1">
                 Verificado {{ new Date(m.verified_at).toLocaleDateString('es-SV') }}
               </p>
             </div>
@@ -501,10 +502,10 @@ function formatFollowers(n: number) {
               <button @click="verifyMetric(m.id)" :disabled="verifyingId === m.id"
                 class="text-violet/50 hover:text-violet disabled:opacity-30 transition-colors text-sm"
                 title="Re-verificar">
-                {{ verifyingId === m.id ? '…' : '🔄' }}
+                <i :class="['pi pi-refresh', { 'pi-spin': verifyingId === m.id }]" aria-hidden="true" />
               </button>
               <button @click="deleteMetric(m.id)" :disabled="deletingId === m.id"
-                class="text-navy/20 hover:text-coral disabled:opacity-30 transition-colors text-sm">✕</button>
+                class="text-navy/20 hover:text-coral-text disabled:opacity-30 transition-colors text-sm">✕</button>
             </div>
           </div>
         </div>
@@ -515,18 +516,18 @@ function formatFollowers(n: number) {
         <div class="flex items-center justify-between mb-4">
           <div>
             <h2 class="font-display font-semibold text-navy">Cuenta bancaria</h2>
-            <p class="text-xs text-navy/40 mt-0.5">Para recibir pagos de contratos vía Wompi</p>
+            <p class="text-xs text-ink-muted mt-0.5">Para recibir pagos de contratos vía Wompi</p>
           </div>
-          <button v-if="!bankEditing" @click="bankEditing = true" class="btn-secondary text-sm">✏️ Editar</button>
+          <button v-if="!bankEditing" @click="bankEditing = true" class="btn-secondary text-sm inline-flex items-center gap-1.5"><i class="pi pi-pencil" aria-hidden="true" /> Editar</button>
         </div>
 
         <template v-if="!bankEditing">
           <div v-if="esData?.banco_nombre"
-            class="flex items-center gap-4 bg-green-50 border border-green-200 rounded-xl p-4">
-            <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-xl shrink-0">🏦</div>
+            class="flex items-center gap-4 bg-success-tint border border-green-200 rounded-xl p-4">
+            <div class="w-10 h-10 bg-success-tint rounded-xl flex items-center justify-center text-xl shrink-0 text-success"><i class="pi pi-building-columns" aria-hidden="true" /></div>
             <div>
-              <p class="font-bold text-green-700 text-sm">{{ esData.banco_nombre }}</p>
-              <p class="text-xs text-green-600 mt-0.5">
+              <p class="font-bold text-success text-sm">{{ esData.banco_nombre }}</p>
+              <p class="text-xs text-success mt-0.5">
                 Cuenta {{ esData.banco_cuenta_tipo }} ·
                 <span class="font-mono">{{ esData.banco_cuenta_numero }}</span>
               </p>
@@ -534,11 +535,11 @@ function formatFollowers(n: number) {
             <span class="ml-auto badge-active text-xs">✓ Configurada</span>
           </div>
           <div v-else
-            class="flex items-center gap-3 bg-coral/5 border border-coral/20 rounded-xl p-4 text-sm text-coral/80">
-            <span class="text-2xl">⚠️</span>
+            class="flex items-center gap-3 bg-coral/5 border border-coral/20 rounded-xl p-4 text-sm text-coral-text">
+            <i class="pi pi-exclamation-triangle text-2xl" aria-hidden="true" />
             <div>
               <p class="font-semibold">Sin cuenta bancaria</p>
-              <p class="text-xs text-coral/60 mt-0.5">Agrégala para poder recibir pagos de campañas.</p>
+              <p class="text-xs text-coral-text mt-0.5">Agrégala para poder recibir pagos de campañas.</p>
             </div>
           </div>
         </template>

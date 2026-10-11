@@ -68,7 +68,7 @@ function formatFollowers(n: number) {
 }
 
 const REDES_ICON: Record<string, string> = {
-  TikTok: '🎵', Instagram: '📸', YouTube: '▶️', Facebook: '👤',
+  TikTok: 'pi-tiktok', Instagram: 'pi-instagram', YouTube: 'pi-youtube', Facebook: 'pi-facebook',
 }
 </script>
 
@@ -77,7 +77,7 @@ const REDES_ICON: Record<string, string> = {
     <div class="space-y-5">
       <div>
         <h1 class="text-2xl font-display font-bold text-navy">Buscar influencers</h1>
-        <p class="text-navy/50 text-sm mt-1">{{ total }} influencer{{ total !== 1 ? 's' : '' }} disponibles</p>
+        <p class="text-ink-muted text-sm mt-1">{{ total }} influencer{{ total !== 1 ? 's' : '' }} disponibles</p>
       </div>
 
       <!-- Filtros -->
@@ -122,11 +122,12 @@ const REDES_ICON: Record<string, string> = {
         <div class="flex items-center justify-between mt-3">
           <label class="flex items-center gap-2 cursor-pointer select-none">
             <input v-model="filters.solo_disponibles" type="checkbox" class="rounded accent-violet" @change="search" />
-            <span class="text-sm font-medium text-navy/70">Solo disponibles</span>
+            <span class="text-sm font-medium text-ink-muted">Solo disponibles</span>
           </label>
           <div class="flex gap-2">
-            <button @click="search" :disabled="loading" class="btn-primary text-sm">
-              {{ loading ? 'Buscando…' : '🔍 Buscar' }}
+            <button @click="search" :disabled="loading" class="btn-primary text-sm inline-flex items-center gap-1.5">
+              <i v-if="!loading" class="pi pi-search" aria-hidden="true" />
+              {{ loading ? 'Buscando…' : 'Buscar' }}
             </button>
             <button @click="clearFilters" class="btn-ghost text-sm">Limpiar</button>
           </div>
@@ -134,10 +135,10 @@ const REDES_ICON: Record<string, string> = {
       </div>
 
       <!-- Resultados -->
-      <div v-if="loading" class="text-center py-12 text-navy/40">Buscando influencers…</div>
+      <div v-if="loading" class="text-center py-12 text-ink-muted">Buscando influencers…</div>
 
       <div v-else-if="results.length === 0" class="card text-center py-10">
-        <p class="text-navy/40 text-sm">No se encontraron influencers con esos filtros.</p>
+        <p class="text-ink-muted text-sm">No se encontraron influencers con esos filtros.</p>
         <button @click="clearFilters" class="text-violet text-sm underline mt-2">Limpiar filtros</button>
       </div>
 
@@ -155,23 +156,24 @@ const REDES_ICON: Record<string, string> = {
                 <p class="font-display font-semibold text-navy truncate">{{ inf.nombre_artistico }}</p>
                 <VerifiedBadge v-if="inf.is_verified" size="sm" />
               </div>
-              <p class="text-xs text-navy/50">{{ inf.ubicacion || 'Sin ubicación' }}</p>
+              <p class="text-xs text-ink-muted">{{ inf.ubicacion || 'Sin ubicación' }}</p>
             </div>
           </div>
 
           <!-- Bio -->
-          <p v-if="inf.bio" class="text-xs text-navy/60 mb-3 line-clamp-2">{{ inf.bio }}</p>
+          <p v-if="inf.bio" class="text-xs text-ink-muted mb-3 line-clamp-2">{{ inf.bio }}</p>
 
           <!-- Tarifa + rating -->
           <div class="flex items-center justify-between mb-3">
-            <span class="badge-info">💰 ${{ Number(inf.tarifa_base).toFixed(0) }} USD</span>
+            <span class="badge-info inline-flex items-center gap-1.5"><i class="pi pi-dollar" aria-hidden="true" /> ${{ Number(inf.tarifa_base).toFixed(0) }} USD</span>
             <div class="flex items-center gap-1.5">
               <template v-if="summaries[inf.id]?.total">
                 <StarRating :model-value="Math.round(summaries[inf.id]!.promedio ?? 0)" readonly size="sm" />
-                <span class="text-xs text-navy/50">({{ summaries[inf.id]!.total }})</span>
+                <span class="text-xs text-ink-muted">({{ summaries[inf.id]!.total }})</span>
               </template>
-              <span v-else :class="inf.disponibilidad ? 'badge-active' : 'badge-muted'" class="text-xs">
-                {{ inf.disponibilidad ? '✅' : '🔒' }}
+              <span v-else :class="inf.disponibilidad ? 'badge-active' : 'badge-muted'" class="text-xs"
+                :title="inf.disponibilidad ? 'Disponible' : 'No disponible'">
+                <i :class="['pi', inf.disponibilidad ? 'pi-check-circle' : 'pi-lock']" aria-hidden="true" />
               </span>
             </div>
           </div>
@@ -180,17 +182,17 @@ const REDES_ICON: Record<string, string> = {
           <div v-if="inf.metrics?.length" class="space-y-1.5">
             <div v-for="m in inf.metrics.slice(0, 3)" :key="m.id"
               class="flex items-center justify-between text-xs bg-slate rounded-lg px-2 py-1">
-              <span>{{ REDES_ICON[m.red_social] ?? '📱' }} {{ m.red_social }} · {{ m.username }}</span>
+              <span class="inline-flex items-center gap-1.5"><i :class="['pi', REDES_ICON[m.red_social] ?? 'pi-mobile']" aria-hidden="true" /> {{ m.red_social }} · {{ m.username }}</span>
               <div class="flex gap-1.5">
                 <span class="badge-info text-xs">{{ formatFollowers(m.seguidores) }}</span>
                 <span class="badge-active text-xs">{{ m.engagement_rate }}%</span>
               </div>
             </div>
-            <p v-if="inf.metrics.length > 3" class="text-xs text-navy/40 text-center">
+            <p v-if="inf.metrics.length > 3" class="text-xs text-ink-muted text-center">
               +{{ inf.metrics.length - 3 }} redes más
             </p>
           </div>
-          <p v-else class="text-xs text-navy/40 italic">Sin métricas cargadas</p>
+          <p v-else class="text-xs text-ink-muted italic">Sin métricas cargadas</p>
         </div>
       </div>
     </div>

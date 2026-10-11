@@ -38,9 +38,24 @@
   --color-slate:        #F8FAFC;   /* fondo de tarjetas, contenedores */
   --color-slate-dark:   #E2E8F0;
 
-  /* Tipografía (claude.md §3.2) */
-  --font-body:    'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-display: 'Lexend', 'Clash Display', system-ui, sans-serif;
+  /* Tokens del sistema de diseño (contraste AA revisado) */
+  --color-ink:            #0F172A;   /* texto principal */
+  --color-ink-muted:      #475569;   /* texto secundario: 7.6:1 sobre blanco (reemplaza navy/40–70) */
+  --color-surface-sunken: #F1F5F9;   /* zonas internas de tarjetas */
+  --color-border:         #E2E8F0;   /* separadores decorativos */
+  --color-border-strong:  #8B95A5;   /* contorno de controles: 3:1 */
+  --color-violet-tint:    #EDE9FE;   /* fondo de chips/insignias informativas */
+  --color-coral-text:     #BE123C;   /* texto de error y saldo bajo: 6.3:1 */
+  --color-coral-tint:     #FFE4E6;   /* fondo de banners de error */
+  --color-danger:         #E11D48;   /* botones destructivos con texto blanco: 4.7:1 */
+  --color-success:        #15803D;
+  --color-success-tint:   #DCFCE7;
+  --color-warning:        #B45309;
+  --color-warning-tint:   #FEF3C7;
+
+  /* Tipografía — ver sistema de diseño ("Decisiones de marca") */
+  --font-body:    'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Lexend', system-ui, sans-serif;
 
   /* Sombras */
   --shadow-card:       0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06);
@@ -59,9 +74,16 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    font-weight: 600;
-    color: var(--color-navy);
+    font-weight: 700;
+    color: var(--color-ink);
+    text-wrap: balance;
   }
+
+  /* Montos y cifras alineadas */
+  .tabular-nums, [class*="font-display"] { font-variant-numeric: tabular-nums; }
+
+  /* Iconos PrimeIcons dentro de texto: mismo tamaño que la línea */
+  .pi { font-size: 1em; line-height: 1; }
 
   body { @apply bg-slate text-navy; margin: 0; }
   #app { min-height: 100vh; }
@@ -74,46 +96,52 @@
 /* ─── Componentes ────────────────────────────────────────────────────────── */
 @layer components {
 
+  /* Foco visible y sólido en todo control (2px violeta, separado 2px) */
+  .btn-primary, .btn-secondary, .btn-danger, .btn-ghost {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet;
+  }
+
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
            bg-violet text-white px-4 py-2 rounded-lg font-semibold text-sm
            hover:bg-violet-dark transition-all duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet/50;
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2
-           bg-violet/10 text-violet px-4 py-2 rounded-lg font-semibold text-sm
+           bg-violet-tint text-violet px-4 py-2 rounded-lg font-semibold text-sm
            hover:bg-violet/20 transition-all duration-150
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2
-           bg-coral text-white px-4 py-2 rounded-lg font-semibold text-sm
-           hover:bg-coral-dark transition-all duration-150;
+           bg-danger text-white px-4 py-2 rounded-lg font-semibold text-sm
+           hover:bg-coral-dark transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2
-           border border-navy/20 text-navy px-4 py-2 rounded-lg font-semibold text-sm
-           hover:bg-navy/5 transition-all duration-150;
+           border border-border-strong text-ink px-4 py-2 rounded-lg font-semibold text-sm
+           hover:bg-surface-sunken transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .card {
-    @apply bg-white rounded-xl border border-navy/10 p-5;
+    @apply bg-white rounded-xl border border-border p-5;
     box-shadow: var(--shadow-card);
     transition: box-shadow 0.15s ease;
   }
   .card:hover { box-shadow: var(--shadow-card-hover); }
 
-  .label  { @apply text-sm font-medium text-navy/70 mb-1 block; }
-  .section-title { @apply text-xs font-semibold uppercase tracking-wide text-navy/50 mb-3; }
+  .label  { @apply text-sm font-medium text-ink-muted mb-1 block; }
+  .section-title { @apply text-xs font-bold uppercase tracking-wider text-ink-muted mb-3; }
 
   .input {
-    @apply w-full bg-white border border-navy/20 rounded-lg px-3 py-2
-           text-sm text-navy placeholder-navy/35
+    @apply w-full bg-white border border-border-strong rounded-lg px-3 py-2
+           text-sm text-ink placeholder:text-ink-muted/80
            outline-none transition-all duration-150
-           hover:border-navy/40
-           focus:border-violet/50 focus:ring-2 focus:ring-violet/15
+           hover:border-ink-muted
+           focus:border-violet focus:ring-2 focus:ring-violet/25
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
@@ -123,18 +151,20 @@
   .label:has(+ select[required])::after,
   .label:has(+ .p-inputtext[required])::after {
     content: ' *';
-    @apply text-coral font-semibold;
+    @apply text-coral-text font-semibold;
   }
   .field  { @apply flex flex-col gap-1; }
 
-  .badge-active  { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700; }
-  .badge-warning { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-coral/10 text-coral; }
-  .badge-info    { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-violet/10 text-violet; }
-  .badge-muted   { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-navy/10 text-navy/60; }
-  .badge-dark    { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-navy text-white; }
+  .badge-active  { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-success-tint text-success; }
+  .badge-success { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-success-tint text-success; }
+  .badge-pending { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-warning-tint text-warning; }
+  .badge-warning { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-coral-tint text-coral-text; }
+  .badge-info    { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-violet-tint text-violet; }
+  .badge-muted   { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-surface-sunken text-ink-muted; }
+  .badge-dark    { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-navy text-white; }
 
   .auth-page { @apply min-h-screen bg-navy flex items-center justify-center p-4; }
-  .auth-card { @apply w-full max-w-md bg-white rounded-xl border border-navy/10 p-8; }
-  .divider   { @apply w-full h-px bg-navy/10 my-4; }
+  .auth-card { @apply w-full max-w-md bg-white rounded-xl border border-border p-8; }
+  .divider   { @apply w-full h-px bg-border my-4; }
 }
 

@@ -46,21 +46,22 @@ async function submit() {
         <!-- Estado: enviado -->
         <template v-if="sent">
           <div class="text-center py-4">
-            <div class="text-5xl mb-4">📬</div>
+            <i class="pi pi-envelope block text-5xl mb-4 text-violet" aria-hidden="true" />
             <h2 class="text-xl font-display font-semibold text-navy mb-2">Revisa tu correo</h2>
-            <p class="text-navy/60 text-sm">
+            <p class="text-ink-muted text-sm">
               Si existe una cuenta con <strong>{{ email }}</strong>, recibirás un enlace para
               restablecer tu contraseña. El enlace expira en 1 hora.
             </p>
-            <p class="text-navy/40 text-xs mt-3">¿No llegó? Revisa la carpeta de spam.</p>
+            <p class="text-ink-muted text-xs mt-3">¿No llegó? Revisa la carpeta de spam.</p>
 
             <!-- Solo visible en desarrollo -->
-            <div v-if="devResetUrl" class="mt-5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-left">
-              <p class="text-xs font-semibold text-amber-700 mb-1">
-                {{ smtpError ? '❌ Error SMTP — usa el enlace directo' : '⚠️ Modo desarrollo' }}
+            <div v-if="devResetUrl" class="mt-5 p-3 bg-warning-tint border border-amber-200 rounded-lg text-left">
+              <p class="text-xs font-semibold text-warning mb-1 flex items-center gap-1.5">
+                <i :class="['pi', smtpError ? 'pi-times-circle' : 'pi-exclamation-triangle']" aria-hidden="true" />
+                {{ smtpError ? 'Error SMTP — usa el enlace directo' : 'Modo desarrollo' }}
               </p>
               <p v-if="smtpError" class="text-xs text-red-600 mb-2 font-mono">{{ smtpError }}</p>
-              <p class="text-xs text-amber-600 mb-2">Enlace para restablecer tu contraseña:</p>
+              <p class="text-xs text-warning mb-2">Enlace para restablecer tu contraseña:</p>
               <a :href="devResetUrl" class="text-xs text-violet break-all underline">{{ devResetUrl }}</a>
             </div>
           </div>
@@ -69,7 +70,7 @@ async function submit() {
         <!-- Estado: formulario -->
         <template v-else>
           <h2 class="text-xl font-display font-semibold text-navy mb-2">Recuperar contraseña</h2>
-          <p class="text-navy/50 text-sm mb-6">
+          <p class="text-ink-muted text-sm mb-6">
             Ingresa tu correo y te enviaremos un enlace para restablecerla.
           </p>
 
@@ -79,7 +80,7 @@ async function submit() {
               <InputText v-model="email" type="email" placeholder="tu@correo.com" fluid required />
             </div>
 
-            <div v-if="error" class="bg-coral/10 text-coral text-sm p-3 rounded-lg">{{ error }}</div>
+            <div v-if="error" class="bg-coral/10 text-coral-text text-sm p-3 rounded-lg">{{ error }}</div>
 
             <button type="submit" class="btn-primary w-full" :disabled="loading">
               {{ loading ? 'Enviando…' : 'Enviar enlace' }}
@@ -87,7 +88,7 @@ async function submit() {
           </form>
         </template>
 
-        <p class="text-center text-sm text-navy/50 mt-5">
+        <p class="text-center text-sm text-ink-muted mt-5">
           <RouterLink to="/login" class="text-violet font-semibold">← Volver al login</RouterLink>
         </p>
       </div>

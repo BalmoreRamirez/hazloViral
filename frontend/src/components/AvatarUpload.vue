@@ -134,7 +134,7 @@ async function onFileChange(event: Event) {
     />
 
     <!-- Error toast inline -->
-    <p v-if="error" class="absolute top-full left-0 mt-1 text-xs text-coral whitespace-nowrap">
+    <p v-if="error" class="absolute top-full left-0 mt-1 text-xs text-coral-text whitespace-nowrap">
       {{ error }}
     </p>
   </div>

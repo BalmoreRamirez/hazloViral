@@ -71,14 +71,25 @@ onMounted(async () => {
 })
 
 const STATUS_LABEL: Record<string, string> = {
-  pending_payment:  '⏳ Pago pendiente',
-  funded_in_escrow: '🔒 En custodia',
-  under_review:     '🔍 En revisión',
-  changes_requested:   '✏️ Cambios solicitados',
-  pending_publication: '📤 Por publicar',
-  publication_review:  '👀 Revisión de publicación',
-  completed:        '✅ Completado',
-  incumplimiento:   '🚫 Incumplimiento',
+  pending_payment:  'Pago pendiente',
+  funded_in_escrow: 'En custodia',
+  under_review:     'En revisión',
+  changes_requested:   'Cambios solicitados',
+  pending_publication: 'Por publicar',
+  publication_review:  'Revisión de publicación',
+  completed:        'Completado',
+  incumplimiento:   'Incumplimiento',
+}
+
+const STATUS_ICON: Record<string, string> = {
+  pending_payment:     'pi-clock',
+  funded_in_escrow:    'pi-lock',
+  under_review:        'pi-search',
+  changes_requested:   'pi-pencil',
+  pending_publication: 'pi-upload',
+  publication_review:  'pi-eye',
+  completed:           'pi-check-circle',
+  incumplimiento:      'pi-ban',
 }
 
 const CHAT_STATUS_LABEL: Record<string, string> = {
@@ -100,9 +111,9 @@ watch(balance, (b) => {
       <!-- Header -->
       <div>
         <h1 class="text-2xl font-display font-bold text-navy">
-          Hola, {{ greetingName }} 👋
+          Hola, {{ greetingName }}
         </h1>
-        <p class="text-navy/50 text-sm mt-1">
+        <p class="text-ink-muted text-sm mt-1">
           {{ isEmpresa ? 'Panel de Marca / Empresa' : 'Panel de Influencer' }}
         </p>
       </div>
@@ -111,29 +122,30 @@ watch(balance, (b) => {
       <template v-if="isEmpresa && balance">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="card flex flex-col gap-1">
-            <p class="text-xs text-navy/50 uppercase tracking-wide font-semibold">Saldo disponible</p>
-            <p class="text-3xl font-display font-bold" :class="balance.is_above_threshold ? 'text-navy' : 'text-coral'">
+            <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Saldo disponible</p>
+            <p class="text-3xl font-display font-bold" :class="balance.is_above_threshold ? 'text-navy' : 'text-coral-text'">
               ${{ balance.balance_creditos.toFixed(2) }}
-              <span class="text-base font-normal text-navy/40">USD</span>
+              <span class="text-base font-normal text-ink-muted">USD</span>
             </p>
-            <p class="text-xs text-navy/40">
+            <p class="text-xs text-ink-muted">
               Alerta de saldo bajo: <strong>${{ balance.umbral_creditos.toFixed(2) }} USD</strong>
               — por debajo de este monto tus chats se congelan
             </p>
           </div>
           <div class="card flex flex-col gap-1">
-            <p class="text-xs text-navy/50 uppercase tracking-wide font-semibold">Estado del chat</p>
-            <span :class="balance.is_above_threshold ? 'badge-active' : 'badge-warning'" class="self-start mt-1 text-base">
-              {{ balance.is_above_threshold ? '🟢 Activo' : '🔴 Chats congelados' }}
+            <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Estado del chat</p>
+            <span :class="balance.is_above_threshold ? 'badge-active' : 'badge-warning'" class="self-start mt-1 text-base inline-flex items-center gap-1.5">
+              <i class="pi pi-circle-fill text-[0.6em]" :class="balance.is_above_threshold ? 'text-success' : 'text-coral-text'" aria-hidden="true" />
+              {{ balance.is_above_threshold ? 'Activo' : 'Chats congelados' }}
             </span>
-            <p class="text-xs text-navy/40 mt-1">
+            <p class="text-xs text-ink-muted mt-1">
               {{ balance.is_above_threshold
                 ? 'Puedes enviar mensajes y propuestas'
                 : `Recarga $${balance.deficit.toFixed(2)} USD o más para reactivar` }}
             </p>
           </div>
           <div class="card flex flex-col gap-2">
-            <p class="text-xs text-navy/50 uppercase tracking-wide font-semibold">Recargar saldo</p>
+            <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Recargar saldo</p>
             <div class="grid grid-cols-4 gap-1.5">
               <button v-for="pack in RECHARGE_PACKS" :key="pack" type="button" @click="selectedPack = pack"
                 class="py-1.5 rounded-lg text-sm font-semibold border transition-colors"
@@ -153,13 +165,13 @@ watch(balance, (b) => {
               class="btn-primary text-sm">
               {{ creditsStore.recharging ? 'Procesando…' : `Recargar $${rechargeAmt || 0} USD` }}
             </button>
-            <p v-if="selectedPack === 'custom' && customAmt != null && !rechargeValid" class="text-xs text-coral">
+            <p v-if="selectedPack === 'custom' && customAmt != null && !rechargeValid" class="text-xs text-coral-text">
               El monto debe estar entre ${{ RECHARGE_MIN }} y ${{ RECHARGE_MAX }} USD.
             </p>
-            <p v-if="creditsStore.rechargeError" class="text-xs text-coral">
+            <p v-if="creditsStore.rechargeError" class="text-xs text-coral-text">
               {{ creditsStore.rechargeError }}
             </p>
-            <p v-else class="text-xs text-navy/40">1 crédito = $1 USD · Pago seguro con Wompi</p>
+            <p v-else class="text-xs text-ink-muted">1 crédito = $1 USD · Pago seguro con Wompi</p>
           </div>
         </div>
       </template>
@@ -168,47 +180,47 @@ watch(balance, (b) => {
       <!-- Inversión (empresa) -->
       <div v-if="isEmpresa" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div class="card">
-          <p class="text-xs text-navy/50 uppercase tracking-wide font-semibold">Total invertido</p>
+          <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Total invertido</p>
           <p class="text-2xl font-display font-bold text-navy mt-1">{{ usd(totalInvertido) }}</p>
-          <p class="text-xs text-navy/40 mt-0.5">Contratos completados</p>
+          <p class="text-xs text-ink-muted mt-0.5">Contratos completados</p>
         </div>
         <div class="card">
-          <p class="text-xs text-navy/50 uppercase tracking-wide font-semibold">En custodia</p>
+          <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">En custodia</p>
           <p class="text-2xl font-display font-bold text-violet mt-1">{{ usd(totalEnCustodia) }}</p>
-          <p class="text-xs text-navy/40 mt-0.5">Retenido hasta aprobar entregas</p>
+          <p class="text-xs text-ink-muted mt-0.5">Retenido hasta aprobar entregas</p>
         </div>
         <RouterLink to="/contratos" class="card hover:border-coral/30 border border-transparent">
-          <p class="text-xs text-navy/50 uppercase tracking-wide font-semibold">Esperan tu revisión</p>
-          <p class="text-2xl font-display font-bold mt-1" :class="pendientesRevision ? 'text-coral' : 'text-navy'">{{ pendientesRevision }}</p>
-          <p class="text-xs text-navy/40 mt-0.5">Entregables o publicaciones</p>
+          <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Esperan tu revisión</p>
+          <p class="text-2xl font-display font-bold mt-1" :class="pendientesRevision ? 'text-coral-text' : 'text-navy'">{{ pendientesRevision }}</p>
+          <p class="text-xs text-ink-muted mt-0.5">Entregables o publicaciones</p>
         </RouterLink>
         <RouterLink to="/contratos" class="card hover:border-coral/30 border border-transparent">
-          <p class="text-xs text-navy/50 uppercase tracking-wide font-semibold">Pendientes de pago</p>
-          <p class="text-2xl font-display font-bold mt-1" :class="pendientesPago ? 'text-coral' : 'text-navy'">{{ pendientesPago }}</p>
-          <p class="text-xs text-navy/40 mt-0.5">Contratos por fondear</p>
+          <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Pendientes de pago</p>
+          <p class="text-2xl font-display font-bold mt-1" :class="pendientesPago ? 'text-coral-text' : 'text-navy'">{{ pendientesPago }}</p>
+          <p class="text-xs text-ink-muted mt-0.5">Contratos por fondear</p>
         </RouterLink>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div class="card text-center">
           <p class="text-2xl font-bold text-violet">{{ activeChats }}</p>
-          <p class="text-xs text-navy/50 mt-1">Chats activos</p>
+          <p class="text-xs text-ink-muted mt-1">Chats activos</p>
         </div>
         <div class="card text-center">
           <p class="text-2xl font-bold text-violet">{{ contractsStore.contracts.length }}</p>
-          <p class="text-xs text-navy/50 mt-1">Contratos</p>
+          <p class="text-xs text-ink-muted mt-1">Contratos</p>
         </div>
         <div class="card text-center">
           <p class="text-2xl font-bold text-navy">
             {{ contractsStore.contracts.filter(c => c.status === 'completed').length }}
           </p>
-          <p class="text-xs text-navy/50 mt-1">Completados</p>
+          <p class="text-xs text-ink-muted mt-1">Completados</p>
         </div>
         <div class="card text-center">
-          <p class="text-2xl font-bold text-coral">
+          <p class="text-2xl font-bold text-coral-text">
             {{ contractsStore.contracts.filter(c => c.status === 'incumplimiento').length }}
           </p>
-          <p class="text-xs text-navy/50 mt-1">En disputa</p>
+          <p class="text-xs text-ink-muted mt-1">En disputa</p>
         </div>
       </div>
 
@@ -218,7 +230,7 @@ watch(balance, (b) => {
           <h2 class="font-display font-semibold text-navy">Chats recientes</h2>
           <RouterLink to="/chats" class="text-violet text-sm font-semibold">Ver todos →</RouterLink>
         </div>
-        <div v-if="chatStore.chats.length === 0" class="text-navy/40 text-sm text-center py-4">
+        <div v-if="chatStore.chats.length === 0" class="text-ink-muted text-sm text-center py-4">
           No tienes chats aún.
         </div>
         <div v-else class="divide-y divide-navy/5">
@@ -231,7 +243,7 @@ watch(balance, (b) => {
                 <span v-else-if="chat.empresa">{{ chat.empresa.nombre_comercial }}</span>
                 <span v-else>Sin nombre</span>
               </p>
-              <p class="text-xs text-navy/40">{{ new Date(chat.created_at).toLocaleDateString() }}</p>
+              <p class="text-xs text-ink-muted">{{ new Date(chat.created_at).toLocaleDateString() }}</p>
             </div>
             <span :class="chat.status === 'active' ? 'badge-active' : chat.status === 'completed' ? 'badge-muted' : 'badge-warning'">
               {{ CHAT_STATUS_LABEL[chat.status] ?? chat.status }}
@@ -255,9 +267,12 @@ watch(balance, (b) => {
                 {{ c.influencer?.nombre_artistico ?? c.empresa?.nombre_comercial ?? 'Contrato' }}
                 — ${{ c.monto_total }}
               </p>
-              <p class="text-xs text-navy/40">Límite: {{ c.fecha_limite_entrega }}</p>
+              <p class="text-xs text-ink-muted">Límite: {{ c.fecha_limite_entrega }}</p>
             </div>
-            <span class="badge-info text-xs">{{ STATUS_LABEL[c.status] ?? c.status }}</span>
+            <span class="badge-info text-xs inline-flex items-center gap-1.5">
+              <i v-if="STATUS_ICON[c.status]" :class="['pi', STATUS_ICON[c.status]]" aria-hidden="true" />
+              {{ STATUS_LABEL[c.status] ?? c.status }}
+            </span>
           </div>
         </div>
       </div>

@@ -285,7 +285,7 @@ function formatTime(dt: string) {
       <!-- Header del chat -->
       <div class="card mb-3 flex items-center justify-between py-3">
         <div class="flex items-center gap-3">
-          <button @click="router.push('/chats')" class="text-navy/40 hover:text-navy text-lg leading-none">←</button>
+          <button @click="router.push('/chats')" class="text-ink-muted hover:text-navy text-lg leading-none">←</button>
           <template v-if="counterpart">
             <img v-if="counterpart.avatar_url"
               :src="counterpart.avatar_url"
@@ -301,7 +301,7 @@ function formatTime(dt: string) {
                 <p v-else class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
                 <VerifiedBadge v-if="counterpart.is_verified" size="sm" />
               </div>
-              <span v-if="counterpart.sub" class="text-xs text-navy/40">{{ counterpart.sub }}</span>
+              <span v-if="counterpart.sub" class="text-xs text-ink-muted">{{ counterpart.sub }}</span>
             </div>
           </template>
           <p v-else class="font-display font-semibold text-navy">Chat</p>
@@ -314,13 +314,13 @@ function formatTime(dt: string) {
 
       <!-- Banner contrato finalizado (solo informativo — el chat sigue activo) -->
       <div v-if="isCompleted && !hasBrief" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 text-sm text-emerald-700 flex items-center gap-2">
-        <span class="text-base">✅</span>
+        <i class="pi pi-check-circle text-base" aria-hidden="true" />
         <span>El contrato anterior fue <strong>completado exitosamente</strong>. Puedes iniciar una nueva campaña aquí{{ isEmpresa ? ' enviando un nuevo brief' : '' }}.</span>
       </div>
 
       <!-- Alerta saldo bajo -->
-      <div v-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral">
-        ⚠️ {{ blockMsg }}
+      <div v-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral-text">
+        <i class="pi pi-exclamation-triangle mr-1.5" aria-hidden="true" />{{ blockMsg }}
         <button v-if="isEmpresa" @click="creditsStore.recharge(10)" :disabled="creditsStore.recharging"
           class="ml-2 underline font-semibold disabled:opacity-50">
           {{ creditsStore.recharging ? 'Procesando…' : 'Recargar $10' }}
@@ -329,17 +329,17 @@ function formatTime(dt: string) {
 
       <!-- Mensajes -->
       <div class="flex-1 overflow-y-auto space-y-3 pr-2 pb-2">
-        <div v-if="chatStore.loadingMessages" class="text-center text-navy/40 py-8">Cargando…</div>
+        <div v-if="chatStore.loadingMessages" class="text-center text-ink-muted py-8">Cargando…</div>
 
         <template v-for="msg in messages" :key="msg.id">
 
           <!-- ── Separador de nueva colaboración ── -->
           <div v-if="collaborationStarts.has(msg.id)" class="flex items-center gap-3 py-2 select-none">
-            <div class="flex-1 border-t border-navy/10" />
-            <span class="text-xs font-medium text-navy/40">
+            <div class="flex-1 border-t border-border" />
+            <span class="text-xs font-medium text-ink-muted">
               Nueva colaboración · #{{ collaborationStarts.get(msg.id) }}
             </span>
-            <div class="flex-1 border-t border-navy/10" />
+            <div class="flex-1 border-t border-border" />
           </div>
 
           <!-- ── Tarjeta de propuesta / contraoferta ── -->
@@ -348,31 +348,31 @@ function formatTime(dt: string) {
 
               <!-- Cabecera -->
               <div class="flex items-center gap-2">
-                <span class="text-violet">{{ msg.contraoferta_data ? '↔️' : '📋' }}</span>
+                <i :class="['pi text-violet', msg.contraoferta_data ? 'pi-arrow-right-arrow-left' : 'pi-file-edit']" aria-hidden="true" />
                 <p class="font-display font-semibold text-violet text-sm">
                   {{ msg.contraoferta_data ? 'Contraoferta del influencer' : 'Propuesta de contrato' }}
                 </p>
                 <span class="ml-auto text-xs px-2 py-0.5 rounded-full font-medium" :class="{
-                  'bg-amber-100 text-amber-700': msg.proposal_status === 'pending',
+                  'bg-warning-tint text-warning': msg.proposal_status === 'pending',
                   'bg-red-100 text-red-700':    ['rejected','counter_rejected'].includes(msg.proposal_status ?? ''),
                   'bg-blue-100 text-blue-700':   msg.proposal_status === 'countered',
-                  'bg-green-100 text-green-700': msg.proposal_status === 'accepted',
+                  'bg-success-tint text-success': msg.proposal_status === 'accepted',
                   'bg-violet/10 text-violet':    msg.proposal_status === 'funded',
                 }">{{ statusLabel(msg.proposal_status ?? '') }}</span>
               </div>
 
               <!-- Datos -->
-              <div class="text-sm space-y-1 text-navy/70">
-                <p>💰 <strong>${{ msg.contraoferta_data?.tarifa_propuesta ?? msg.proposal_data?.tarifa }}</strong> USD</p>
-                <p v-if="msg.contraoferta_data?.justificacion" class="italic text-navy/60">
+              <div class="text-sm space-y-1 text-ink-muted">
+                <p class="flex items-center gap-1.5"><i class="pi pi-dollar" aria-hidden="true" /><span><strong>${{ msg.contraoferta_data?.tarifa_propuesta ?? msg.proposal_data?.tarifa }}</strong> USD</span></p>
+                <p v-if="msg.contraoferta_data?.justificacion" class="italic text-ink-muted">
                   "{{ msg.contraoferta_data.justificacion }}"
                 </p>
                 <template v-else-if="msg.proposal_data">
-                  <p v-for="(e, i) in msg.proposal_data.entregables ?? []" :key="i">📦 <strong>{{ e.tipo }}:</strong> {{ e.descripcion }}</p>
-                  <p>📅 Plazo: {{ msg.proposal_data.plazo }}</p>
+                  <p v-for="(e, i) in msg.proposal_data.entregables ?? []" :key="i" class="flex items-start gap-1.5"><i class="pi pi-box mt-0.5" aria-hidden="true" /><span><strong>{{ e.tipo }}:</strong> {{ e.descripcion }}</span></p>
+                  <p class="flex items-center gap-1.5"><i class="pi pi-calendar" aria-hidden="true" />Plazo: {{ msg.proposal_data.plazo }}</p>
                   <a v-if="msg.proposal_data.contrato_pdf_url" :href="msg.proposal_data.contrato_pdf_url" target="_blank"
                     class="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-lg bg-violet/10 text-violet text-xs font-medium hover:bg-violet/20 transition-colors">
-                    📄 Ver contrato PDF
+                    <i class="pi pi-file-pdf" aria-hidden="true" /> Ver contrato PDF
                   </a>
                 </template>
               </div>
@@ -389,7 +389,7 @@ function formatTime(dt: string) {
                     ↔ Contraoferta
                   </button>
                   <button @click="rejectProposal(msg)" :disabled="rejectLoading === msg.id"
-                    class="btn-ghost text-xs flex-1 border-coral/30 text-coral">
+                    class="btn-ghost text-xs flex-1 border-coral/30 text-coral-text">
                     {{ rejectLoading === msg.id ? '…' : '✕ Rechazar' }}
                   </button>
                 </div>
@@ -425,7 +425,7 @@ function formatTime(dt: string) {
                     {{ resolveLoading === msg.id ? '…' : '✓ Aceptar contraoferta' }}
                   </button>
                   <button @click="resolveCounter(msg, 'reject')" :disabled="resolveLoading === msg.id"
-                    class="btn-ghost text-xs flex-1 border-coral/30 text-coral">
+                    class="btn-ghost text-xs flex-1 border-coral/30 text-coral-text">
                     {{ resolveLoading === msg.id ? '…' : '✕ Rechazar' }}
                   </button>
                 </div>
@@ -440,11 +440,11 @@ function formatTime(dt: string) {
 
           <!-- ── Tarjeta de brief ── -->
           <div v-else-if="msg.campaignBrief" class="flex justify-center">
-            <div class="card max-w-sm w-full border-amber-200 bg-amber-50 space-y-2">
+            <div class="card max-w-sm w-full border-amber-200 bg-warning-tint space-y-2">
               <div class="flex items-center gap-2">
-                <span>📋</span>
-                <p class="font-display font-semibold text-amber-800 text-sm">Brief de campaña</p>
-                <span class="ml-auto text-xs text-amber-600">{{ formatTime(msg.created_at) }}</span>
+                <i class="pi pi-clipboard text-warning" aria-hidden="true" />
+                <p class="font-display font-semibold text-warning text-sm">Brief de campaña</p>
+                <span class="ml-auto text-xs text-warning">{{ formatTime(msg.created_at) }}</span>
               </div>
               <p class="font-semibold text-navy text-sm">{{ msg.campaignBrief.titulo_campana }}</p>
               <BriefDetails :brief="msg.campaignBrief" />
@@ -455,10 +455,10 @@ function formatTime(dt: string) {
           <div v-else :class="['flex', isMine(msg) ? 'justify-end' : 'justify-start']">
             <div :class="['max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl text-sm', isMine(msg)
               ? 'bg-violet text-white rounded-br-sm'
-              : 'bg-white text-navy border border-navy/10 rounded-bl-sm']">
+              : 'bg-white text-navy border border-border rounded-bl-sm']">
               <p>{{ msg.message_text }}</p>
               <div :class="['flex items-center gap-1 mt-1', isMine(msg) ? 'justify-end' : 'justify-start']">
-                <span :class="['text-xs', isMine(msg) ? 'text-white/60' : 'text-navy/40']">
+                <span :class="['text-xs', isMine(msg) ? 'text-white/60' : 'text-ink-muted']">
                   {{ formatTime(msg.created_at) }}
                 </span>
                 <!-- Doble check: solo en mensajes propios -->
@@ -474,10 +474,10 @@ function formatTime(dt: string) {
 
       <!-- Error devuelto por el servidor (antes se perdía en silencio) -->
       <div v-if="chatStore.socketError"
-        class="mb-3 flex items-start gap-2 bg-coral/10 border border-coral/20 rounded-lg px-3 py-2 text-sm text-coral">
-        <span>⚠️</span>
+        class="mb-3 flex items-start gap-2 bg-coral/10 border border-coral/20 rounded-lg px-3 py-2 text-sm text-coral-text">
+        <i class="pi pi-exclamation-triangle mt-0.5" aria-hidden="true" />
         <span class="flex-1">{{ chatStore.socketError }}</span>
-        <button @click="chatStore.socketError = null" class="text-coral/60 hover:text-coral" title="Cerrar">✕</button>
+        <button @click="chatStore.socketError = null" class="text-coral-text hover:text-coral-text" title="Cerrar">✕</button>
       </div>
 
       <!-- Formulario de propuesta -->
@@ -488,19 +488,19 @@ function formatTime(dt: string) {
             <label class="label">Tarifa total (USD)</label>
             <input v-model.number="propTarifa" type="number" min="1" required
               :class="['input', { '!border-coral': pv$.tarifa.$error }]" />
-            <p v-if="pv$.tarifa.$error" class="text-coral text-xs mt-1">{{ pv$.tarifa.$errors[0]?.$message }}</p>
+            <p v-if="pv$.tarifa.$error" class="text-coral-text text-xs mt-1">{{ pv$.tarifa.$errors[0]?.$message }}</p>
           </div>
           <div>
             <label class="label">Fecha límite</label>
             <input v-model="propPlazo" type="date" required :min="todayIso"
               :class="['input', { '!border-coral': pv$.plazo.$error }]" />
-            <p v-if="pv$.plazo.$error" class="text-coral text-xs mt-1">{{ pv$.plazo.$errors[0]?.$message }}</p>
+            <p v-if="pv$.plazo.$error" class="text-coral-text text-xs mt-1">{{ pv$.plazo.$errors[0]?.$message }}</p>
           </div>
         </div>
 
         <!-- Entregables: uno por plataforma/pieza -->
         <div class="space-y-2">
-          <label class="label">Entregables <span class="text-coral">*</span></label>
+          <label class="label">Entregables <span class="text-coral-text">*</span></label>
           <div v-for="(e, i) in propEntregables" :key="i" class="flex items-start gap-2">
             <select v-model="e.tipo" class="input w-32 shrink-0">
               <option v-for="pl in PLATAFORMAS_PROPUESTA" :key="pl">{{ pl }}</option>
@@ -509,31 +509,31 @@ function formatTime(dt: string) {
               <textarea v-model="e.descripcion" rows="2"
                 placeholder="Ej.: 1 video de 60s mencionando la marca y el código de descuento"
                 :class="['input', { '!border-coral': pv$.entregables.$dirty && !e.descripcion.trim() }]" />
-              <p v-if="pv$.entregables.$dirty && !e.descripcion.trim()" class="text-coral text-xs mt-1">
+              <p v-if="pv$.entregables.$dirty && !e.descripcion.trim()" class="text-coral-text text-xs mt-1">
                 Describe este entregable
               </p>
             </div>
             <button v-if="propEntregables.length > 1" type="button" @click="removeEntregable(i)"
-              class="text-navy/30 hover:text-coral text-sm mt-2" title="Quitar entregable">✕</button>
+              class="text-ink-muted hover:text-coral-text text-sm mt-2" title="Quitar entregable">✕</button>
           </div>
           <button type="button" @click="addEntregable"
             class="text-sm font-semibold text-violet hover:text-violet/80">+ Agregar otro entregable</button>
         </div>
         <div>
-          <label class="label">Contrato PDF <span class="text-navy/40 font-normal">(opcional, máx. 10 MB)</span></label>
+          <label class="label">Contrato PDF <span class="text-ink-muted font-normal">(opcional, máx. 10 MB)</span></label>
           <label class="flex items-center gap-3 cursor-pointer group">
             <div :class="['flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all',
-              propPdfFile ? 'border-violet/50 bg-violet/5 text-violet' : 'border-navy/20 bg-white text-navy/50 group-hover:border-violet/40']">
-              <span>📎</span>
+              propPdfFile ? 'border-violet/50 bg-violet/5 text-violet' : 'border-navy/20 bg-white text-ink-muted group-hover:border-violet/40']">
+              <i class="pi pi-paperclip" aria-hidden="true" />
               <span class="truncate max-w-[200px]">{{ propPdfFile ? propPdfFile.name : 'Adjuntar PDF…' }}</span>
               <button v-if="propPdfFile" type="button" @click.prevent="propPdfFile = null"
-                class="ml-1 text-navy/40 hover:text-coral text-xs">✕</button>
+                class="ml-1 text-ink-muted hover:text-coral-text text-xs">✕</button>
             </div>
             <input type="file" accept="application/pdf" class="hidden" @change="onPdfChange" />
           </label>
-          <p v-if="propPdfError" class="text-coral text-xs mt-1">{{ propPdfError }}</p>
+          <p v-if="propPdfError" class="text-coral-text text-xs mt-1">{{ propPdfError }}</p>
         </div>
-        <p v-if="pv$.$error" class="text-coral text-sm">Revisa los campos marcados en rojo.</p>
+        <p v-if="pv$.$error" class="text-coral-text text-sm">Revisa los campos marcados en rojo.</p>
         <div class="flex gap-2">
           <button @click="sendProposal" :disabled="propLoading" class="btn-primary text-sm">
             {{ propLoading ? 'Enviando…' : 'Enviar propuesta' }}
@@ -545,10 +545,10 @@ function formatTime(dt: string) {
       <!-- Selector de briefs -->
       <div v-if="showBriefPicker && isEmpresa" class="card mb-2 space-y-2">
         <p class="font-semibold text-navy text-sm flex items-center gap-2">
-          📋 Enviar brief de campaña
-          <button @click="showBriefPicker = false" class="ml-auto text-navy/40 hover:text-navy text-xs">✕</button>
+          <i class="pi pi-clipboard" aria-hidden="true" /> Enviar brief de campaña
+          <button @click="showBriefPicker = false" class="ml-auto text-ink-muted hover:text-navy text-xs">✕</button>
         </p>
-        <div v-if="!profileStore.briefs.length" class="text-navy/40 text-sm text-center py-3">
+        <div v-if="!profileStore.briefs.length" class="text-ink-muted text-sm text-center py-3">
           No tienes briefs creados.
           <RouterLink to="/perfil/empresa" class="text-violet underline ml-1">Crear uno →</RouterLink>
         </div>
@@ -558,7 +558,7 @@ function formatTime(dt: string) {
             :disabled="sendingBrief"
             class="w-full text-left px-2 py-2.5 hover:bg-violet/5 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none">
             <p class="text-sm font-medium text-navy">{{ b.titulo_campana }}</p>
-            <p v-if="b.objetivo_principal" class="text-xs text-navy/50 truncate mt-0.5">
+            <p v-if="b.objetivo_principal" class="text-xs text-ink-muted truncate mt-0.5">
               {{ b.objetivo_principal }}
             </p>
           </button>
@@ -567,16 +567,16 @@ function formatTime(dt: string) {
 
       <!-- Input de mensaje -->
       <div class="card py-3">
-        <p v-if="isEmpresa && !isBlocked && !hasBrief" class="text-xs text-navy/50 mb-2">
-          📋 {{ lastCompletedAt
+        <p v-if="isEmpresa && !isBlocked && !hasBrief" class="text-xs text-ink-muted mb-2">
+          <i class="pi pi-clipboard mr-1" aria-hidden="true" />{{ lastCompletedAt
             ? 'Envía un nuevo brief de campaña para iniciar esta colaboración.'
             : 'Envía primero el brief de campaña antes de proponer un contrato.' }}
         </p>
         <div class="flex gap-2">
           <button v-if="isEmpresa && !isBlocked && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
-            class="btn-ghost text-sm px-3" title="Enviar propuesta de contrato">📝</button>
+            class="btn-ghost text-sm px-3" title="Enviar propuesta de contrato" aria-label="Enviar propuesta de contrato"><i class="pi pi-file-edit" aria-hidden="true" /></button>
           <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
-            class="btn-ghost text-sm px-3" title="Enviar brief de campaña">📋</button>
+            class="btn-ghost text-sm px-3" title="Enviar brief de campaña" aria-label="Enviar brief de campaña"><i class="pi pi-clipboard" aria-hidden="true" /></button>
           <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
             :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
             class="input flex-1" />

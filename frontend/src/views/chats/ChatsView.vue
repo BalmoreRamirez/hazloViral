@@ -42,10 +42,10 @@ async function openChat() {
 
       <!-- Abrir nuevo chat (empresa) -->
       <div v-if="authStore.isEmpresa" class="card">
-        <p class="text-sm font-semibold text-navy/70 mb-3">Iniciar chat con influencer</p>
+        <p class="text-sm font-semibold text-ink-muted mb-3">Iniciar chat con influencer</p>
         <div class="flex gap-2">
           <div class="relative flex-1">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-navy/40 font-medium select-none">@</span>
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted font-medium select-none">@</span>
             <input v-model="usernameInput" type="text" placeholder="username_del_influencer"
               class="input pl-7 w-full" @keyup.enter="openChat" />
           </div>
@@ -53,13 +53,13 @@ async function openChat() {
             {{ opening ? 'Buscando…' : 'Iniciar chat' }}
           </button>
         </div>
-        <p v-if="openError" class="text-coral text-xs mt-2">{{ openError }}</p>
-        <p class="text-xs text-navy/40 mt-2">Costo: 1 crédito por chat nuevo.</p>
+        <p v-if="openError" class="text-coral-text text-xs mt-2">{{ openError }}</p>
+        <p class="text-xs text-ink-muted mt-2">Costo: 1 crédito por chat nuevo.</p>
       </div>
 
       <!-- Lista de chats -->
       <div class="card">
-        <div v-if="chatStore.chats.length === 0" class="text-center py-8 text-navy/40">
+        <div v-if="chatStore.chats.length === 0" class="text-center py-8 text-ink-muted">
           No tienes chats aún.
         </div>
         <div v-else class="divide-y divide-navy/5">
@@ -94,7 +94,7 @@ async function openChat() {
                   <span v-else-if="chat.empresa">{{ chat.empresa.nombre_comercial }}</span>
                   <span v-else>Sin nombre</span>
                 </p>
-                <p :class="['text-xs', chatStore.isRead(chat.id) ? 'text-navy/40' : 'text-violet/70 font-medium']">
+                <p :class="['text-xs', chatStore.isRead(chat.id) ? 'text-ink-muted' : 'text-violet/70 font-medium']">
                   {{ chatStore.isRead(chat.id) ? new Date(chat.created_at).toLocaleDateString('es-SV', { day:'2-digit', month:'short', year:'numeric' }) : 'Nuevo mensaje' }}
                 </p>
               </div>

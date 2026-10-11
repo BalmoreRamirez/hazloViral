@@ -6,7 +6,7 @@ import BriefDetails from '@/components/BriefDetails.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { useContractsStore } from '@/stores/contracts'
 import { useAuthStore } from '@/stores/auth'
-import { connectSocket } from '@/socket'
+import { connectSocket, peekSocket } from '@/socket'
 import { contractsApi } from '@/api/contracts'
 import type { EntregableConArchivos, ArchivoEntregable } from '@/api/contracts'
 
@@ -120,8 +120,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  const s = connectSocket()
-  CONTRACT_EVENTS.forEach(e => s.off(e))
+  // Solo limpiar listeners: no abrir una conexión nueva al salir (p. ej. al cerrar sesión)
+  const s = peekSocket()
+  CONTRACT_EVENTS.forEach(e => s?.off(e))
 })
 
 // ── File upload helpers ────────────────────────────────────────────────────
@@ -240,12 +241,12 @@ async function reportNonCompliance() {
 
 // ── Timeline ───────────────────────────────────────────────────────────────
 const STATUS_STEPS = [
-  { key: 'pending_payment',     label: 'Pago pendiente',        icon: '⏳', tooltip: 'La empresa debe realizar el pago al escrow para activar el contrato y que el influencer pueda comenzar.' },
-  { key: 'funded_in_escrow',    label: 'En custodia',           icon: '🔒', tooltip: 'El pago está retenido de forma segura. El influencer puede comenzar a producir el contenido acordado.' },
-  { key: 'under_review',        label: 'Revisión entregables',  icon: '🔍', tooltip: 'El influencer envió los entregables. La empresa puede aprobarlos o solicitar cambios (máx. 3 rondas).' },
-  { key: 'pending_publication', label: 'Publicación',           icon: '📢', tooltip: 'Los entregables fueron aprobados. El influencer debe publicar el contenido en las plataformas acordadas.' },
-  { key: 'publication_review',  label: 'Revisión publicación',  icon: '👁', tooltip: 'La empresa verifica que el contenido fue publicado correctamente según lo acordado.' },
-  { key: 'completed',           label: 'Finalizado',            icon: '✅', tooltip: 'Contrato completado exitosamente. El pago en escrow es liberado al influencer.' },
+  { key: 'pending_payment',     label: 'Pago pendiente',        icon: 'pi-clock', tooltip: 'La empresa debe realizar el pago al escrow para activar el contrato y que el influencer pueda comenzar.' },
+  { key: 'funded_in_escrow',    label: 'En custodia',           icon: 'pi-lock', tooltip: 'El pago está retenido de forma segura. El influencer puede comenzar a producir el contenido acordado.' },
+  { key: 'under_review',        label: 'Revisión entregables',  icon: 'pi-search', tooltip: 'El influencer envió los entregables. La empresa puede aprobarlos o solicitar cambios (máx. 3 rondas).' },
+  { key: 'pending_publication', label: 'Publicación',           icon: 'pi-upload', tooltip: 'Los entregables fueron aprobados. El influencer debe publicar el contenido en las plataformas acordadas.' },
+  { key: 'publication_review',  label: 'Revisión publicación',  icon: 'pi-eye', tooltip: 'La empresa verifica que el contenido fue publicado correctamente según lo acordado.' },
+  { key: 'completed',           label: 'Finalizado',            icon: 'pi-check-circle', tooltip: 'Contrato completado exitosamente. El pago en escrow es liberado al influencer.' },
 ]
 
 const ORDER = [
@@ -265,14 +266,25 @@ function stepState(step: string, current: string) {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_payment:     '⏳ Pago pendiente',
-  funded_in_escrow:    '🔒 En custodia',
-  under_review:        '🔍 En revisión',
-  changes_requested:   '🔄 Cambios solicitados',
-  pending_publication: '📢 Pendiente de publicación',
-  publication_review:  '👁 Revisando publicaciones',
-  completed:           '✅ Completado',
-  incumplimiento:      '🚫 Incumplimiento',
+  pending_payment:     'Pago pendiente',
+  funded_in_escrow:    'En custodia',
+  under_review:        'En revisión',
+  changes_requested:   'Cambios solicitados',
+  pending_publication: 'Pendiente de publicación',
+  publication_review:  'Revisando publicaciones',
+  completed:           'Completado',
+  incumplimiento:      'Incumplimiento',
+}
+
+const STATUS_ICON: Record<string, string> = {
+  pending_payment:     'pi-clock',
+  funded_in_escrow:    'pi-lock',
+  under_review:        'pi-search',
+  changes_requested:   'pi-refresh',
+  pending_publication: 'pi-upload',
+  publication_review:  'pi-eye',
+  completed:           'pi-check-circle',
+  incumplimiento:      'pi-ban',
 }
 
 
@@ -295,28 +307,28 @@ function formatDate(dt: string) {
 }
 
 const TIPO_ICON: Record<string, string> = {
-  TikTok: '🎵', Instagram: '📸', YouTube: '▶️', Twitter: '𝕏', Facebook: '👤', Twitch: '🎮',
+  TikTok: 'pi-tiktok', Instagram: 'pi-instagram', YouTube: 'pi-youtube', Facebook: 'pi-facebook',
 }
 </script>
 
 <template>
   <AppLayout>
-    <div v-if="contractsStore.loading" class="text-center py-16 text-navy/40">Cargando…</div>
+    <div v-if="contractsStore.loading" class="text-center py-16 text-ink-muted">Cargando…</div>
 
     <template v-else-if="contrato">
       <div class="space-y-5">
 
         <!-- Header -->
         <div class="flex items-start gap-3">
-          <button @click="router.push('/contratos')" class="text-navy/40 hover:text-navy text-lg mt-0.5">←</button>
+          <button @click="router.push('/contratos')" class="text-ink-muted hover:text-navy text-lg mt-0.5">←</button>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
               <h1 class="text-2xl font-display font-bold text-navy">Contrato</h1>
-              <span class="px-2 py-0.5 rounded-full text-xs font-semibold" :class="{
-                'bg-amber-100 text-amber-700':  ['pending_payment','incumplimiento'].includes(contrato.status),
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold" :class="{
+                'bg-warning-tint text-warning':  ['pending_payment','incumplimiento'].includes(contrato.status),
                 'bg-blue-100 text-blue-700':    ['funded_in_escrow','under_review','changes_requested','pending_publication','publication_review'].includes(contrato.status),
-                'bg-green-100 text-green-700':  contrato.status === 'completed',
-              }">{{ STATUS_LABELS[contrato.status] ?? contrato.status }}</span>
+                'bg-success-tint text-success':  contrato.status === 'completed',
+              }"><i v-if="STATUS_ICON[contrato.status]" :class="['pi', STATUS_ICON[contrato.status]]" aria-hidden="true" />{{ STATUS_LABELS[contrato.status] ?? contrato.status }}</span>
             </div>
             <div class="flex items-center gap-2 mt-2 text-sm flex-wrap">
               <div class="flex items-center gap-1.5">
@@ -328,27 +340,28 @@ const TIPO_ICON: Record<string, string> = {
                 <span v-else class="font-medium text-navy">Empresa</span>
                 <VerifiedBadge v-if="contrato.empresa?.is_verified" size="sm" />
               </div>
-              <span class="text-navy/30">→</span>
+              <span class="text-ink-muted">→</span>
               <div class="flex items-center gap-1.5">
                 <div class="w-6 h-6 rounded-full bg-violet/20 flex items-center justify-center text-xs font-bold text-violet">
                   {{ (contrato.influencer?.nombre_artistico?.[0] ?? 'I').toUpperCase() }}
                 </div>
                 <span class="font-medium text-navy">{{ contrato.influencer?.nombre_artistico ?? 'Influencer' }}</span>
               </div>
-              <span class="text-navy/30">·</span>
-              <span class="text-navy/40">{{ new Date(contrato.created_at).toLocaleDateString('es-CO') }}</span>
+              <span class="text-ink-muted">·</span>
+              <span class="text-ink-muted">{{ new Date(contrato.created_at).toLocaleDateString('es-CO') }}</span>
             </div>
           </div>
         </div>
 
         <!-- Tabs -->
-        <div class="flex gap-1 border-b border-navy/10">
+        <div class="flex gap-1 border-b border-border">
           <button v-for="t in (['detalle','auditoría'] as const)" :key="t"
             @click="activeTab = t"
-            :class="['px-4 py-2 text-sm font-medium transition-colors', activeTab === t
+            :class="['inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors', activeTab === t
               ? 'text-violet border-b-2 border-violet -mb-px'
-              : 'text-navy/40 hover:text-navy']">
-            {{ t === 'detalle' ? '📋 Detalle' : '📜 Auditoría' }}
+              : 'text-ink-muted hover:text-navy']">
+            <i :class="['pi', t === 'detalle' ? 'pi-clipboard' : 'pi-history']" aria-hidden="true" />
+            {{ t === 'detalle' ? 'Detalle' : 'Auditoría' }}
           </button>
         </div>
 
@@ -359,8 +372,9 @@ const TIPO_ICON: Record<string, string> = {
           <div class="card">
             <h2 class="font-semibold text-navy mb-4">Estado del contrato</h2>
             <div v-if="contrato.status === 'incumplimiento'"
-              class="bg-coral/10 border border-coral/20 rounded-lg p-4 text-coral text-sm">
-              🚫 Incumplimiento reportado: {{ contrato.motivo_incumplimiento }}
+              class="flex items-start gap-2 bg-coral/10 border border-coral/20 rounded-lg p-4 text-coral-text text-sm">
+              <i class="pi pi-ban mt-0.5" aria-hidden="true" />
+              <span>Incumplimiento reportado: {{ contrato.motivo_incumplimiento }}</span>
             </div>
             <div v-else class="flex items-center">
               <template v-for="(step, i) in STATUS_STEPS" :key="step.key">
@@ -370,8 +384,8 @@ const TIPO_ICON: Record<string, string> = {
                     <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-base border-2 transition-all cursor-default', {
                       'bg-violet border-violet text-white shadow-md': stepState(step.key, contrato.status) === 'active',
                       'bg-green-500 border-green-500 text-white':     stepState(step.key, contrato.status) === 'past',
-                      'bg-white border-navy/20 text-navy/30':         stepState(step.key, contrato.status) === 'future',
-                    }]">{{ step.icon }}</div>
+                      'bg-white border-navy/20 text-ink-muted':         stepState(step.key, contrato.status) === 'future',
+                    }]"><i :class="['pi', step.icon]" aria-hidden="true" /></div>
                     <!-- Tooltip flotante -->
                     <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-52 bg-navy text-white text-xs rounded-xl px-3 py-2.5 text-center leading-relaxed
                                 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-20 shadow-lg">
@@ -381,11 +395,11 @@ const TIPO_ICON: Record<string, string> = {
                   </div>
                   <p class="text-xs mt-1 text-center font-medium leading-tight px-1" :class="{
                     'text-violet':     stepState(step.key, contrato.status) === 'active',
-                    'text-green-600':  stepState(step.key, contrato.status) === 'past',
-                    'text-navy/30':    stepState(step.key, contrato.status) === 'future',
+                    'text-success':  stepState(step.key, contrato.status) === 'past',
+                    'text-ink-muted':    stepState(step.key, contrato.status) === 'future',
                   }">{{ step.label }}</p>
                   <span v-if="step.key === 'under_review' && contrato.revision_round > 0"
-                    class="text-xs text-amber-600 font-medium mt-0.5">
+                    class="text-xs text-warning font-medium mt-0.5">
                     Ronda {{ contrato.revision_round }}/{{ MAX_ROUNDS }}
                   </span>
                 </div>
@@ -401,18 +415,18 @@ const TIPO_ICON: Record<string, string> = {
               <h2 class="font-semibold text-navy">Detalles económicos</h2>
               <div class="text-sm space-y-1">
                 <div class="flex justify-between">
-                  <span class="text-navy/50">Monto total</span>
+                  <span class="text-ink-muted">Monto total</span>
                   <strong>${{ contrato.monto_total }} USD</strong>
                 </div>
                 <template v-if="isEmpresa">
                   <div class="flex justify-between">
-                    <span class="text-navy/50">Comisión plataforma</span>
+                    <span class="text-ink-muted">Comisión plataforma</span>
                     <span>${{ contrato.comision_plataforma }} USD</span>
                   </div>
                 </template>
-                <div class="flex justify-between border-t border-navy/10 pt-1 mt-1">
-                  <span class="text-navy/50">{{ isEmpresa ? 'Neto al influencer' : 'Recibirás' }}</span>
-                  <strong class="text-green-600">
+                <div class="flex justify-between border-t border-border pt-1 mt-1">
+                  <span class="text-ink-muted">{{ isEmpresa ? 'Neto al influencer' : 'Recibirás' }}</span>
+                  <strong class="text-success">
                     ${{ (Number(contrato.monto_total) - Number(contrato.comision_plataforma)).toFixed(2) }} USD
                   </strong>
                 </div>
@@ -420,7 +434,7 @@ const TIPO_ICON: Record<string, string> = {
               <div v-if="contrato.contrato_pdf_url" class="pt-1">
                 <a :href="contrato.contrato_pdf_url" target="_blank"
                   class="inline-flex items-center gap-1.5 text-xs text-violet font-medium hover:underline">
-                  📄 Ver contrato PDF oficial
+                  <i class="pi pi-file-pdf" aria-hidden="true" />Ver contrato PDF oficial
                 </a>
               </div>
             </div>
@@ -428,14 +442,14 @@ const TIPO_ICON: Record<string, string> = {
             <div class="card space-y-3">
               <h2 class="font-semibold text-navy">Entregables requeridos</h2>
               <div v-for="(e, i) in contrato.entregables" :key="i"
-                class="rounded-lg border border-navy/8 bg-slate p-3 text-sm space-y-1">
+                class="rounded-lg border border-border bg-slate p-3 text-sm space-y-1">
                 <div class="flex items-center gap-2">
-                  <span>{{ TIPO_ICON[e.tipo] ?? '📦' }}</span>
+                  <i :class="['pi', TIPO_ICON[e.tipo] ?? 'pi-box']" aria-hidden="true" />
                   <span class="font-semibold text-navy">{{ e.tipo }}</span>
                 </div>
-                <p v-if="e.descripcion" class="text-navy/60 leading-snug">{{ e.descripcion }}</p>
+                <p v-if="e.descripcion" class="text-ink-muted leading-snug">{{ e.descripcion }}</p>
                 <div v-if="e.archivos?.length" class="pt-2 space-y-3">
-                  <p class="text-xs text-navy/40 font-medium">Archivos entregados:</p>
+                  <p class="text-xs text-ink-muted font-medium">Archivos entregados:</p>
                   <div v-for="(a, j) in e.archivos" :key="j" class="space-y-1">
                     <!-- Video inline -->
                     <video v-if="a.tipo_archivo === 'video'"
@@ -450,17 +464,17 @@ const TIPO_ICON: Record<string, string> = {
                     <!-- Documento — solo link de descarga -->
                     <a v-else :href="a.url" target="_blank" download
                       class="flex items-center gap-1.5 text-xs text-violet hover:underline">
-                      <span>📎</span>{{ a.nombre }}
+                      <i class="pi pi-paperclip" aria-hidden="true" />{{ a.nombre }}
                     </a>
                     <!-- Nombre y peso debajo de video/imagen -->
-                    <p v-if="a.tipo_archivo !== 'documento'" class="text-xs text-navy/40">
+                    <p v-if="a.tipo_archivo !== 'documento'" class="text-xs text-ink-muted">
                       {{ a.nombre }} · {{ (a.size_bytes / 1024 / 1024).toFixed(1) }} MB
                     </p>
                   </div>
                 </div>
               </div>
-              <div class="flex items-center gap-1.5 text-xs text-navy/50 pt-1 border-t border-navy/8">
-                <span>📅</span>
+              <div class="flex items-center gap-1.5 text-xs text-ink-muted pt-1 border-t border-border">
+                <i class="pi pi-calendar" aria-hidden="true" />
                 <span>Fecha límite:</span>
                 <span class="font-semibold text-navy">{{ contrato.fecha_limite_entrega }}</span>
               </div>
@@ -470,12 +484,12 @@ const TIPO_ICON: Record<string, string> = {
           <!-- Brief de la campaña (copia guardada al aceptar la propuesta) -->
           <div v-if="contrato.campaign_brief" class="card space-y-2">
             <div class="flex items-center gap-2">
-              <span>📋</span>
+              <i class="pi pi-clipboard" aria-hidden="true" />
               <h2 class="font-semibold text-navy">Brief de la campaña</h2>
             </div>
             <p class="font-semibold text-navy text-sm">{{ contrato.campaign_brief.titulo_campana }}</p>
             <BriefDetails :brief="contrato.campaign_brief" class="text-sm" />
-            <p class="text-xs text-navy/40 pt-1 border-t border-navy/8">
+            <p class="text-xs text-ink-muted pt-1 border-t border-border">
               Versión del brief vigente al aceptar la propuesta. Los entregables se revisan contra este brief.
             </p>
           </div>
@@ -484,14 +498,14 @@ const TIPO_ICON: Record<string, string> = {
           <div v-if="contractsStore.revisionRounds.length" class="card space-y-3">
             <h2 class="font-semibold text-navy">Historial de revisiones</h2>
             <div v-for="r in contractsStore.revisionRounds" :key="r.id"
-              class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+              class="rounded-lg border border-amber-200 bg-warning-tint p-3 text-sm">
               <div class="flex items-center gap-2 mb-1">
-                <span class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                <span class="text-xs font-bold text-warning bg-warning-tint px-2 py-0.5 rounded-full">
                   Ronda {{ r.round_number }}/{{ MAX_ROUNDS }}
                 </span>
-                <span class="text-xs text-navy/40">{{ formatDate(r.created_at) }}</span>
+                <span class="text-xs text-ink-muted">{{ formatDate(r.created_at) }}</span>
               </div>
-              <p class="text-navy/70">{{ r.feedback }}</p>
+              <p class="text-ink-muted">{{ r.feedback }}</p>
             </div>
           </div>
 
@@ -499,10 +513,10 @@ const TIPO_ICON: Record<string, string> = {
           <div v-if="contrato.publication_links?.length" class="card space-y-3">
             <h2 class="font-semibold text-navy">Publicaciones en redes sociales</h2>
             <div v-for="(p, i) in contrato.publication_links" :key="i"
-              class="flex items-center gap-3 rounded-lg border border-navy/8 bg-slate p-3 text-sm">
+              class="flex items-center gap-3 rounded-lg border border-border bg-slate p-3 text-sm">
               <span class="font-semibold text-navy w-24 shrink-0">{{ p.red_social }}</span>
               <a :href="p.url" target="_blank" class="text-violet hover:underline truncate flex-1">{{ p.url }}</a>
-              <span class="text-xs text-navy/40 shrink-0">{{ formatDate(p.publicado_at) }}</span>
+              <span class="text-xs text-ink-muted shrink-0">{{ formatDate(p.publicado_at) }}</span>
             </div>
           </div>
 
@@ -512,13 +526,13 @@ const TIPO_ICON: Record<string, string> = {
 
             <!-- Empresa: fondear -->
             <template v-if="isEmpresa && contrato.status === 'pending_payment'">
-              <p class="text-sm text-navy/60">El influencer aceptó la propuesta. Deposita los fondos para que pueda comenzar a trabajar.</p>
+              <p class="text-sm text-ink-muted">El influencer aceptó la propuesta. Deposita los fondos para que pueda comenzar a trabajar.</p>
               <button @click="fundContract" :disabled="fundLoading" class="btn-primary disabled:opacity-60">
                 <template v-if="fundLoading">Procesando…</template>
-                <template v-else-if="isDevMode">🧪 Simular pago (Desarrollo)</template>
-                <template v-else>🔒 Fondear contrato en custodia (Wompi)</template>
+                <template v-else-if="isDevMode">Simular pago (Desarrollo)</template>
+                <template v-else><i class="pi pi-lock" aria-hidden="true" />Fondear contrato en custodia (Wompi)</template>
               </button>
-              <p v-if="isDevMode" class="text-xs text-amber-600 mt-1">
+              <p v-if="isDevMode" class="text-xs text-warning mt-1">
                 Modo desarrollo — el pago se simula sin pasar por Wompi.
               </p>
             </template>
@@ -526,21 +540,21 @@ const TIPO_ICON: Record<string, string> = {
             <!-- Influencer: subir entregables -->
             <template v-if="!isEmpresa && ['funded_in_escrow','changes_requested'].includes(contrato.status)">
               <div class="space-y-3">
-                <p class="text-sm text-navy/60">
+                <p class="text-sm text-ink-muted">
                   {{ contrato.status === 'changes_requested'
                     ? `La empresa solicitó cambios (ronda ${contrato.revision_round}/${MAX_ROUNDS}). Sube los archivos corregidos.`
                     : 'El pago está asegurado. Sube tus archivos de entregables.' }}
                 </p>
                 <!-- Un bloque de subida por cada entregable acordado -->
                 <div v-for="(slot, idx) in delivSlots" :key="idx"
-                  class="rounded-lg border border-navy/10 p-3 space-y-2">
+                  class="rounded-lg border border-border p-3 space-y-2">
                   <div>
-                    <p class="text-sm font-semibold text-navy">{{ TIPO_ICON[slot.tipo] ?? '📦' }} {{ slot.tipo }}</p>
-                    <p v-if="slot.descripcion" class="text-xs text-navy/50">{{ slot.descripcion }}</p>
+                    <p class="inline-flex items-center gap-1.5 text-sm font-semibold text-navy"><i :class="['pi', TIPO_ICON[slot.tipo] ?? 'pi-box']" aria-hidden="true" />{{ slot.tipo }}</p>
+                    <p v-if="slot.descripcion" class="text-xs text-ink-muted">{{ slot.descripcion }}</p>
                   </div>
                   <label class="flex items-center gap-2 cursor-pointer">
-                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-navy/20 text-sm text-navy/50 hover:border-violet/40 transition-colors">
-                      <span>📎</span> Seleccionar archivos…
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-navy/20 text-sm text-ink-muted hover:border-violet/40 transition-colors">
+                      <i class="pi pi-paperclip" aria-hidden="true" /> Seleccionar archivos…
                     </div>
                     <input type="file" multiple class="hidden"
                       accept="video/*,image/*,application/pdf,application/zip"
@@ -548,49 +562,53 @@ const TIPO_ICON: Record<string, string> = {
                   </label>
                   <div v-if="pendingByIdx[idx]?.length" class="space-y-1">
                     <div v-for="(p, i) in pendingByIdx[idx]" :key="i"
-                      class="flex items-center gap-2 text-xs text-navy/70 bg-slate rounded px-2 py-1">
-                      <span>{{ p.uploaded ? '✅' : '⏳' }}</span>
+                      class="flex items-center gap-2 text-xs text-ink-muted bg-slate rounded px-2 py-1">
+                      <i :class="['pi', p.uploaded ? 'pi-check-circle text-success' : 'pi-clock']" aria-hidden="true" />
                       <span class="flex-1 truncate">{{ p.file.name }}</span>
-                      <button @click="removePendingFile(idx, i)" class="text-coral hover:text-coral/70">✕</button>
+                      <button @click="removePendingFile(idx, i)" class="text-coral-text hover:text-coral-text">✕</button>
                     </div>
                   </div>
                 </div>
-                <p class="text-xs text-navy/40">Formatos: video, imagen, banner, PDF o ZIP. Cada entregable necesita al menos un archivo.</p>
-                <p v-if="uploadError" class="text-coral text-xs">{{ uploadError }}</p>
+                <p class="text-xs text-ink-muted">Formatos: video, imagen, banner, PDF o ZIP. Cada entregable necesita al menos un archivo.</p>
+                <p v-if="uploadError" class="text-coral-text text-xs">{{ uploadError }}</p>
                 <button @click="submitDeliverables"
                   :disabled="submitting || uploadingFiles || !allPending.length"
                   class="btn-primary text-sm disabled:opacity-50">
-                  {{ submitting ? 'Enviando…' : uploadingFiles ? 'Subiendo archivos…' : '📤 Enviar entregables' }}
+                  <i v-if="!submitting && !uploadingFiles" class="pi pi-upload" aria-hidden="true" />
+                  {{ submitting ? 'Enviando…' : uploadingFiles ? 'Subiendo archivos…' : 'Enviar entregables' }}
                 </button>
               </div>
             </template>
 
             <!-- Empresa: revisar entregables -->
             <template v-if="isEmpresa && contrato.status === 'under_review'">
-              <p class="text-sm text-navy/60">El influencer entregó el trabajo. Revisa los archivos y decide.</p>
+              <p class="text-sm text-ink-muted">El influencer entregó el trabajo. Revisa los archivos y decide.</p>
               <div class="flex gap-2 flex-wrap">
                 <button @click="approveDeliverables" :disabled="approving" class="btn-primary text-sm">
-                  {{ approving ? 'Aprobando…' : '✅ Aprobar entregables' }}
+                  <i v-if="!approving" class="pi pi-check-circle" aria-hidden="true" />
+                  {{ approving ? 'Aprobando…' : 'Aprobar entregables' }}
                 </button>
                 <button v-if="contrato.revision_round < MAX_ROUNDS"
                   @click="showChanges = !showChanges"
-                  class="btn-ghost text-sm border-amber-300 text-amber-700">
-                  🔄 Solicitar cambios ({{ contrato.revision_round }}/{{ MAX_ROUNDS }})
+                  class="btn-ghost text-sm border-amber-300 text-warning">
+                  <i class="pi pi-refresh" aria-hidden="true" />
+                  Solicitar cambios ({{ contrato.revision_round }}/{{ MAX_ROUNDS }})
                 </button>
-                <div v-else class="w-full mt-1 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm">
-                  <p class="font-semibold text-amber-800 mb-1">⚠️ Rondas de revisión agotadas</p>
-                  <p class="text-amber-700 text-xs mb-2">
+                <div v-else class="w-full mt-1 rounded-lg bg-warning-tint border border-amber-200 p-3 text-sm">
+                  <p class="flex items-center gap-1.5 font-semibold text-warning mb-1"><i class="pi pi-exclamation-triangle" aria-hidden="true" />Rondas de revisión agotadas</p>
+                  <p class="text-warning text-xs mb-2">
                     Usaste las {{ MAX_ROUNDS }} rondas disponibles. Si el trabajo entregado sigue sin cumplir el acuerdo,
                     puedes reportar un incumplimiento para que el equipo de hazloViral intervenga.
                   </p>
                   <button @click="showNonCompliance = !showNonCompliance"
-                    class="btn-ghost text-xs border-coral/40 text-coral hover:bg-coral/5">
-                    🚫 Reportar incumplimiento
+                    class="btn-ghost text-xs border-coral/40 text-coral-text hover:bg-coral/5">
+                    <i class="pi pi-ban" aria-hidden="true" />
+                    Reportar incumplimiento
                   </button>
                 </div>
               </div>
-              <div v-if="showChanges" class="border border-amber-200 rounded-lg p-4 space-y-3 bg-amber-50">
-                <p class="text-sm font-semibold text-amber-700">Solicitar cambios — ronda {{ contrato.revision_round + 1 }}/{{ MAX_ROUNDS }}</p>
+              <div v-if="showChanges" class="border border-amber-200 rounded-lg p-4 space-y-3 bg-warning-tint">
+                <p class="text-sm font-semibold text-warning">Solicitar cambios — ronda {{ contrato.revision_round + 1 }}/{{ MAX_ROUNDS }}</p>
                 <textarea v-model="changesFeedback" class="input" rows="3"
                   placeholder="Describe qué debe corregir el influencer…" />
                 <div class="flex gap-2">
@@ -604,39 +622,41 @@ const TIPO_ICON: Record<string, string> = {
 
             <!-- Influencer: registrar publicaciones -->
             <template v-if="!isEmpresa && contrato.status === 'pending_publication'">
-              <p class="text-sm text-navy/60">Los entregables fueron aprobados. Publica el contenido en tus redes sociales y registra los enlaces.</p>
+              <p class="text-sm text-ink-muted">Los entregables fueron aprobados. Publica el contenido en tus redes sociales y registra los enlaces.</p>
               <div class="space-y-2">
                 <div v-for="(p, i) in pubLinks" :key="i" class="flex gap-2 items-center">
                   <select v-model="p.red_social" class="input w-32 text-sm shrink-0">
                     <option>TikTok</option><option>Instagram</option>
-                    <option>YouTube</option><option>Twitter</option>
-                    <option>Facebook</option>
+                    <option>Facebook</option><option>YouTube</option>
                   </select>
                   <input v-model="p.url" class="input flex-1 text-sm" placeholder="https://..." />
-                  <button @click="removePubLink(i)" v-if="pubLinks.length > 1" class="text-coral text-sm">✕</button>
+                  <button @click="removePubLink(i)" v-if="pubLinks.length > 1" class="text-coral-text text-sm">✕</button>
                 </div>
                 <button @click="addPubLink" class="btn-ghost text-xs">+ Agregar otro enlace</button>
               </div>
               <button @click="registerPublications" :disabled="registeringPubs || !pubLinks.some(p => p.url.trim())"
                 class="btn-primary text-sm">
-                {{ registeringPubs ? 'Registrando…' : '📢 Registrar publicaciones' }}
+                <i v-if="!registeringPubs" class="pi pi-upload" aria-hidden="true" />
+                {{ registeringPubs ? 'Registrando…' : 'Registrar publicaciones' }}
               </button>
             </template>
 
             <!-- Empresa: revisar publicaciones -->
             <template v-if="isEmpresa && contrato.status === 'publication_review'">
-              <p class="text-sm text-navy/60">El influencer publicó el contenido. Revisa los enlaces y confirma el cumplimiento.</p>
+              <p class="text-sm text-ink-muted">El influencer publicó el contenido. Revisa los enlaces y confirma el cumplimiento.</p>
               <div class="flex gap-2 flex-wrap">
                 <button @click="approve" :disabled="approving" class="btn-primary text-sm">
-                  {{ approving ? 'Aprobando…' : '✅ Aprobar y liberar fondos' }}
+                  <i v-if="!approving" class="pi pi-check-circle" aria-hidden="true" />
+                  {{ approving ? 'Aprobando…' : 'Aprobar y liberar fondos' }}
                 </button>
                 <button @click="showNonCompliance = !showNonCompliance"
-                  class="btn-ghost text-sm border-coral/30 text-coral">
-                  🚫 Reportar incumplimiento
+                  class="btn-ghost text-sm border-coral/30 text-coral-text">
+                  <i class="pi pi-ban" aria-hidden="true" />
+                  Reportar incumplimiento
                 </button>
               </div>
               <div v-if="showNonCompliance" class="border border-coral/30 rounded-lg p-4 space-y-3 bg-coral/5">
-                <p class="text-sm font-semibold text-coral">Reportar incumplimiento</p>
+                <p class="text-sm font-semibold text-coral-text">Reportar incumplimiento</p>
                 <textarea v-model="nonComplianceMotivo" class="input" rows="3"
                   placeholder="Describe el incumplimiento detectado…" />
                 <div class="flex gap-2">
@@ -649,12 +669,13 @@ const TIPO_ICON: Record<string, string> = {
             </template>
 
             <!-- Contrato completado -->
-            <div v-if="contrato.status === 'completed'" class="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p class="text-green-700 font-semibold">✅ Contrato completado exitosamente.</p>
-              <p class="text-green-600 text-sm mt-1">El pago fue liberado al influencer.</p>
+            <div v-if="contrato.status === 'completed'" class="bg-success-tint border border-green-200 rounded-lg p-4">
+              <p class="flex items-center gap-2 text-success font-semibold"><i class="pi pi-check-circle" aria-hidden="true" />Contrato completado exitosamente.</p>
+              <p class="text-success text-sm mt-1">El pago fue liberado al influencer.</p>
               <RouterLink v-if="!isEmpresa && contrato.empresa?.id" :to="`/empresas/${contrato.empresa.id}`"
                 class="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:text-violet/80 mt-2">
-                ⭐ Califica tu experiencia con {{ contrato.empresa.nombre_comercial }}
+                <i class="pi pi-star" aria-hidden="true" />
+                Califica tu experiencia con {{ contrato.empresa.nombre_comercial }}
               </RouterLink>
             </div>
 
@@ -665,30 +686,30 @@ const TIPO_ICON: Record<string, string> = {
         <template v-if="activeTab === 'auditoría'">
           <div class="card space-y-1">
             <h2 class="font-semibold text-navy mb-3">Historial de auditoría</h2>
-            <div v-if="!contractsStore.auditLog.length" class="text-navy/40 text-sm py-4 text-center">
+            <div v-if="!contractsStore.auditLog.length" class="text-ink-muted text-sm py-4 text-center">
               Sin registros aún.
             </div>
             <div v-for="entry in contractsStore.auditLog" :key="entry.id"
-              class="flex gap-3 py-3 border-b border-navy/6 last:border-0">
+              class="flex gap-3 py-3 border-b border-border last:border-0">
               <div class="w-2 h-2 rounded-full bg-violet/40 mt-2 shrink-0"></div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-navy">{{ auditLabel(entry.action) }}</p>
                 <div class="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span v-if="entry.previous_status && entry.new_status"
-                    class="text-xs text-navy/40">
+                    class="text-xs text-ink-muted">
                     {{ STATUS_LABELS[entry.previous_status] ?? entry.previous_status }}
                     → {{ STATUS_LABELS[entry.new_status] ?? entry.new_status }}
                   </span>
-                  <span class="text-xs text-navy/30">{{ formatDate(entry.created_at) }}</span>
+                  <span class="text-xs text-ink-muted">{{ formatDate(entry.created_at) }}</span>
                 </div>
                 <div v-if="entry.metadata && Object.keys(entry.metadata).length" class="mt-1">
-                  <p v-if="entry.metadata.monto" class="text-xs text-navy/50">
+                  <p v-if="entry.metadata.monto" class="text-xs text-ink-muted">
                     Monto: ${{ entry.metadata.monto }} · Comisión: ${{ entry.metadata.comision }}
                   </p>
-                  <p v-if="entry.metadata.feedback" class="text-xs text-navy/50 italic">
+                  <p v-if="entry.metadata.feedback" class="text-xs text-ink-muted italic">
                     "{{ entry.metadata.feedback }}"
                   </p>
-                  <p v-if="entry.metadata.count" class="text-xs text-navy/50">
+                  <p v-if="entry.metadata.count" class="text-xs text-ink-muted">
                     {{ entry.metadata.count }} publicación(es) registrada(s)
                   </p>
                 </div>
@@ -700,6 +721,6 @@ const TIPO_ICON: Record<string, string> = {
       </div>
     </template>
 
-    <div v-else class="card text-center py-8 text-navy/40">Contrato no encontrado.</div>
+    <div v-else class="card text-center py-8 text-ink-muted">Contrato no encontrado.</div>
   </AppLayout>
 </template>
