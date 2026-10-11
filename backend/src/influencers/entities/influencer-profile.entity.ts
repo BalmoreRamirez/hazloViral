@@ -115,4 +115,15 @@ export class InfluencerProfile {
     const isOldEnough = !!this.fecha_nacimiento && calcAge(this.fecha_nacimiento) >= 16;
     return hasId && hasVerifiedMetric && hasAvatar && hasVerifiedEmail && isOldEnough;
   }
+
+  /**
+   * Los getters no se incluyen al convertir a JSON, así que `is_verified` nunca llegaba al
+   * frontend (el perfil propio mostraba "Perfil incompleto" aunque cumpliera todo).
+   * Se agrega solo cuando las relaciones necesarias están cargadas; si no, se omite.
+   */
+  toJSON() {
+    const json: Record<string, unknown> = { ...(this as object) };
+    if (this.user && this.metrics) json.is_verified = this.is_verified;
+    return json;
+  }
 }
