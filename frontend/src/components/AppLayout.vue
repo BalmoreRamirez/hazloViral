@@ -77,9 +77,9 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
       <div class="flex items-center gap-4">
         <!-- Balance de créditos (solo empresa) -->
         <template v-if="authStore.isEmpresa && balance">
-          <RouterLink to="/dashboard" class="flex items-center gap-2 text-sm">
+          <RouterLink to="/dashboard" class="flex items-center gap-2 text-sm" title="Saldo disponible — clic para recargar">
             <span :class="isLow ? 'text-coral font-semibold' : 'text-slate/80'">
-              {{ isLow ? '⚠️' : '💰' }} {{ balance.balance_creditos.toFixed(2) }} cr.
+              {{ isLow ? '⚠️' : '💰' }} ${{ balance.balance_creditos.toFixed(2) }} USD
             </span>
           </RouterLink>
         </template>
@@ -117,10 +117,10 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
     <!-- Alerta saldo bajo (claude.md §5.1) -->
     <div v-if="isLow" class="bg-coral/10 border-b border-coral/30 px-6 py-2 flex items-center justify-between">
       <p class="text-coral text-sm font-medium">
-        ⚠️ Saldo bajo el umbral mínimo ({{ balance?.deficit.toFixed(2) }} cr. de déficit).
+        ⚠️ Saldo bajo el mínimo (te faltan ${{ balance?.deficit.toFixed(2) }} USD).
         Los chats están en <strong>solo lectura</strong>.
       </p>
-      <RouterLink to="/dashboard" class="text-sm underline text-coral font-semibold">Recargar créditos →</RouterLink>
+      <RouterLink to="/dashboard" class="text-sm underline text-coral font-semibold">Recargar saldo →</RouterLink>
     </div>
 
     <main class="flex-1 px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">

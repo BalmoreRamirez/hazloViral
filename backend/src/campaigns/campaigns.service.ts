@@ -1,10 +1,18 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CampaignBrief } from './entities/campaign-brief.entity';
 import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateCampaignBriefDto, UpdateCampaignBriefDto } from './dto/campaign-brief.dto';
+
+/** Campos que la empresa puede escribir en un brief */
+const WRITABLE_FIELDS = [
+  'titulo_campana', 'objetivo_principal', 'tono_de_voz', 'puntos_clave_si', 'restricciones_no',
+  'recursos_esteticos', 'presupuesto_min', 'presupuesto_max', 'publico_objetivo', 'fecha_inicio',
+  'fecha_fin', 'plataformas', 'formatos', 'hashtags_menciones', 'derechos_uso', 'exclusividad_dias',
+  'exclusividad_detalle', 'requiere_disclosure', 'archivos',
+] as const;
 
 @Injectable()
 export class CampaignsService {
@@ -21,16 +29,32 @@ export class CampaignsService {
     return empresa.id;
   }
 
+  /** Copia los campos del DTO al brief. Cadenas vacías se guardan como NULL. */
+  private applyDto(brief: CampaignBrief, dto: CreateCampaignBriefDto | UpdateCampaignBriefDto) {
+    for (const field of WRITABLE_FIELDS) {
+      const value = (dto as any)[field];
+      if (value === undefined) continue;
+      (brief as any)[field] = value === '' ? null : value;
+    }
+  }
+
+  /** Reglas de coherencia entre campos */
+  private assertConsistent(brief: CampaignBrief) {
+    const min = brief.presupuesto_min != null ? Number(brief.presupuesto_min) : null;
+    const max = brief.presupuesto_max != null ? Number(brief.presupuesto_max) : null;
+    if (min != null && max != null && max < min) {
+      throw new BadRequestException('El presupuesto máximo no puede ser menor que el mínimo.');
+    }
+    if (brief.fecha_inicio && brief.fecha_fin && brief.fecha_fin < brief.fecha_inicio) {
+      throw new BadRequestException('La fecha de fin no puede ser anterior a la fecha de inicio.');
+    }
+  }
+
   async create(user: User, dto: CreateCampaignBriefDto): Promise<CampaignBrief> {
-    const empresa_id = await this.getEmpresaId(user.id);
     const brief = new CampaignBrief();
-    brief.empresa_id         = empresa_id;
-    brief.titulo_campana     = dto.titulo_campana;
-    if (dto.objetivo_principal) brief.objetivo_principal = dto.objetivo_principal;
-    if (dto.tono_de_voz)        brief.tono_de_voz        = dto.tono_de_voz;
-    if (dto.puntos_clave_si)    brief.puntos_clave_si    = dto.puntos_clave_si;
-    if (dto.restricciones_no)   brief.restricciones_no   = dto.restricciones_no;
-    if (dto.recursos_esteticos) brief.recursos_esteticos = dto.recursos_esteticos;
+    brief.empresa_id = await this.getEmpresaId(user.id);
+    this.applyDto(brief, dto);
+    this.assertConsistent(brief);
     return this.briefsRepo.save(brief);
   }
 
@@ -52,12 +76,8 @@ export class CampaignsService {
 
   async update(user: User, id: number, dto: UpdateCampaignBriefDto): Promise<CampaignBrief> {
     const brief = await this.findOne(user, id);
-    if (dto.titulo_campana     !== undefined) brief.titulo_campana     = dto.titulo_campana;
-    if (dto.objetivo_principal !== undefined) brief.objetivo_principal = dto.objetivo_principal;
-    if (dto.tono_de_voz        !== undefined) brief.tono_de_voz        = dto.tono_de_voz;
-    if (dto.puntos_clave_si    !== undefined) brief.puntos_clave_si    = dto.puntos_clave_si;
-    if (dto.restricciones_no   !== undefined) brief.restricciones_no   = dto.restricciones_no;
-    if (dto.recursos_esteticos !== undefined) brief.recursos_esteticos = dto.recursos_esteticos;
+    this.applyDto(brief, dto);
+    this.assertConsistent(brief);
     return this.briefsRepo.save(brief);
   }
 

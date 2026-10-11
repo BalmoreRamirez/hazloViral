@@ -62,6 +62,8 @@ export const useChatStore = defineStore('chat', () => {
   const completedContracts = ref<{ id: number; completedAt: string }[]>([])
   const socketConnected = ref(false)
   const loadingMessages = ref(false)
+  // Último error enviado por el servidor vía WebSocket (ej. propuesta rechazada por validación)
+  const socketError     = ref<string | null>(null)
   const readIds         = ref<Set<number>>(loadReadIds())
 
   const creditsStore = useCreditsStore()
@@ -107,7 +109,13 @@ export const useChatStore = defineStore('chat', () => {
       .off('joined_chat').off('new_message').off('credit_status').off('chat_blocked')
       .off('contract_created').off('proposal_countered').off('proposal_rejected')
       .off('counter_resolved').off('contract_funded').off('messages_read')
-      .off('contract_completed')
+      .off('contract_completed').off('error')
+
+    socketError.value = null
+    // El backend emite 'error' cuando rechaza un mensaje; antes se ignoraba en silencio
+    socket.on('error', (data: { message?: string }) => {
+      socketError.value = data?.message ?? 'No se pudo enviar el mensaje.'
+    })
 
     socket.emit('join_chat', { chat_id: chat.id })
 
@@ -186,12 +194,14 @@ export const useChatStore = defineStore('chat', () => {
   function sendMessage(text: string) {
     if (!activeChat.value) return
     const socket = getSocket()
+    socketError.value = null
     socket.emit('send_message', { chat_id: activeChat.value.id, message_text: text })
   }
 
   function sendProposal(proposal_data: { tarifa: number; entregables: any[]; plazo: string; contrato_pdf_url?: string }) {
     if (!activeChat.value) return
     const socket = getSocket()
+    socketError.value = null
     socket.emit('send_message', {
       chat_id: activeChat.value.id,
       is_proposal: true,
@@ -202,6 +212,7 @@ export const useChatStore = defineStore('chat', () => {
   function sendBrief(briefId: number) {
     if (!activeChat.value) return
     const socket = getSocket()
+    socketError.value = null
     socket.emit('send_message', {
       chat_id: activeChat.value.id,
       campaign_brief_id: briefId,
@@ -218,11 +229,12 @@ export const useChatStore = defineStore('chat', () => {
     isBlocked.value   = false
     isCompleted.value = false
     completedContracts.value = []
+    socketError.value = null
   }
 
   return {
     chats, activeChat, messages, isBlocked, blockMessage, isCompleted, completedContracts,
-    socketConnected, loadingMessages, readIds,
+    socketConnected, loadingMessages, readIds, socketError,
     isRead, markRead,
     loadChats, openChat, enterChat, sendMessage, sendProposal, sendBrief, addMessage, leaveChat,
   }

@@ -3,13 +3,43 @@ import { ref } from 'vue'
 import { empresaApi, influencerApi } from '@/api/profiles'
 import { campaignsApi } from '@/api/campaigns'
 
+export interface EmpresaVerificationChecklist {
+  email_verificado: boolean
+  logo: boolean
+  nit: boolean
+  representante: boolean
+  telefono: boolean
+  presencia_online: boolean
+}
+
 export interface EmpresaProfile {
   id: number; user_id: number; nombre_comercial: string
-  sitio_web: string; balance_creditos: number; umbral_creditos: number
+  razon_social: string | null
+  nit: string | null
+  nrc: string | null
+  telefono: string | null
+  email_facturacion: string | null
+  descripcion: string | null
+  sitio_web: string | null
+  instagram_url: string | null
+  tiktok_url: string | null
+  pais: string | null
+  direccion: string | null
+  balance_creditos: number; umbral_creditos: number
   representante_nombre: string | null
   representante_tipo_identificacion: string | null
   representante_numero_identificacion: string | null
   rubro: string | null
+  is_verified: boolean
+  verification_checklist: EmpresaVerificationChecklist
+}
+
+/** Campos que la empresa puede editar (el umbral de créditos lo controla el admin) */
+export type EmpresaProfileUpdate = Partial<Omit<EmpresaProfile,
+  'id' | 'user_id' | 'balance_creditos' | 'umbral_creditos' | 'is_verified' | 'verification_checklist'>>
+
+export interface BriefArchivo {
+  url: string; nombre: string; tipo_archivo: string; size_bytes: number
 }
 
 export interface InfluencerProfile {
@@ -39,6 +69,19 @@ export interface CampaignBrief {
   objetivo_principal: string; tono_de_voz: string
   puntos_clave_si: string; restricciones_no: string
   recursos_esteticos: string; created_at: string
+  presupuesto_min: number | string | null
+  presupuesto_max: number | string | null
+  publico_objetivo: string | null
+  fecha_inicio: string | null
+  fecha_fin: string | null
+  plataformas: string[] | null
+  formatos: string | null
+  hashtags_menciones: string | null
+  derechos_uso: string | null
+  exclusividad_dias: number | null
+  exclusividad_detalle: string | null
+  requiere_disclosure: boolean
+  archivos: BriefArchivo[] | null
 }
 
 export const useProfileStore = defineStore('profile', () => {
@@ -56,7 +99,7 @@ export const useProfileStore = defineStore('profile', () => {
     finally { loading.value = false }
   }
 
-  async function updateEmpresaProfile(data: Partial<EmpresaProfile>) {
+  async function updateEmpresaProfile(data: EmpresaProfileUpdate) {
     saving.value = true
     try { empresaProfile.value = await empresaApi.updateProfile(data) }
     finally { saving.value = false }

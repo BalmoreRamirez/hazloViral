@@ -106,6 +106,7 @@
   .card:hover { box-shadow: var(--shadow-card-hover); }
 
   .label  { @apply text-sm font-medium text-navy/70 mb-1 block; }
+  .section-title { @apply text-xs font-semibold uppercase tracking-wide text-navy/50 mb-3; }
 
   .input {
     @apply w-full bg-white border border-navy/20 rounded-lg px-3 py-2

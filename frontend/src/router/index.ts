@@ -52,6 +52,13 @@ const router = createRouter({
       meta: { auth: true },
     },
 
+    {
+      path: '/empresas/:id',
+      name: 'empresa-public',
+      component: () => import('@/views/empresas/EmpresaPublicView.vue'),
+      meta: { auth: true },
+    },
+
     // ── Chats ───────────────────────────────────────────────────────────────
     { path: '/chats',     name: 'chats', component: () => import('@/views/chats/ChatsView.vue'),   meta: { auth: true } },
     { path: '/chats/:id', name: 'chat',  component: () => import('@/views/chats/ChatView.vue'),    meta: { auth: true } },

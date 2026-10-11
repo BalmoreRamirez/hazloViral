@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Not, Repository } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
-import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
+import { EmpresaProfile, toPublicEmpresa } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
 import { CreditsService } from '../credits/credits.service';
 import { ChatStatus, ProposalStatus, UserRole } from '../common/enums';
@@ -78,11 +78,13 @@ export class ChatsService {
 
     const influencer = await this.influencersRepo.findOne({ where: { user_id: user.id } });
     if (!influencer) return [];
-    return this.chatsRepo.find({
+    const chats = await this.chatsRepo.find({
       where: { influencer_id: influencer.id },
       relations: { empresa: { user: true } },
       order: { created_at: 'DESC' },
     });
+    // El influencer solo ve los datos públicos de la marca (sin NIT, teléfono ni saldo)
+    return chats.map((c) => Object.assign(c, { empresa: toPublicEmpresa(c.empresa) as any }));
   }
 
   // ─── Historial de mensajes (paginado) ────────────────────────────────────────
