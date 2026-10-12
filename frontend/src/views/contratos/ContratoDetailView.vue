@@ -537,6 +537,13 @@ const TIPO_ICON: Record<string, string> = {
               </p>
             </template>
 
+            <!-- Influencer: esperando que la empresa deposite -->
+            <div v-if="!isEmpresa && contrato.status === 'pending_payment'"
+              class="flex items-start gap-3 bg-warning-tint rounded-lg p-4 text-sm text-warning">
+              <i class="pi pi-clock mt-0.5" aria-hidden="true" />
+              <p>Esperando que la empresa deposite el pago en custodia. Te avisaremos cuando puedas empezar a trabajar.</p>
+            </div>
+
             <!-- Influencer: subir entregables -->
             <template v-if="!isEmpresa && ['funded_in_escrow','changes_requested'].includes(contrato.status)">
               <div class="space-y-3">

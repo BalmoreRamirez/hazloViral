@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
 import { InfluencerProfile } from './entities/influencer-profile.entity';
 import { InfluencerMetric } from './entities/influencer-metric.entity';
@@ -22,9 +22,16 @@ export interface SearchInfluencerQuery {
   min_seguidores?: number;
   max_tarifa?: number;
   disponible?: boolean;
+  orden?: SearchOrden;
   page?: number;
   limit?: number;
 }
+
+export const SEARCH_ORDENES = ['tarifa', 'seguidores', 'calificacion', 'recientes'] as const;
+export type SearchOrden = (typeof SEARCH_ORDENES)[number];
+
+/** Perfil del buscador con su resumen de calificaciones (evita un request por tarjeta). */
+export type SearchResultItem = InfluencerProfile & { rating: { promedio: number | null; total: number } };
 
 @Injectable()
 export class InfluencersService {
@@ -75,17 +82,18 @@ export class InfluencersService {
   }
 
   // ─── Buscador público ─────────────────────────────────────────────────────────
-  async search(query: SearchInfluencerQuery): Promise<{ data: InfluencerProfile[]; total: number }> {
-    const page  = query.page  ?? 1;
-    const limit = Math.min(query.limit ?? 20, 50);
+  async search(query: SearchInfluencerQuery): Promise<{ data: SearchResultItem[]; total: number; page: number; limit: number }> {
+    const page  = Math.max(query.page ?? 1, 1);
+    const limit = Math.min(Math.max(query.limit ?? 20, 1), 50);
     const skip  = (page - 1) * limit;
 
     const soloDisponibles = query.disponible !== false;
 
+    // Paso 1: filtrar, ordenar y paginar solo IDs (sin unir métricas, para que la paginación
+    // no se rompa con filas duplicadas y el orden pueda usar expresiones calculadas).
     const qb = this.profilesRepo
       .createQueryBuilder('p')
-      .innerJoinAndSelect('p.user', 'u')
-      .leftJoinAndSelect('p.metrics', 'm');
+      .innerJoin('p.user', 'u');
 
     // Solo influencers con perfil verificado completo
     qb.where('u.is_email_verified = true')
@@ -112,17 +120,72 @@ export class InfluencersService {
     if (query.max_tarifa !== undefined) {
       qb.andWhere('p.tarifa_base <= :tarifa', { tarifa: query.max_tarifa });
     }
+    // Red social y mínimo de seguidores. Sin red elegida, el mínimo aplica a cualquiera de sus redes.
+    const minSeg = query.min_seguidores && query.min_seguidores > 0 ? query.min_seguidores : null;
     if (query.red_social) {
-      qb.andWhere('m.red_social = :red', { red: query.red_social });
-      if (query.min_seguidores !== undefined) {
-        qb.andWhere('m.seguidores >= :seg', { seg: query.min_seguidores });
-      }
+      qb.andWhere(
+        `EXISTS (SELECT 1 FROM influencer_metrics fm WHERE fm.influencer_id = p.id AND fm.red_social = :red${minSeg ? ' AND fm.seguidores >= :seg' : ''})`,
+        { red: query.red_social, seg: minSeg },
+      );
+    } else if (minSeg) {
+      qb.andWhere(
+        'EXISTS (SELECT 1 FROM influencer_metrics fm WHERE fm.influencer_id = p.id AND fm.seguidores >= :seg)',
+        { seg: minSeg },
+      );
     }
 
-    qb.orderBy('p.tarifa_base', 'ASC').skip(skip).take(limit);
+    const total = await qb.getCount();
 
-    const [data, total] = await qb.getManyAndCount();
-    return { data, total };
+    const orden = query.orden ?? 'tarifa';
+    const SEGUIDORES = '(SELECT COALESCE(MAX(sm.seguidores), 0) FROM influencer_metrics sm WHERE sm.influencer_id = p.id AND sm.is_verified = true)';
+    const RATING_AVG = '(SELECT COALESCE(AVG(r.estrellas), 0) FROM influencer_ratings r WHERE r.influencer_id = p.id)';
+    const RATING_CNT = '(SELECT COUNT(*) FROM influencer_ratings r WHERE r.influencer_id = p.id)';
+
+    qb.select('p.id', 'id');
+    if (orden === 'seguidores') {
+      qb.addSelect(SEGUIDORES, 'k1').orderBy('k1', 'DESC');
+    } else if (orden === 'calificacion') {
+      qb.addSelect(RATING_AVG, 'k1').addSelect(RATING_CNT, 'k2').orderBy('k1', 'DESC').addOrderBy('k2', 'DESC');
+    } else if (orden === 'recientes') {
+      qb.addSelect('u.created_at', 'k1').orderBy('k1', 'DESC');
+    } else {
+      // Menor tarifa primero; "a convenir" (tarifa 0) al final
+      qb.addSelect('CASE WHEN p.tarifa_base > 0 THEN 0 ELSE 1 END', 'k1')
+        .addSelect('p.tarifa_base', 'k2')
+        .orderBy('k1', 'ASC').addOrderBy('k2', 'ASC');
+    }
+    qb.addOrderBy('p.id', 'ASC').offset(skip).limit(limit);
+
+    const ids = (await qb.getRawMany<{ id: number }>()).map((r) => Number(r.id));
+    if (!ids.length) return { data: [], total, page, limit };
+
+    // Paso 2: cargar los perfiles completos y las calificaciones de la página en dos consultas
+    const [profiles, ratings] = await Promise.all([
+      this.profilesRepo.find({ where: { id: In(ids) }, relations: { user: true, metrics: true } }),
+      this.profilesRepo.manager
+        .createQueryBuilder()
+        .select('r.influencer_id', 'influencer_id')
+        .addSelect('ROUND(AVG(r.estrellas)::numeric, 1)', 'promedio')
+        .addSelect('COUNT(*)', 'total')
+        .from('influencer_ratings', 'r')
+        .where('r.influencer_id IN (:...ids)', { ids })
+        .groupBy('r.influencer_id')
+        .getRawMany<{ influencer_id: number; promedio: string; total: string }>(),
+    ]);
+
+    const byId = new Map(profiles.map((p) => [p.id, p]));
+    const ratingById = new Map(ratings.map((r) => [Number(r.influencer_id), r]));
+    const data = ids
+      .map((id) => byId.get(id))
+      .filter((p): p is InfluencerProfile => !!p)
+      .map((p) => {
+        const r = ratingById.get(p.id);
+        return Object.assign(p, {
+          rating: { promedio: r ? parseFloat(r.promedio) : null, total: r ? parseInt(r.total, 10) : 0 },
+        }) as SearchResultItem;
+      });
+
+    return { data, total, page, limit };
   }
 
   async getPublicProfile(id: number): Promise<InfluencerProfile> {

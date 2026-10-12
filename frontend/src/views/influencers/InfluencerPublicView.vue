@@ -4,10 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import StarRating from '@/components/StarRating.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
+import CoverBanner from '@/components/CoverBanner.vue'
 import { useChatStore } from '@/stores/chat'
 import { influencerApi } from '@/api/profiles'
+import { creditsApi } from '@/api/credits'
 import { ratingsApi, type RatingSummary, type RatingItem, type MyRating } from '@/api/ratings'
 import { useAuthStore } from '@/stores/auth'
+import { rubroNombre } from '@/constants/rubros'
 
 const route     = useRoute()
 const router    = useRouter()
@@ -27,6 +30,13 @@ const ratingForm   = ref({ estrellas: 0, comentario: '' })
 const savingRating = ref(false)
 const ratingError  = ref('')
 const ratingDone   = ref(false)
+// Solo empresas con un contrato completado con este influencer pueden calificarlo
+const puedeCalificar = ref(false)
+
+// Costo real de abrir un chat (configurable por el admin); gratis si ya existe el chat
+const chatCost      = ref<number | null>(null)
+const chatExistente = computed(() =>
+  !!profile.value && chatStore.chats.some(c => c.influencer_id === profile.value.id))
 
 const REDES_ICON: Record<string, string> = {
   TikTok: 'pi-tiktok', Instagram: 'pi-instagram', YouTube: 'pi-youtube', Facebook: 'pi-facebook',
@@ -57,9 +67,16 @@ onMounted(async () => {
       ratingsApi.getSummary(id),
       ratingsApi.getAll(id),
     ])
-    // Load empresa's own rating
+    // Empresa: su calificación, si puede calificar, costo del chat y si ya tiene chat abierto
     if (authStore.isEmpresa) {
-      myRating.value = await ratingsApi.getMine(id)
+      const [mine, cost] = await Promise.all([
+        ratingsApi.getMine(id),
+        creditsApi.getChatCost().catch(() => null),
+        chatStore.loadChats().catch(() => null),
+      ])
+      myRating.value       = mine.rating
+      puedeCalificar.value = mine.puede_calificar
+      chatCost.value       = cost?.costo ?? null
       if (myRating.value) {
         ratingForm.value.estrellas   = myRating.value.estrellas
         ratingForm.value.comentario  = myRating.value.comentario ?? ''
@@ -112,18 +129,32 @@ async function submitRating() {
           ← Volver al buscador
         </button>
 
+        <!-- Banner del rubro principal (el mismo que ve el influencer en su perfil) -->
+        <CoverBanner :rubro="profile.rubros?.[0]" :extra="(profile.rubros?.length ?? 1) - 1"
+          :nombre="profile.nombre_artistico" height="160px" />
+
         <!-- Header -->
         <div class="card">
           <div class="flex items-start gap-4">
-            <div class="w-16 h-16 rounded-full bg-violet/20 flex items-center justify-center text-3xl font-bold text-violet shrink-0">
+            <img v-if="profile.user?.avatar_url" :src="profile.user.avatar_url" :alt="profile.nombre_artistico"
+              class="w-20 h-20 rounded-full object-cover shrink-0 border-2 border-white shadow-md" />
+            <div v-else class="w-20 h-20 rounded-full bg-violet/20 flex items-center justify-center text-3xl font-bold text-violet shrink-0">
               {{ profile.nombre_artistico?.[0]?.toUpperCase() }}
             </div>
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <h1 class="text-2xl font-display font-bold text-navy">{{ profile.nombre_artistico }}</h1>
                 <VerifiedBadge v-if="profile.is_verified" size="lg" />
               </div>
+              <p v-if="profile.username" class="text-violet text-sm font-medium">@{{ profile.username }}</p>
               <p class="text-ink-muted text-sm mt-0.5 flex items-center gap-1.5"><i class="pi pi-map-marker text-xs" aria-hidden="true" /> {{ profile.ubicacion || 'Sin ubicación' }}</p>
+
+              <!-- Rubros: el principal primero, con estrella -->
+              <div v-if="profile.rubros?.length" class="flex flex-wrap gap-1.5 mt-2">
+                <span v-for="(r, i) in profile.rubros" :key="r" class="badge-muted">
+                  <i v-if="i === 0" class="pi pi-star-fill text-violet" aria-hidden="true" />{{ rubroNombre(r) }}
+                </span>
+              </div>
 
               <!-- Rating summary -->
               <div v-if="summary && summary.total > 0" class="flex items-center gap-2 mt-1.5">
@@ -140,7 +171,7 @@ async function submitRating() {
 
               <p v-if="profile.bio" class="text-sm text-ink-muted mt-2">{{ profile.bio }}</p>
               <div class="flex flex-wrap gap-2 mt-3">
-                <span class="badge-info text-sm inline-flex items-center gap-1.5"><i class="pi pi-dollar" aria-hidden="true" /> ${{ Number(profile.tarifa_base).toFixed(0) }} USD / campaña</span>
+                <span class="badge-info text-sm inline-flex items-center gap-1.5"><i class="pi pi-dollar" aria-hidden="true" /> {{ Number(profile.tarifa_base) > 0 ? `$${Number(profile.tarifa_base).toFixed(0)} USD / campaña` : 'Tarifa a convenir' }}</span>
                 <span :class="profile.disponibilidad ? 'badge-active' : 'badge-muted'" class="inline-flex items-center gap-1.5">
                   <i :class="['pi', profile.disponibilidad ? 'pi-check-circle' : 'pi-lock']" aria-hidden="true" />
                   {{ profile.disponibilidad ? 'Disponible' : 'No disponible' }}
@@ -159,7 +190,10 @@ async function submitRating() {
             <p v-if="!profile.disponibilidad" class="text-ink-muted text-xs mt-1">
               Este influencer no está disponible actualmente.
             </p>
-            <p v-else class="text-ink-muted text-xs mt-1">Costo: 1 crédito por chat nuevo.</p>
+            <p v-else-if="chatExistente" class="text-ink-muted text-xs mt-1">Ya tienes un chat con este influencer: abrirlo es gratis.</p>
+            <p v-else-if="chatCost !== null" class="text-ink-muted text-xs mt-1">
+              Abrir un chat nuevo cuesta ${{ chatCost.toFixed(2) }} USD de tu saldo.
+            </p>
           </div>
         </div>
 
@@ -191,8 +225,14 @@ async function submitRating() {
           Este influencer aún no ha cargado métricas de redes sociales.
         </div>
 
-        <!-- Formulario de calificación (solo empresa) -->
-        <div v-if="authStore.isEmpresa" class="card">
+        <!-- Empresa sin contrato completado: aún no puede calificar -->
+        <div v-if="authStore.isEmpresa && !puedeCalificar" class="card flex items-center gap-3 text-sm text-ink-muted">
+          <i class="pi pi-star text-lg" aria-hidden="true" />
+          Podrás calificar al terminar un contrato con este influencer.
+        </div>
+
+        <!-- Formulario de calificación (solo empresas con contrato completado) -->
+        <div v-if="authStore.isEmpresa && puedeCalificar" class="card">
           <h2 class="font-display font-semibold text-navy mb-1">
             {{ myRating ? 'Tu calificación' : 'Calificar influencer' }}
           </h2>
