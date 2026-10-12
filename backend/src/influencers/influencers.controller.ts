@@ -13,7 +13,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { InfluencersService } from './influencers.service';
+import { InfluencersService, SEARCH_ORDENES, SearchOrden } from './influencers.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -40,12 +40,15 @@ export class InfluencersController {
     @Query('page',           new DefaultValuePipe(1),  ParseIntPipe) page?:           number,
     @Query('limit',          new DefaultValuePipe(20), ParseIntPipe) limit?:          number,
     @Query('disponible')                                              disponible?:     string,
+    @Query('orden')                                                   orden?:          string,
   ) {
     // max_tarifa solo se aplica si se envía explícitamente (evita filtrar con 0 por defecto)
     const maxTarifa = max_tarifa !== undefined ? Number(max_tarifa) : undefined;
     // disponible=false → muestra todos; cualquier otro valor (o ausente) → solo disponibles
     const soloDisponibles = disponible === undefined ? true : disponible !== 'false';
-    return this.service.search({ red_social, ubicacion, rubro, min_seguidores, max_tarifa: maxTarifa, page, limit, disponible: soloDisponibles });
+    // Orden desconocido → por tarifa (valor por defecto)
+    const ordenValido = (SEARCH_ORDENES as readonly string[]).includes(orden ?? '') ? (orden as SearchOrden) : undefined;
+    return this.service.search({ red_social, ubicacion, rubro, min_seguidores, max_tarifa: maxTarifa, page, limit, disponible: soloDisponibles, orden: ordenValido });
   }
 
   // ─── Perfil propio (influencer) ───────────────────────────────────────────────

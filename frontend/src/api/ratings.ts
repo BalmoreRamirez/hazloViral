@@ -31,7 +31,8 @@ export const ratingsApi = {
     return data
   },
 
-  async getMine(influencerId: number): Promise<MyRating | null> {
+  /** Calificación propia y si la empresa puede calificar (contrato completado con el influencer). */
+  async getMine(influencerId: number): Promise<{ rating: MyRating | null; puede_calificar: boolean }> {
     const { data } = await api.get(`/influencers/${influencerId}/ratings/mine`)
     return data
   },

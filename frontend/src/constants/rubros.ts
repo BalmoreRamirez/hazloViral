@@ -14,3 +14,9 @@ export const RUBROS = RUBROS_INFLUENCER
 export function rubroLabel(value: string | null | undefined): string {
   return RUBROS.find(r => r.value === value)?.label ?? (value ?? '')
 }
+
+/** Nombre del rubro sin el emoji del menú (para etiquetas en tarjetas y perfiles). */
+export function rubroNombre(value: string | null | undefined): string {
+  const label = RUBROS.find(r => r.value === value)?.label
+  return label ? label.replace(/^\S+\s+/, '') : (value ?? '')
+}

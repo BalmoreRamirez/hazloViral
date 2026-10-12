@@ -45,6 +45,11 @@ export class CreditsService {
     return Number(empresa.balance_creditos) > Number(empresa.umbral_creditos);
   }
 
+  /** Costo actual de abrir un chat nuevo (configurable por el admin en global_settings). */
+  getChatOpenCost(): Promise<number> {
+    return this.adminService.getNumber('chat_open_cost', 1.0);
+  }
+
   // ─── Debitar créditos al abrir chat (claude.md §5.1) ─────────────────────────
   async deductChatOpenCost(empresaId: number): Promise<BalanceInfo> {
     const cost = await this.adminService.getNumber('chat_open_cost', 1.0);

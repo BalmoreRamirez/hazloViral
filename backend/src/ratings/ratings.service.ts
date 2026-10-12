@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InfluencerRating } from './entities/influencer-rating.entity';
 import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
+import { ContratoEscrow } from '../contratos/entities/contrato-escrow.entity';
+import { ContratoStatus } from '../common/enums';
 import { User } from '../users/entities/user.entity';
 import { UpsertRatingDto } from './dto/upsert-rating.dto';
 
@@ -16,6 +18,8 @@ export class RatingsService {
     private readonly empresaRepo: Repository<EmpresaProfile>,
     @InjectRepository(InfluencerProfile)
     private readonly influencerRepo: Repository<InfluencerProfile>,
+    @InjectRepository(ContratoEscrow)
+    private readonly contratosRepo: Repository<ContratoEscrow>,
   ) {}
 
   private async resolveEmpresa(user: User): Promise<EmpresaProfile> {
@@ -29,6 +33,11 @@ export class RatingsService {
     if (!influencer) throw new NotFoundException('Influencer no encontrado.');
 
     const empresa = await this.resolveEmpresa(user);
+
+    // Solo quien trabajó con el influencer puede calificarlo (evita reseñas falsas o de venganza)
+    if (!(await this.hasCompletedContract(empresa.id, influencerId))) {
+      throw new ForbiddenException('Solo puedes calificar a influencers con los que completaste un contrato.');
+    }
 
     let rating = await this.repo.findOne({
       where: { influencer_id: influencerId, empresa_id: empresa.id },
@@ -80,9 +89,22 @@ export class RatingsService {
     }));
   }
 
-  async getMyRating(user: User, influencerId: number): Promise<InfluencerRating | null> {
+  /** Calificación propia y si la empresa puede calificar (tiene un contrato completado con el influencer). */
+  async getMyRating(user: User, influencerId: number): Promise<{ rating: InfluencerRating | null; puede_calificar: boolean }> {
     const empresa = await this.empresaRepo.findOne({ where: { user_id: user.id } });
-    if (!empresa) return null;
-    return this.repo.findOne({ where: { influencer_id: influencerId, empresa_id: empresa.id } });
+    if (!empresa) return { rating: null, puede_calificar: false };
+    const [rating, puede_calificar] = await Promise.all([
+      this.repo.findOne({ where: { influencer_id: influencerId, empresa_id: empresa.id } }),
+      this.hasCompletedContract(empresa.id, influencerId),
+    ]);
+    return { rating, puede_calificar };
+  }
+
+  private hasCompletedContract(empresaId: number, influencerId: number): Promise<boolean> {
+    return this.contratosRepo.existsBy({
+      empresa_id: empresaId,
+      influencer_id: influencerId,
+      status: ContratoStatus.COMPLETED,
+    });
   }
 }

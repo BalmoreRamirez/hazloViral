@@ -18,4 +18,11 @@ export class CreditsController {
   getBalance(@GetUser() user: User) {
     return this.creditsService.getBalance(user.id);
   }
+
+  // GET /api/credits/chat-cost — costo actual de abrir un chat nuevo (lo define el admin)
+  @Get('chat-cost')
+  @Roles(UserRole.EMPRESA)
+  async getChatCost() {
+    return { costo: await this.creditsService.getChatOpenCost() };
+  }
 }
