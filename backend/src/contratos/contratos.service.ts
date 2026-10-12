@@ -559,17 +559,28 @@ export class ContratosService {
   // ─── Helpers ──────────────────────────────────────────────────────────────────
   // Vincula al contrato el último brief enviado en el chat antes de la propuesta
   private async attachBrief(manager: EntityManager, contrato: ContratoEscrow, proposal: Message): Promise<void> {
+    // Último mensaje con brief antes de la propuesta. Se busca también por la copia, porque el brief
+    // original pudo borrarse (campaign_brief_id queda en NULL) y la copia sigue siendo válida.
     const briefMsg = await manager.findOne(Message, {
-      where: { chat_id: proposal.chat_id, id: LessThan(proposal.id), campaign_brief_id: Not(IsNull()) },
+      where: [
+        { chat_id: proposal.chat_id, id: LessThan(proposal.id), campaign_brief_id: Not(IsNull()) },
+        { chat_id: proposal.chat_id, id: LessThan(proposal.id), campaign_brief_snapshot: Not(IsNull()) },
+      ],
       relations: { campaignBrief: true },
       order: { id: 'DESC' },
     });
-    const brief = briefMsg?.campaignBrief;
-    if (!brief) return;
-    contrato.campaign_brief_id = brief.id;
+    if (!briefMsg) return;
+
+    // Preferir la copia guardada al enviar: es lo que el influencer leyó y aceptó.
+    // Mensajes anteriores a este cambio no tienen copia y usan el brief actual.
+    const source: Record<string, unknown> | null =
+      briefMsg.campaign_brief_snapshot ?? (briefMsg.campaignBrief as any) ?? null;
+    if (!source) return;
+
+    contrato.campaign_brief_id = briefMsg.campaign_brief_id ?? null;
     // Snapshot inmutable: incluye condiciones comerciales (derechos de uso, exclusividad)
     contrato.campaign_brief = Object.fromEntries(
-      BRIEF_CONTENT_FIELDS.map((f) => [f, (brief as any)[f] ?? null]),
+      BRIEF_CONTENT_FIELDS.map((f) => [f, (source as any)[f] ?? null]),
     ) as unknown as ContratoEscrow['campaign_brief'];
   }
 
