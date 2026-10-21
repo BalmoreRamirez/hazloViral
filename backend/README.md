@@ -25,6 +25,32 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Comprobantes internos de pago
+
+El módulo `receipts` registra comprobantes internos después de confirmar operaciones
+de Wompi:
+
+La variable `FACTURA_ELECTRONICA=FALSE` mantiene el sistema en modo de desarrollo:
+los documentos generados son comprobantes internos y no DTE fiscales. Cambiarla a
+`TRUE` no basta para emitir facturas válidas; primero debe implementarse y
+configurarse la integración autorizada con Hacienda o un proveedor de DTE.
+
+La preparación del módulo [`dte`](./src/dte) incorpora las entidades para cabecera,
+detalle y contingencias, junto con la configuración del ambiente de pruebas del
+firmador y del Ministerio de Hacienda. Mientras `FACTURA_ELECTRONICA=FALSE`, no
+se firman ni transmiten documentos y no se realizan llamadas a esos servicios.
+
+- `credits_top_up`: recargas de créditos.
+- `escrow_funding`: fondeo de contratos en custodia.
+- `platform_commission`: comisión incluida en el fondeo.
+- `influencer_payout`: dispersión aprobada al influencer.
+
+Los comprobantes se consultan con `GET /api/receipts` y
+`GET /api/receipts/:id`, autenticados con JWT. Estos documentos son informativos,
+no son DTE ni sustituyen una factura electrónica autorizada por el Ministerio de
+Hacienda de El Salvador. La integración fiscal requerirá posteriormente datos del
+emisor, certificado/firma, autorización y un proveedor o API oficial de DTE.
+
 ## Project setup
 
 ```bash

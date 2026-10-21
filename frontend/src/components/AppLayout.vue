@@ -58,6 +58,7 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
             <RouterLink to="/influencers"    :class="navLinkClass"><span class="inline-flex items-center gap-1.5"><i class="pi pi-search" aria-hidden="true" />Buscar</span></RouterLink>
             <RouterLink to="/chats"          :class="navLinkClass">Chats</RouterLink>
             <RouterLink to="/contratos"      :class="navLinkClass">Contratos</RouterLink>
+            <RouterLink to="/pagos/comprobantes" :class="navLinkClass">Pagos</RouterLink>
             <RouterLink to="/perfil/empresa" :class="navLinkClass">Mi perfil</RouterLink>
           </template>
 
@@ -65,6 +66,7 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
           <template v-else-if="user?.role === 'influencer'">
             <RouterLink to="/chats"              :class="navLinkClass">Chats</RouterLink>
             <RouterLink to="/contratos"          :class="navLinkClass">Contratos</RouterLink>
+            <RouterLink to="/pagos/comprobantes" :class="navLinkClass">Pagos</RouterLink>
             <RouterLink to="/perfil/influencer"  :class="navLinkClass">Mi perfil</RouterLink>
           </template>
 
