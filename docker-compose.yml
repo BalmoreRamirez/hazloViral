@@ -17,6 +17,9 @@ services:
     environment:
       # Sobreescribe DB_HOST del .env para alcanzar PostgreSQL local desde Docker
       DB_HOST: host.docker.internal
+      # Docker Desktop sobre Windows puede no propagar eventos de filesystem al contenedor.
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
     extra_hosts:
       # Necesario en Linux; en Docker Desktop para Windows ya está disponible
       - "host.docker.internal:host-gateway"
@@ -37,6 +40,8 @@ services:
     environment:
       # Proxy de Vite apunta al servicio backend dentro de la red Docker
       VITE_PROXY_TARGET: http://backend:3009
+      # Asegura HMR cuando los bind mounts vienen desde Windows.
+      CHOKIDAR_USEPOLLING: "true"
     depends_on:
       - backend
 

@@ -181,7 +181,7 @@ async function submitRating() {
           </div>
 
           <!-- CTA: iniciar chat (solo empresa) -->
-          <div v-if="authStore.isEmpresa" class="mt-5 pt-4 border-t border-border">
+          <div v-if="authStore.isEmpresa && profile.is_verified" class="mt-5 pt-4 border-t border-border">
             <button @click="startChat" :disabled="chatting || !profile.disponibilidad" class="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2">
               <i v-if="!chatting" class="pi pi-comments" aria-hidden="true" />
               {{ chatting ? 'Abriendo chat…' : 'Iniciar chat' }}
@@ -195,6 +195,9 @@ async function submitRating() {
               Abrir un chat nuevo cuesta ${{ chatCost.toFixed(2) }} USD de tu saldo.
             </p>
           </div>
+          <p v-else-if="authStore.isEmpresa" class="mt-5 pt-4 border-t border-border text-warning text-sm">
+            Este perfil está incompleto y no puede ser contratado hasta completar la verificación.
+          </p>
         </div>
 
         <!-- Redes sociales -->

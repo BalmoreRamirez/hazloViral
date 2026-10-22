@@ -40,8 +40,14 @@ export class ChatsService {
 
     const influencer = await this.influencersRepo.findOne({
       where: { id: dto.influencer_id, disponibilidad: true },
+      relations: { metrics: true, user: true },
     });
     if (!influencer) throw new NotFoundException('Influencer no disponible.');
+    if (!influencer.is_verified) {
+      throw new BadRequestException(
+        'Este influencer tiene el perfil incompleto y no puede ser contratado. Debe completar su documento, correo, foto y al menos una red social verificada.',
+      );
+    }
 
     // Verificar umbral antes de gastar (claude.md §5.1)
     const balance = await this.creditsService.getBalanceByEmpresaId(empresa.id);
@@ -176,9 +182,27 @@ export class ChatsService {
       if (user.role !== UserRole.EMPRESA) {
         throw new ForbiddenException('Solo la empresa puede enviar un brief de campaña.');
       }
+      const influencer = await this.influencersRepo.findOne({
+        where: { id: chat.influencer_id },
+        relations: { metrics: true, user: true },
+      });
+      if (!influencer?.is_verified) {
+        throw new BadRequestException(
+          'Este influencer aún no tiene su perfil verificado. No puedes enviar briefs hasta que complete su perfil.',
+        );
+      }
       const brief = await this.briefsRepo.findOne({ where: { id: dto.campaign_brief_id } });
       if (!brief || brief.empresa_id !== chat.empresa_id) {
         throw new ForbiddenException('Ese brief no pertenece a tu empresa.');
+      }
+      const alreadySent = await this.messagesRepo.exists({
+        where: {
+          chat_id: chat.id,
+          campaign_brief_id: brief.id,
+        },
+      });
+      if (alreadySent) {
+        throw new BadRequestException('Este brief ya fue enviado en este chat.');
       }
       msg.campaign_brief_id = brief.id;
       // Copia del brief tal como se envió: no cambia si la empresa lo edita o lo borra después
