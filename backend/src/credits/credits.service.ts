@@ -104,6 +104,12 @@ export class CreditsService {
     });
   }
 
+  async addCreditsForUser(userId: number, amount: number): Promise<BalanceInfo> {
+    const empresa = await this.empresasRepo.findOne({ where: { user_id: userId } });
+    if (!empresa) throw new NotFoundException('Perfil de empresa no encontrado.');
+    return this.addCredits(empresa.id, amount);
+  }
+
   // ─── Actualizar umbral de seguridad ───────────────────────────────────────────
   async updateThreshold(empresaId: number, newThreshold: number): Promise<BalanceInfo> {
     if (newThreshold < 0) throw new BadRequestException('El umbral no puede ser negativo.');

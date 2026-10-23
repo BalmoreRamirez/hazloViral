@@ -4,6 +4,8 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 
+const proxyTarget = process.env.VITE_PROXY_TARGET ?? 'http://localhost:3009'
+
 export default defineConfig({
   plugins: [vue(), vueDevTools(), tailwindcss()],
   resolve: {
@@ -11,8 +13,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': { target: 'http://localhost:3009', changeOrigin: true },
-      '/uploads': { target: 'http://localhost:3009', changeOrigin: true },
+      '/api': { target: proxyTarget, changeOrigin: true },
+      '/uploads': { target: proxyTarget, changeOrigin: true },
     },
   },
 })

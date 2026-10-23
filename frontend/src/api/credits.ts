@@ -6,4 +6,6 @@ export const creditsApi = {
   getChatCost: (): Promise<{ costo: number }> => api.get('/credits/chat-cost').then((r) => r.data),
   createCheckout: (amount_usd: number) =>
     api.post('/wompi/credits/checkout', { amount_usd }).then((r) => r.data),
+  simulateRecharge: (amount_usd: number) =>
+    api.post('/credits/dev/simulate-recharge', { amount_usd }).then((r) => r.data),
 }

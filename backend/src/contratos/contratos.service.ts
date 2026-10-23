@@ -440,18 +440,40 @@ export class ContratosService {
   async approveAndRelease(user: User, contratoId: number, wompiTransferId?: string): Promise<ContratoEscrow> {
     const contrato = await this.findAndAuthorize(contratoId, user, UserRole.EMPRESA);
 
-    if (contrato.status !== ContratoStatus.PUBLICATION_REVIEW) {
+    const repairingFailedPayout =
+      contrato.status === ContratoStatus.COMPLETED && !contrato.stripe_transfer_id;
+    if (contrato.status !== ContratoStatus.PUBLICATION_REVIEW && !repairingFailedPayout) {
       throw new BadRequestException(
         `El contrato debe estar en publication_review para aprobar. Estado: ${contrato.status}`,
       );
     }
 
+    contrato.payout_status = 'processing';
+    contrato.payout_error = null;
+    const processing = await this.contratosRepo.save(contrato);
+    let transferId: string | null = wompiTransferId ?? null;
+    try {
+      transferId ??= await this.wompiService.disbursementToInfluencer(processing.id);
+    } catch (err: any) {
+      contrato.payout_status = 'failed';
+      contrato.payout_error = err?.message ?? 'Error inesperado al procesar el payout.';
+      await this.contratosRepo.save(contrato);
+      throw new BadRequestException('El payout falló. El contrato no se marcó como completado; puedes reintentarlo.');
+    }
+    if (!transferId) {
+      contrato.payout_status = 'failed';
+      contrato.payout_error = 'No se pudo confirmar la transferencia al influencer.';
+      await this.contratosRepo.save(contrato);
+      throw new BadRequestException('El payout falló. El contrato no se marcó como completado; puedes reintentarlo.');
+    }
+
     const prevStatus = contrato.status;
     contrato.status = ContratoStatus.COMPLETED;
-    if (wompiTransferId) contrato.stripe_transfer_id = wompiTransferId;
+    contrato.payout_status = 'paid';
+    contrato.payout_error = null;
+    contrato.stripe_transfer_id = transferId;
     const saved = await this.contratosRepo.save(contrato);
 
-    // Reactivar el chat para permitir nuevas campañas con el mismo influencer
     await this.chatsRepo.update({ id: contrato.chat_id }, { status: ChatStatus.ACTIVE });
 
     await this.writeAudit(null, {
@@ -460,11 +482,8 @@ export class ContratosService {
       action: 'approved',
       previous_status: prevStatus,
       new_status: ContratoStatus.COMPLETED,
+      metadata: { payout_status: 'paid', transfer_id: transferId },
     });
-
-    this.wompiService.disbursementToInfluencer(saved.id).catch((err: any) =>
-      console.error(`Payout falló para contrato ${saved.id}:`, err?.message),
-    );
 
     this.chatGateway.server.to(`chat-${contrato.chat_id}`).emit('contract_completed', {
       contrato_id: saved.id,

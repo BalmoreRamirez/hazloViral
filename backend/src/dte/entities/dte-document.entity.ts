@@ -86,6 +86,9 @@ export class DteDocument {
   @Column({ type: 'int', nullable: true })
   payment_receipt_id: number | null;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  pdf_url: string | null;
+
   @CreateDateColumn()
   created_at: Date;
 

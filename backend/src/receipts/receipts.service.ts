@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { join } from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaymentReceipt, PaymentReceiptType } from './entities/payment-receipt.entity';
@@ -6,6 +7,9 @@ import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
 import { ContratoEscrow } from '../contratos/entities/contrato-escrow.entity';
 import { User } from '../users/entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { DteService } from '../dte/dte.service';
+import { DteDocument } from '../dte/entities/dte-document.entity';
 
 const INTERNAL_ISSUER = {
   name: 'InfluSmart',
@@ -26,6 +30,10 @@ export class ReceiptsService {
     private readonly influencersRepo: Repository<InfluencerProfile>,
     @InjectRepository(ContratoEscrow)
     private readonly contratosRepo: Repository<ContratoEscrow>,
+    @InjectRepository(DteDocument)
+    private readonly dteRepo: Repository<DteDocument>,
+    private readonly notifications: NotificationsService,
+    private readonly dteService: DteService,
   ) {}
 
   async createCreditsTopUp(
@@ -99,7 +107,15 @@ export class ReceiptsService {
     });
     if (!contrato) throw new NotFoundException('Contrato no encontrado.');
     const amountUsd = Number(contrato.monto_total) - Number(contrato.comision_plataforma);
-    return this.createOnce({
+    const existing = await this.receiptsRepo.findOne({
+      where: {
+        operation_type: 'influencer_payout',
+        operation_reference: `payout-contrato-${contrato.id}-${transactionId}`,
+      },
+    });
+    if (existing) return existing;
+
+    const receipt = await this.createOnce({
       operation_type: 'influencer_payout',
       operation_reference: `payout-contrato-${contrato.id}-${transactionId}`,
       wompi_transaction_id: transactionId,
@@ -111,33 +127,78 @@ export class ReceiptsService {
       customer_snapshot: this.influencerSnapshot(contrato.influencer),
       metadata: { payout_status: 'accepted_by_wompi' },
     });
+    let developmentDte: { numeroControl: string; codigoGeneracion: string; pdfUrl: string } | null = null;
+    if (this.dteService.isDevelopmentMode()) {
+      developmentDte = await this.dteService.createDevelopmentPayoutDte({
+        receiptId: receipt.id,
+        receiptNumber: receipt.receipt_number,
+        transactionId,
+        contractId: contrato.id,
+        amountCop: Number((amountUsd * this.usdToCop()).toFixed(2)),
+        influencerName: contrato.influencer.nombre_artistico,
+        influencerEmail: contrato.influencer.user?.email ?? '',
+      });
+    }
+    receipt.factura_enviada = await this.notifications.sendInfluencerPayoutReceipt({
+      email: contrato.influencer.user?.email ?? '',
+      influencerName: contrato.influencer.nombre_artistico,
+      receiptNumber: receipt.receipt_number,
+      amountUsd,
+      amountCop: Number((amountUsd * this.usdToCop()).toFixed(2)),
+      transactionId,
+      contractId: contrato.id,
+      isFiscalDte: receipt.is_fiscal_dte,
+      developmentDteNumber: developmentDte?.numeroControl,
+      developmentDtePdfPath: developmentDte?.pdfUrl
+        ? join(process.cwd(), developmentDte.pdfUrl.replace(/^\/api\/uploads\//, 'uploads/'))
+        : undefined,
+    });
+    await this.receiptsRepo.save(receipt);
+    return receipt;
   }
 
   async listForUser(user: User): Promise<PaymentReceipt[]> {
     if (user.role === 'empresa') {
       const empresa = await this.empresasRepo.findOne({ where: { user_id: user.id } });
       if (!empresa) throw new NotFoundException('Perfil de empresa no encontrado.');
-      return this.receiptsRepo.find({ where: { empresa_id: empresa.id }, order: { created_at: 'DESC' } });
+      return this.withDteData(await this.receiptsRepo.find({ where: { empresa_id: empresa.id }, order: { created_at: 'DESC' } }));
     }
     if (user.role === 'influencer') {
       const influencer = await this.influencersRepo.findOne({ where: { user_id: user.id } });
       if (!influencer) throw new NotFoundException('Perfil de influencer no encontrado.');
-      return this.receiptsRepo.find({ where: { influencer_id: influencer.id }, order: { created_at: 'DESC' } });
+      return this.withDteData(await this.receiptsRepo.find({ where: { influencer_id: influencer.id }, order: { created_at: 'DESC' } }));
     }
     return [];
   }
 
   async findForUser(user: User, id: number): Promise<PaymentReceipt> {
-    const receipt = await this.receiptsRepo.findOne({ where: { id } });
-    if (!receipt) throw new NotFoundException('Comprobante no encontrado.');
-    const receipts = await this.listForUser(user);
-    if (!receipts.some((item) => item.id === receipt.id)) {
+    let ownerField: 'empresa_id' | 'influencer_id';
+    let ownerId: number;
+
+    if (user.role === 'empresa') {
+      const empresa = await this.empresasRepo.findOne({ where: { user_id: user.id } });
+      if (!empresa) throw new NotFoundException('Perfil de empresa no encontrado.');
+      ownerField = 'empresa_id';
+      ownerId = empresa.id;
+    } else if (user.role === 'influencer') {
+      const influencer = await this.influencersRepo.findOne({ where: { user_id: user.id } });
+      if (!influencer) throw new NotFoundException('Perfil de influencer no encontrado.');
+      ownerField = 'influencer_id';
+      ownerId = influencer.id;
+    } else {
       throw new NotFoundException('Comprobante no encontrado.');
     }
-    return receipt;
+
+    const receipt = await this.receiptsRepo.findOne({
+      where: { id, [ownerField]: ownerId },
+    });
+    if (!receipt) throw new NotFoundException('Comprobante no encontrado.');
+
+    const [enriched] = await this.withDteData([receipt]);
+    return enriched;
   }
 
-  private async createOnce(data: Omit<PaymentReceipt, 'id' | 'receipt_number' | 'created_at' | 'currency' | 'is_fiscal_dte' | 'issuer_snapshot'>): Promise<PaymentReceipt> {
+  private async createOnce(data: Omit<PaymentReceipt, 'id' | 'receipt_number' | 'created_at' | 'currency' | 'is_fiscal_dte' | 'factura_enviada' | 'issuer_snapshot'>): Promise<PaymentReceipt> {
     const existing = await this.receiptsRepo.findOne({
       where: { operation_type: data.operation_type, operation_reference: data.operation_reference },
     });
@@ -150,6 +211,32 @@ export class ReceiptsService {
       issuer_snapshot: INTERNAL_ISSUER,
     });
     return this.receiptsRepo.save(receipt);
+  }
+
+  private async withDteData(receipts: PaymentReceipt[]) {
+    if (!receipts.length) return receipts;
+    const dtes = await this.dteRepo
+      .createQueryBuilder('dte')
+      .where('dte.payment_receipt_id IN (:...receiptIds)', { receiptIds: receipts.map((receipt) => receipt.id) })
+      .getMany();
+    const byReceipt = new Map(dtes.map((dte) => [dte.payment_receipt_id, dte]));
+    const enriched = await Promise.all(receipts.map(async (receipt) => {
+      const dte = byReceipt.get(receipt.id);
+      if (dte && this.dteService.isDevelopmentMode()) {
+        await this.dteService.ensureDevelopmentPdf(dte);
+      }
+      return Object.assign(receipt, {
+        dte: dte ? {
+          numero_control: dte.numero_control,
+          codigo_generacion: dte.codigo_generacion,
+          estado: dte.estado,
+          ambiente: dte.ambiente,
+          fecha_emision: dte.fecha_emision,
+          pdf_url: dte.pdf_url,
+        } : null,
+      });
+    }));
+    return enriched;
   }
 
   private companySnapshot(empresa: EmpresaProfile): Record<string, string | null> {

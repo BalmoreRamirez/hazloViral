@@ -14,6 +14,15 @@ export interface PaymentReceipt {
   customer_snapshot: Record<string, string | null>
   metadata: Record<string, unknown> | null
   is_fiscal_dte: boolean
+  factura_enviada: boolean
+  dte: {
+    numero_control: string
+    codigo_generacion: string
+    estado: string
+    ambiente: string
+    fecha_emision: string
+    pdf_url: string | null
+  } | null
   created_at: string
 }
 

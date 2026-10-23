@@ -171,11 +171,23 @@ export class WompiService {
     if (!contrato) return null;
 
     const influencer = contrato.influencer;
+    const isDevelopment = this.config.get<string>('FORMA_PAGO', 'desarrollo') !== 'produccion';
     if (
       !influencer?.banco_nombre ||
       !influencer?.banco_cuenta_numero ||
       !influencer?.banco_cuenta_tipo
     ) {
+      if (isDevelopment) {
+        const txId = `dev-payout-contrato-${contratoId}`;
+        await this.receiptsService.createInfluencerPayout(contratoId, txId);
+        contrato.stripe_transfer_id = txId;
+        await this.contratosRepo.save(contrato);
+        this.logger.log(
+          `Payout simulado para contrato ${contratoId} (modo desarrollo, sin cuenta bancaria).`,
+        );
+        return txId;
+      }
+
       this.logger.warn(
         `Payout cancelado para contrato ${contratoId}: el influencer no tiene cuenta bancaria registrada.`,
       );
@@ -227,6 +239,8 @@ export class WompiService {
         return null;
       }
       await this.receiptsService.createInfluencerPayout(contratoId, txId);
+      contrato.stripe_transfer_id = txId;
+      await this.contratosRepo.save(contrato);
       this.logger.log(
         `Payout realizado para contrato ${contratoId} — txId Wompi: ${txId}`,
       );

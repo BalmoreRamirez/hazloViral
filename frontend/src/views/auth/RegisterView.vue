@@ -14,7 +14,6 @@ const role      = ref<'empresa' | 'influencer'>('empresa')
 const error        = ref('')
 const loading      = ref(false)
 const registered   = ref(false)
-const devVerifyUrl = ref<string | null>(null)
 
 // Campos comunes
 const email_       = ref(''); const password    = ref('')
@@ -178,9 +177,8 @@ async function submit() {
 
   error.value = ''; loading.value = true
   try {
-    let res: any
     if (role.value === 'empresa') {
-      res = await authStore.registerEmpresa({
+      await authStore.registerEmpresa({
         email: email_.value, password: password.value,
         nombre_comercial: nombre_comercial.value,
         sitio_web:  sitio_web.value  || undefined,
@@ -196,7 +194,7 @@ async function submit() {
         representante_numero_identificacion: rep_numero_id.value,
       })
     } else {
-      res = await authStore.registerInfluencer({
+      await authStore.registerInfluencer({
         email: email_.value, password: password.value,
         username: username.value,
         nombre_artistico: nombre_artistico.value,
@@ -216,7 +214,6 @@ async function submit() {
         } : {}),
       })
     }
-    devVerifyUrl.value = res?.dev_verify_url ?? null
     registered.value = true
   } catch (e: any) {
     const msg = e.response?.data?.message
@@ -241,12 +238,6 @@ async function submit() {
           Enviamos un correo de verificación a <strong>{{ email_ }}</strong>.
         </p>
         <p class="text-ink-muted text-xs mb-5">Haz clic en el enlace del correo para activar tu cuenta. Expira en 24 h.</p>
-
-        <!-- Solo en desarrollo cuando SMTP no entrega -->
-        <div v-if="devVerifyUrl" class="mb-5 p-3 bg-warning-tint border border-amber-200 rounded-lg text-left">
-          <p class="text-xs font-semibold text-warning mb-1 flex items-center gap-1.5"><i class="pi pi-exclamation-triangle" aria-hidden="true" />Modo desarrollo</p>
-          <a :href="devVerifyUrl" class="text-xs text-violet break-all underline">Verificar ahora →</a>
-        </div>
 
         <button class="btn-primary w-full" @click="router.push('/dashboard')">
           Ir al dashboard

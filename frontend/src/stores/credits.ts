@@ -46,5 +46,18 @@ export const useCreditsStore = defineStore('credits', () => {
     }
   }
 
-  return { balance, loading, recharging, rechargeError, fetchBalance, updateFromSocket, recharge }
+  async function simulateRecharge(amountUsd: number) {
+    rechargeError.value = null
+    recharging.value = true
+    try {
+      balance.value = await creditsApi.simulateRecharge(amountUsd)
+    } catch (e: any) {
+      rechargeError.value = e.response?.data?.message ?? 'No se pudo simular la recarga.'
+      throw e
+    } finally {
+      recharging.value = false
+    }
+  }
+
+  return { balance, loading, recharging, rechargeError, fetchBalance, updateFromSocket, recharge, simulateRecharge }
 })

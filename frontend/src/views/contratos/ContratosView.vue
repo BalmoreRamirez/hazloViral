@@ -17,9 +17,48 @@ const STATUS_LABEL: Record<string, { label: string; cls: string; icon: string }>
   pending_payment:  { label: 'Pago pendiente',  cls: 'badge-warning', icon: 'pi-clock' },
   funded_in_escrow: { label: 'En custodia',     cls: 'badge-info',    icon: 'pi-lock' },
   under_review:     { label: 'En revisión',     cls: 'badge-info',    icon: 'pi-search' },
+  changes_requested: { label: 'Cambios solicitados', cls: 'badge-warning', icon: 'pi-pencil' },
+  pending_publication: { label: 'Pendiente de publicación', cls: 'badge-info', icon: 'pi-upload' },
+  publication_review: { label: 'Revisión de publicación', cls: 'badge-info', icon: 'pi-eye' },
   completed:        { label: 'Completado',      cls: 'badge-active',  icon: 'pi-check-circle' },
   incumplimiento:   { label: 'Incumplimiento',  cls: 'badge-warning', icon: 'pi-ban' },
 }
+
+const PAYMENT_STATUS: Record<string, { label: string; cls: string; icon: string }> = {
+  pending_funding: { label: 'Pendiente de fondeo', cls: 'badge-warning', icon: 'pi-clock' },
+  in_escrow: { label: 'Fondos en custodia', cls: 'badge-info', icon: 'pi-lock' },
+  pending_approval: { label: 'Pendiente de aprobación', cls: 'badge-info', icon: 'pi-eye' },
+  processing: { label: 'Procesando payout', cls: 'badge-warning', icon: 'pi-spin pi-spinner' },
+  paid: { label: 'Pago confirmado', cls: 'badge-active', icon: 'pi-check-circle' },
+  failed: { label: 'Payout fallido', cls: 'badge-warning', icon: 'pi-exclamation-triangle' },
+  not_applicable: { label: 'No disponible', cls: 'badge-muted', icon: 'pi-minus-circle' },
+}
+
+function paymentState(c: any): keyof typeof PAYMENT_STATUS {
+  if (c.payout_status === 'paid' || c.stripe_transfer_id) return 'paid'
+  if (c.payout_status === 'processing') return 'processing'
+  if (c.payout_status === 'failed' || (c.status === 'completed' && !c.stripe_transfer_id)) return 'failed'
+  if (c.status === 'pending_payment') return 'pending_funding'
+  if (c.status === 'funded_in_escrow' || c.status === 'under_review' || c.status === 'changes_requested') return 'in_escrow'
+  if (c.status === 'pending_publication' || c.status === 'publication_review') return 'pending_approval'
+  return 'not_applicable'
+}
+
+function paymentStatus(c: any): { label: string; cls: string; icon: string } {
+  return PAYMENT_STATUS[paymentState(c)] ?? { label: 'No disponible', cls: 'badge-muted', icon: 'pi-minus-circle' }
+}
+
+const paymentSummary = computed(() => {
+  const counts = { pending: 0, inProgress: 0, paid: 0, failed: 0 }
+  contractsStore.contracts.forEach((c) => {
+    const state = paymentState(c)
+    if (state === 'pending_funding') counts.pending++
+    else if (state === 'in_escrow' || state === 'pending_approval' || state === 'processing') counts.inProgress++
+    else if (state === 'paid') counts.paid++
+    else if (state === 'failed') counts.failed++
+  })
+  return counts
+})
 
 const REDES_ICON: Record<string, string> = {
   TikTok: 'pi-tiktok', Instagram: 'pi-instagram', YouTube: 'pi-youtube', Facebook: 'pi-facebook',
@@ -47,6 +86,25 @@ function neto(c: any) {
       <div>
         <h1 class="text-2xl font-display font-bold text-navy">Mis Contratos</h1>
         <p class="text-ink-muted text-sm mt-1">{{ contractsStore.contracts.length }} contrato{{ contractsStore.contracts.length !== 1 ? 's' : '' }}</p>
+      </div>
+
+      <div v-if="isEmpresa && contractsStore.contracts.length" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="card">
+          <p class="text-xs text-ink-muted">Pendientes de fondeo</p>
+          <p class="text-2xl font-display font-bold text-warning mt-1">{{ paymentSummary.pending }}</p>
+        </div>
+        <div class="card">
+          <p class="text-xs text-ink-muted">En seguimiento</p>
+          <p class="text-2xl font-display font-bold text-violet mt-1">{{ paymentSummary.inProgress }}</p>
+        </div>
+        <div class="card">
+          <p class="text-xs text-ink-muted">Pagos confirmados</p>
+          <p class="text-2xl font-display font-bold text-success mt-1">{{ paymentSummary.paid }}</p>
+        </div>
+        <div class="card">
+          <p class="text-xs text-ink-muted">Payouts fallidos</p>
+          <p class="text-2xl font-display font-bold text-coral-text mt-1">{{ paymentSummary.failed }}</p>
+        </div>
       </div>
 
       <div v-if="contractsStore.loading" class="text-center py-8 text-ink-muted">Cargando…</div>
@@ -103,6 +161,25 @@ function neto(c: any) {
               <p class="text-xs text-ink-muted mb-0.5">Fecha límite</p>
               <p class="font-semibold text-navy">{{ c.fecha_limite_entrega }}</p>
             </div>
+          </div>
+
+          <div v-if="isEmpresa" class="mt-3 border-t border-navy/5 pt-3">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-xs text-ink-muted font-semibold uppercase tracking-wide">Seguimiento del pago</p>
+              <span :class="[paymentStatus(c).cls, 'inline-flex items-center gap-1.5']">
+                <i :class="['pi', paymentStatus(c).icon]" aria-hidden="true" />
+                {{ paymentStatus(c).label }}
+              </span>
+            </div>
+            <p v-if="paymentState(c) === 'failed'" class="text-xs text-coral-text mt-2">
+              {{ c.payout_error ?? 'No existe una transferencia confirmada.' }} Abre el contrato para reintentar.
+            </p>
+            <p v-else-if="paymentState(c) === 'paid'" class="text-xs text-success mt-2">
+              Transferencia confirmada: {{ c.stripe_transfer_id }}
+            </p>
+            <p v-else class="text-xs text-ink-muted mt-2">
+              El estado se actualizará conforme avance el fondeo, la revisión y la liberación.
+            </p>
           </div>
 
           <!-- CTA si requiere acción -->

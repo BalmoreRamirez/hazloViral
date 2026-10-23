@@ -20,7 +20,7 @@ async function bootstrap() {
   });
 
   const port = process.env.APP_PORT ?? 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`Backend corriendo en http://localhost:${port}/api`);
 }
 bootstrap();

@@ -62,6 +62,9 @@ export class PaymentReceipt {
   @Column({ default: false })
   is_fiscal_dte: boolean;
 
+  @Column({ default: false })
+  factura_enviada: boolean;
+
   @CreateDateColumn()
   created_at: Date;
 }

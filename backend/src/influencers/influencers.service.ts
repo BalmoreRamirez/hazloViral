@@ -215,6 +215,18 @@ export class InfluencersService {
 
     // Para plataformas soportadas, verificar ANTES de guardar
     if (this.verificationService.isSupported(dto.red_social)) {
+      if (!this.verificationService.isProductionMode()) {
+        const metric = new InfluencerMetric();
+        metric.influencer_id   = profile.id;
+        metric.red_social      = dto.red_social;
+        metric.username        = username;
+        metric.seguidores      = dto.seguidores ?? 0;
+        metric.engagement_rate = dto.engagement_rate ?? 0;
+        metric.is_verified     = true;
+        metric.verified_at     = new Date();
+        return this.metricsRepo.save(metric);
+      }
+
       const result = await this.verificationService.verify(dto.red_social, username);
       if (!result) {
         throw new BadRequestException(
@@ -273,6 +285,7 @@ export class InfluencersService {
   // ─── Verificación ─────────────────────────────────────────────────────────────
   private async runVerification(metric: InfluencerMetric): Promise<InfluencerMetric> {
     if (!this.verificationService.isSupported(metric.red_social)) return metric;
+    if (!this.verificationService.isProductionMode()) return metric;
 
     const result = await this.verificationService.verify(metric.red_social, metric.username);
     if (result) {
@@ -290,6 +303,11 @@ export class InfluencersService {
   // ─── Cron: re-verificación semanal (domingos 3 AM) ───────────────────────────
   @Cron('0 3 * * 0')
   async reVerifyAllMetrics(): Promise<void> {
+    if (!this.verificationService.isProductionMode()) {
+      this.logger.log('Re-verificación omitida: SOCIAL_VERIFICATION_MODE=development.');
+      return;
+    }
+
     this.logger.log('Iniciando re-verificación semanal de métricas...');
     const metrics = await this.metricsRepo.find();
     let verified = 0;

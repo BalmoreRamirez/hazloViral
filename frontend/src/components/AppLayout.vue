@@ -18,13 +18,11 @@ const isAdmin        = computed(() => user.value?.role === 'admin')
 const emailUnverified = computed(() => user.value && !user.value.is_email_verified)
 const resendLoading  = ref(false)
 const resendDone     = ref(false)
-const devVerifyUrl   = ref<string | null>(null)
 
 async function resendVerification() {
   resendLoading.value = true
   try {
-    const res = await authApi.resendVerification()
-    devVerifyUrl.value = res?.dev_verify_url ?? null
+    await authApi.resendVerification()
     resendDone.value = true
   } finally {
     resendLoading.value = false
@@ -106,10 +104,7 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
           <i class="pi pi-envelope mr-1.5" aria-hidden="true" />Verifica tu correo electrónico para activar todas las funciones de la plataforma.
         </p>
         <div class="flex items-center gap-3">
-          <span v-if="resendDone && !devVerifyUrl" class="text-success text-xs font-medium">¡Enviado! Revisa tu bandeja.</span>
-          <a v-if="devVerifyUrl" :href="devVerifyUrl" class="text-xs text-violet underline font-medium">
-            [dev] Verificar ahora →
-          </a>
+          <span v-if="resendDone" class="text-success text-xs font-medium">¡Enviado! Revisa tu bandeja.</span>
           <button v-if="!resendDone" @click="resendVerification" :disabled="resendLoading"
             class="text-xs text-warning border border-amber-400 rounded px-2 py-1 hover:bg-warning-tint transition-colors">
             {{ resendLoading ? 'Enviando…' : 'Reenviar correo' }}

@@ -23,6 +23,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 const PDFS_DIR    = join(process.cwd(), 'uploads', 'pdfs');
+const DTE_DIR     = join(process.cwd(), 'uploads', 'dte');
 const FILES_DIR   = join(process.cwd(), 'uploads', 'files');
 const AVATARS_DIR = join(process.cwd(), 'uploads', 'avatars');
 
@@ -164,6 +165,17 @@ export class UploadsController {
     if (!existsSync(filePath)) throw new NotFoundException('Archivo no encontrado');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.sendFile(filePath);
+  }
+
+  @Get('dte/:filename')
+  serveDte(@Param('filename') filename: string, @Res() res: any) {
+    if (filename.includes('/') || filename.includes('..')) throw new NotFoundException();
+    const filePath = join(DTE_DIR, filename);
+    if (!existsSync(filePath)) throw new NotFoundException('DTE no encontrado');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(filePath);
   }
 
