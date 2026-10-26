@@ -29,6 +29,23 @@ const selectedPack   = ref<number | 'custom'>(25)
 const customAmt      = ref<number | null>(null)
 const rechargeAmt    = computed(() => selectedPack.value === 'custom' ? Number(customAmt.value ?? 0) : selectedPack.value)
 const rechargeValid  = computed(() => rechargeAmt.value >= RECHARGE_MIN && rechargeAmt.value <= RECHARGE_MAX)
+const isDevelopment = import.meta.env.VITE_FORMA_PAGO !== 'produccion'
+const showDevCheckout = ref(false)
+const devCheckoutStep = ref<'review' | 'success'>('review')
+
+async function confirmDevelopmentRecharge() {
+  try {
+    await creditsStore.simulateRecharge(rechargeAmt.value)
+    devCheckoutStep.value = 'success'
+  } catch {
+    // El store muestra el error en la tarjeta.
+  }
+}
+
+function closeDevCheckout() {
+  showDevCheckout.value = false
+  devCheckoutStep.value = 'review'
+}
 
 // ─── Saludo ───────────────────────────────────────────────────────────────────
 const greetingName = computed(() =>
@@ -160,7 +177,7 @@ watch(balance, (b) => {
             </div>
             <input v-if="selectedPack === 'custom'" v-model.number="customAmt" type="number"
               :min="RECHARGE_MIN" :max="RECHARGE_MAX" step="1" class="input text-sm" placeholder="Monto en USD" />
-            <button @click="creditsStore.recharge(rechargeAmt)"
+            <button @click="isDevelopment ? (showDevCheckout = true) : creditsStore.recharge(rechargeAmt)"
               :disabled="creditsStore.recharging || !rechargeValid"
               class="btn-primary text-sm">
               {{ creditsStore.recharging ? 'Procesando…' : `Recargar $${rechargeAmt || 0} USD` }}
@@ -171,10 +188,39 @@ watch(balance, (b) => {
             <p v-if="creditsStore.rechargeError" class="text-xs text-coral-text">
               {{ creditsStore.rechargeError }}
             </p>
-            <p v-else class="text-xs text-ink-muted">1 crédito = $1 USD · Pago seguro con Wompi</p>
+            <p v-else class="text-xs text-ink-muted">{{ isDevelopment ? 'Ambiente de desarrollo · Sin cargos reales' : '1 crédito = $1 USD · Pago seguro con Wompi' }}</p>
           </div>
         </div>
       </template>
+
+      <div v-if="showDevCheckout" class="fixed inset-0 z-50 flex items-center justify-center bg-navy/70 px-4" @click.self="closeDevCheckout">
+        <section class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="dev-checkout-title">
+          <div class="bg-navy px-6 py-5 text-white">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"><i class="pi pi-wallet text-xl" aria-hidden="true" /></span>
+                <div><p class="text-xs uppercase tracking-wider text-white/60">InfluSmart</p><h2 id="dev-checkout-title" class="font-display text-xl font-bold">Checkout de desarrollo</h2></div>
+              </div>
+              <button type="button" class="text-white/70 hover:text-white" aria-label="Cerrar" @click="closeDevCheckout"><i class="pi pi-times" aria-hidden="true" /></button>
+            </div>
+          </div>
+          <div class="space-y-5 px-6 py-6">
+            <template v-if="devCheckoutStep === 'review'">
+              <div class="rounded-xl border border-navy/10 bg-slate p-4">
+                <div class="flex items-center justify-between"><span class="text-sm text-ink-muted">Recarga de créditos</span><i class="pi pi-shield text-navy" aria-hidden="true" /></div>
+                <p class="mt-2 text-3xl font-display font-bold text-navy">${{ Number(rechargeAmt).toFixed(2) }} <span class="text-sm font-normal text-ink-muted">USD</span></p>
+                <p class="mt-1 text-xs text-ink-muted">Se acreditará en tu saldo de pruebas.</p>
+              </div>
+              <div class="flex items-start gap-3 rounded-lg border border-navy/15 p-3 text-sm text-navy"><i class="pi pi-info-circle mt-0.5" aria-hidden="true" /><p>Esta operación es simulada. No solicita datos bancarios y no realiza cargos reales.</p></div>
+              <p v-if="creditsStore.rechargeError" class="text-sm text-coral-text">{{ creditsStore.rechargeError }}</p>
+              <div class="flex gap-3"><button type="button" class="btn-secondary flex-1" @click="closeDevCheckout">Cancelar</button><button type="button" class="btn-primary flex-1" :disabled="creditsStore.recharging" @click="confirmDevelopmentRecharge">{{ creditsStore.recharging ? 'Procesando…' : 'Confirmar recarga' }}</button></div>
+            </template>
+            <template v-else>
+              <div class="py-4 text-center"><span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-navy text-white"><i class="pi pi-check text-2xl" aria-hidden="true" /></span><h3 class="mt-4 text-xl font-display font-bold text-navy">Recarga simulada completada</h3><p class="mt-2 text-sm text-ink-muted">El saldo fue actualizado correctamente en el ambiente de desarrollo.</p><button type="button" class="btn-primary mt-6 w-full" @click="closeDevCheckout">Continuar</button></div>
+            </template>
+          </div>
+        </section>
+      </div>
 
       <!-- Estadísticas rápidas -->
       <!-- Inversión (empresa) -->

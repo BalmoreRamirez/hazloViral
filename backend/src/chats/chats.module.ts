@@ -5,6 +5,7 @@ import { Message } from './entities/message.entity';
 import { EmpresaProfile } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
 import { ChatsService } from './chats.service';
+import { CampaignBrief } from '../campaigns/entities/campaign-brief.entity';
 import { ChatsController } from './chats.controller';
 import { ChatGateway } from './chats.gateway';
 import { CreditsModule } from '../credits/credits.module';
@@ -12,7 +13,7 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Chat, Message, EmpresaProfile, InfluencerProfile]),
+    TypeOrmModule.forFeature([Chat, Message, EmpresaProfile, InfluencerProfile, CampaignBrief]),
     CreditsModule,
     AuthModule, // exporta JwtModule para que Gateway use JwtService
   ],

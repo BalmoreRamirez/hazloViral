@@ -16,6 +16,7 @@ import { Message } from '../chats/entities/message.entity';
 import { ChatGateway } from '../chats/chats.gateway';
 import { CreditsService } from '../credits/credits.service';
 import { ContratoStatus, ProposalStatus } from '../common/enums';
+import { ReceiptsService } from '../receipts/receipts.service';
 
 @Injectable()
 export class WompiService {
@@ -41,6 +42,7 @@ export class WompiService {
     private readonly messagesRepo: Repository<Message>,
     private readonly chatGateway: ChatGateway,
     private readonly creditsService: CreditsService,
+    private readonly receiptsService: ReceiptsService,
   ) {
     const mode = config.get<string>('FORMA_PAGO', 'desarrollo');
     const prefix = mode === 'produccion' ? 'WOMPI_PROD' : 'WOMPI_DEV';
@@ -169,11 +171,23 @@ export class WompiService {
     if (!contrato) return null;
 
     const influencer = contrato.influencer;
+    const isDevelopment = this.config.get<string>('FORMA_PAGO', 'desarrollo') !== 'produccion';
     if (
       !influencer?.banco_nombre ||
       !influencer?.banco_cuenta_numero ||
       !influencer?.banco_cuenta_tipo
     ) {
+      if (isDevelopment) {
+        const txId = `dev-payout-contrato-${contratoId}`;
+        await this.receiptsService.createInfluencerPayout(contratoId, txId);
+        contrato.stripe_transfer_id = txId;
+        await this.contratosRepo.save(contrato);
+        this.logger.log(
+          `Payout simulado para contrato ${contratoId} (modo desarrollo, sin cuenta bancaria).`,
+        );
+        return txId;
+      }
+
       this.logger.warn(
         `Payout cancelado para contrato ${contratoId}: el influencer no tiene cuenta bancaria registrada.`,
       );
@@ -220,6 +234,13 @@ export class WompiService {
       }
 
       const txId = String(data?.data?.id ?? data?.id ?? '');
+      if (!txId) {
+        this.logger.error(`Wompi Dispersiones no devolvió un ID para contrato ${contratoId}`);
+        return null;
+      }
+      await this.receiptsService.createInfluencerPayout(contratoId, txId);
+      contrato.stripe_transfer_id = txId;
+      await this.contratosRepo.save(contrato);
       this.logger.log(
         `Payout realizado para contrato ${contratoId} — txId Wompi: ${txId}`,
       );
@@ -300,6 +321,12 @@ export class WompiService {
       // Convertir COP pagados de regreso a unidades de crédito (1 crédito = 1 USD equiv.)
       const credits   = Math.round(amountCop / this.usdToCop);
       await this.creditsService.addCredits(empresaId, credits);
+      await this.receiptsService.createCreditsTopUp(
+        empresaId,
+        credits,
+        amountCop,
+        String(tx['id']),
+      );
       this.logger.log(
         `Créditos añadidos — empresa ${empresaId}: ${credits} créditos (${amountCop} COP)`,
       );
@@ -309,7 +336,10 @@ export class WompiService {
     if (reference.startsWith('contrato-')) {
       const parts      = reference.split('-');
       const contratoId = Number(parts[1]);
-      await this.applyContractFunding(contratoId, String(tx['id']));
+      const funded = await this.applyContractFunding(contratoId, String(tx['id']));
+      if (funded) {
+        await this.receiptsService.createEscrowReceipts(contratoId, String(tx['id']));
+      }
     }
   }
 

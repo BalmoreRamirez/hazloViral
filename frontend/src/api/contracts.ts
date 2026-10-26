@@ -48,6 +48,7 @@ export const contractsApi = {
   registerPublications: (contrato_id: number, publications: { red_social: string; url: string }[]) =>
     api.post(`/contratos/${contrato_id}/register-publications`, { contrato_id, publications }).then((r) => r.data),
   approve: (id: number) => api.post(`/contratos/${id}/approve`).then((r) => r.data),
+  retryPayout: (id: number) => api.post(`/contratos/${id}/retry-payout`).then((r) => r.data),
   reportNonCompliance: (contrato_id: number, motivo: string) =>
     api.post(`/contratos/${contrato_id}/report-noncompliance`, { contrato_id, motivo }).then((r) => r.data),
   dispute: (id: number, motivo: string) =>

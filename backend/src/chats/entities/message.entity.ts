@@ -70,6 +70,23 @@ export class Message {
   @Column({ type: 'timestamp', nullable: true })
   read_at: Date | null;
 
+  /**
+   * Copia del brief tal como estaba al enviarlo. Si la empresa edita o borra el brief después,
+   * el chat sigue mostrando lo que el influencer leyó, y el contrato copia esta versión.
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  campaign_brief_snapshot: Record<string, unknown> | null;
+
   @CreateDateColumn()
   created_at: Date;
+
+  /** Si hay copia, el chat muestra la copia en lugar del brief actual (que pudo cambiar o borrarse). */
+  toJSON() {
+    const json: Record<string, unknown> = { ...(this as object) };
+    if (this.campaign_brief_snapshot) {
+      json.campaignBrief = { id: this.campaign_brief_id ?? null, ...this.campaign_brief_snapshot };
+    }
+    delete json.campaign_brief_snapshot;
+    return json;
+  }
 }

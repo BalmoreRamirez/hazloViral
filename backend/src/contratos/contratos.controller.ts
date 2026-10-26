@@ -116,6 +116,12 @@ export class ContratosController {
     return this.contratosService.approveAndRelease(user, id);
   }
 
+  @Post(':id/retry-payout')
+  @Roles(UserRole.EMPRESA)
+  retryPayout(@Param('id', ParseIntPipe) id: number, @GetUser() user: User) {
+    return this.contratosService.approveAndRelease(user, id);
+  }
+
   @Post(':id/report-noncompliance')
   @Roles(UserRole.EMPRESA)
   reportNonCompliance(@GetUser() user: User, @Body() dto: ReportNonComplianceDto) {

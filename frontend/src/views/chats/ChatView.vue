@@ -78,6 +78,11 @@ function isAfter(date: string, ref: string) {
 const hasBrief = computed(() => messages.value.some(m =>
   m.campaignBrief != null && (!lastCompletedAt.value || isAfter(m.created_at, lastCompletedAt.value)),
 ))
+const sentBriefIds = computed(() => new Set(
+  messages.value
+    .map(m => m.campaign_brief_id)
+    .filter((id): id is number => id != null),
+))
 
 // Mensajes que abren una nueva colaboración (el primero después de cada contrato completado)
 const collaborationStarts = computed(() => {
@@ -256,7 +261,7 @@ async function resolveCounter(msg: ChatMessage, action: 'accept' | 'reject') {
 function isMine(msg: ChatMessage) { return msg.sender_id === myId.value }
 
 function pickBrief(briefId: number) {
-  if (sendingBrief.value) return
+  if (sendingBrief.value || sentBriefIds.value.has(briefId) || !counterpart.value?.is_verified) return
   sendingBrief.value = true
   chatStore.sendBrief(briefId)
   showBriefPicker.value = false
@@ -555,12 +560,13 @@ function formatTime(dt: string) {
         <div v-else class="divide-y divide-navy/5 max-h-48 overflow-y-auto">
           <button v-for="b in profileStore.briefs" :key="b.id"
             @click="pickBrief(b.id)"
-            :disabled="sendingBrief"
+            :disabled="sendingBrief || sentBriefIds.has(b.id) || !counterpart?.is_verified"
             class="w-full text-left px-2 py-2.5 hover:bg-violet/5 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none">
             <p class="text-sm font-medium text-navy">{{ b.titulo_campana }}</p>
             <p v-if="b.objetivo_principal" class="text-xs text-ink-muted truncate mt-0.5">
               {{ b.objetivo_principal }}
             </p>
+            <p v-if="sentBriefIds.has(b.id)" class="text-xs text-ink-muted mt-0.5">Ya enviado en este chat</p>
           </button>
         </div>
       </div>
@@ -573,10 +579,13 @@ function formatTime(dt: string) {
             : 'Envía primero el brief de campaña antes de proponer un contrato.' }}
         </p>
         <div class="flex gap-2">
-          <button v-if="isEmpresa && !isBlocked && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
+          <button v-if="isEmpresa && !isBlocked && counterpart?.is_verified && hasBrief" @click="showProposal = !showProposal; showBriefPicker = false"
             class="btn-ghost text-sm px-3" title="Enviar propuesta de contrato" aria-label="Enviar propuesta de contrato"><i class="pi pi-file-edit" aria-hidden="true" /></button>
-          <button v-if="isEmpresa && !isBlocked" @click="showBriefPicker = !showBriefPicker; showProposal = false"
+          <button v-if="isEmpresa && !isBlocked && counterpart?.is_verified" @click="showBriefPicker = !showBriefPicker; showProposal = false"
             class="btn-ghost text-sm px-3" title="Enviar brief de campaña" aria-label="Enviar brief de campaña"><i class="pi pi-clipboard" aria-hidden="true" /></button>
+          <p v-if="isEmpresa && !isBlocked && !counterpart?.is_verified" class="text-warning text-xs flex-1 self-center">
+            No puedes enviar briefs ni propuestas hasta que el influencer complete su perfil.
+          </p>
           <input v-model="text" @keyup.enter="send" :disabled="isBlocked"
             :placeholder="isBlocked ? 'Chat en solo lectura — recarga créditos' : 'Escribe un mensaje…'"
             class="input flex-1" />

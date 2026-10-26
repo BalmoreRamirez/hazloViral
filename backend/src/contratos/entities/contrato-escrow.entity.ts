@@ -112,6 +112,12 @@ export class ContratoEscrow {
   @Column({ nullable: true, length: 255 })
   stripe_transfer_id: string;
 
+  @Column({ type: 'varchar', length: 20, default: 'pending' })
+  payout_status: 'pending' | 'processing' | 'paid' | 'failed';
+
+  @Column({ type: 'text', nullable: true })
+  payout_error: string | null;
+
   @OneToMany('ContratoRevisionRound', 'contrato')
   revision_rounds: any[];
 

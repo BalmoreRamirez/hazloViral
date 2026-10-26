@@ -18,6 +18,10 @@ export class SocialVerificationService {
     return SUPPORTED.includes(platform);
   }
 
+  isProductionMode(): boolean {
+    return this.config.get<string>('SOCIAL_VERIFICATION_MODE', 'development').toLowerCase() === 'production';
+  }
+
   async verify(platform: string, username: string): Promise<VerificationResult | null> {
     const clean = username.replace(/^@/, '').trim();
     try {

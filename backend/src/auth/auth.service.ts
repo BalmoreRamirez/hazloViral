@@ -74,8 +74,8 @@ export class AuthService {
       await manager.save(profile);
 
       const result = { user: this.sanitize(user), profile, token: this.sign(user) };
-      const devVerifyUrl = await this.sendVerificationEmail(user);
-      return devVerifyUrl ? { ...result, dev_verify_url: devVerifyUrl } : result;
+      await this.sendVerificationEmail(user);
+      return result;
     });
   }
 
@@ -143,8 +143,8 @@ export class AuthService {
           .catch(() => undefined);
       }
 
-      const devVerifyUrl = await this.sendVerificationEmail(user);
-      return devVerifyUrl ? { ...result, dev_verify_url: devVerifyUrl } : result;
+      await this.sendVerificationEmail(user);
+      return result;
     });
   }
 
@@ -192,20 +192,16 @@ export class AuthService {
     return rawToken;
   }
 
-  private async sendVerificationEmail(user: User): Promise<string | undefined> {
+  private async sendVerificationEmail(user: User): Promise<void> {
     const rawToken   = await this.createEmailVerificationToken(user.id);
     const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:5173');
     const verifyUrl  = `${frontendUrl}/verify-email?token=${rawToken}`;
-    let devUrl: string | undefined;
 
     try {
       await this.notifications.sendEmailVerification({ email: user.email, verifyUrl });
     } catch {
       // Error ya logueado en NotificationsService
     }
-
-    if (this.config.get<string>('NODE_ENV') !== 'production') devUrl = verifyUrl;
-    return devUrl;
   }
 
   async verifyEmail(rawToken: string): Promise<void> {
@@ -219,13 +215,12 @@ export class AuthService {
     await this.emailVerifRepo.save(record);
   }
 
-  async resendVerificationEmail(userId: number): Promise<{ dev_verify_url?: string }> {
+  async resendVerificationEmail(userId: number): Promise<void> {
     const user = await this.usersRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado.');
     if (user.is_email_verified) throw new BadRequestException('El correo ya está verificado.');
 
-    const devUrl = await this.sendVerificationEmail(user);
-    return devUrl ? { dev_verify_url: devUrl } : {};
+    await this.sendVerificationEmail(user);
   }
 
   async testSmtp(): Promise<{ ok: boolean; message: string }> {

@@ -41,7 +41,7 @@ async function submit() {
           </div>
         </div>
         <h1 class="text-4xl mb-1"><BrandName /></h1>
-        <p class="text-slate/60">Conecta marcas con influencers en Latam</p>
+        <p class="text-slate/60">Conecta marcas con influencers en El Salvador</p>
       </div>
 
       <div class="card">

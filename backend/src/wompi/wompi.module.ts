@@ -9,6 +9,7 @@ import { Message } from '../chats/entities/message.entity';
 import { CreditsModule } from '../credits/credits.module';
 import { AuthModule } from '../auth/auth.module';
 import { ChatsModule } from '../chats/chats.module';
+import { ReceiptsModule } from '../receipts/receipts.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ChatsModule } from '../chats/chats.module';
     CreditsModule,
     AuthModule,
     ChatsModule,
+    ReceiptsModule,
   ],
   controllers: [WompiController],
   providers: [WompiService],

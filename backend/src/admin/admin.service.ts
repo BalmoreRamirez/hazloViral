@@ -36,7 +36,7 @@ export class AdminService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.seedDefaults();
-    await this.seedAdminUser();
+    await this.seedDemoUsers();
   }
 
   // ─── Global Settings ──────────────────────────────────────────────────────────
@@ -132,17 +132,54 @@ export class AdminService implements OnApplicationBootstrap {
     }
   }
 
-  private async seedAdminUser(): Promise<void> {
-    const ADMIN_EMAIL = 'admin@influsmart.com';
-    const exists = await this.usersRepo.existsBy({ email: ADMIN_EMAIL });
-    if (exists) return;
+  private async seedDemoUsers(): Promise<void> {
+    const password = await bcrypt.hash('Admin123!', 10);
 
-    const hashed = await bcrypt.hash('Admin123!', 10);
-    const admin = new User();
-    admin.email = ADMIN_EMAIL;
-    admin.password = hashed;
-    admin.role = UserRole.ADMIN;
-    await this.usersRepo.save(admin);
-    this.logger.log(`Usuario admin creado: ${ADMIN_EMAIL} / Admin123!`);
+    const admin = await this.upsertSeedUser('hazloviral@yopmail.com', UserRole.ADMIN, password);
+    this.logger.log(`Usuario admin disponible: ${admin.email}`);
+
+    const empresa = await this.upsertSeedUser('nique@yopmail.com', UserRole.EMPRESA, password);
+    let empresaProfile = await this.empresasRepo.findOne({ where: { user_id: empresa.id } });
+    if (!empresaProfile) {
+      empresaProfile = this.empresasRepo.create({
+        user_id: empresa.id,
+        nombre_comercial: 'Nique',
+        telefono: '+503 7000-0000',
+        representante_nombre: 'Nique',
+        representante_tipo_identificacion: 'DUI',
+        representante_numero_identificacion: '00000000-0',
+        balance_creditos: 10,
+        umbral_creditos: 5,
+      });
+      await this.empresasRepo.save(empresaProfile);
+    }
+    this.logger.log(`Usuario empresa disponible: ${empresa.email}`);
+
+    const influencer = await this.upsertSeedUser('mike@yopmail.com', UserRole.INFLUENCER, password);
+    let influencerProfile = await this.influencersRepo.findOne({ where: { user_id: influencer.id } });
+    if (!influencerProfile) {
+      influencerProfile = this.influencersRepo.create({
+        user_id: influencer.id,
+        username: 'mike',
+        nombre_artistico: 'Mike',
+        fecha_nacimiento: '1995-01-01',
+        tipo_identificacion: 'DUI',
+        numero_identificacion: '00000000-0',
+      });
+      await this.influencersRepo.save(influencerProfile);
+    }
+    this.logger.log(`Usuario influencer disponible: ${influencer.email}`);
+  }
+
+  private async upsertSeedUser(email: string, role: UserRole, password: string): Promise<User> {
+    let user = await this.usersRepo.findOne({ where: { email } });
+    if (!user) {
+      user = this.usersRepo.create({ email, role, password });
+    } else {
+      user.role = role;
+      user.password = password;
+      user.is_active = true;
+    }
+    return this.usersRepo.save(user);
   }
 }

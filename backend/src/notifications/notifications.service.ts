@@ -67,7 +67,7 @@ export class NotificationsService {
     `;
 
     if (!this.transporter) {
-      this.logger.warn(`[EMAIL NO ENVIADO — SMTP no configurado]\nPara: ${email}\nURL: ${verifyUrl}`);
+      this.logger.warn(`[EMAIL NO ENVIADO — SMTP no configurado] Para: ${email}`);
       return;
     }
 
@@ -180,6 +180,73 @@ export class NotificationsService {
       this.logger.error(
         `Error al enviar email al tutor ${tutorEmail}: ${err?.message}`,
       );
+    }
+  }
+
+  async sendInfluencerPayoutReceipt(opts: {
+    email: string;
+    influencerName: string;
+    receiptNumber: string;
+    amountUsd: number;
+    amountCop: number;
+    transactionId: string;
+    contractId: number;
+    isFiscalDte: boolean;
+    developmentDteNumber?: string;
+    developmentDtePdfPath?: string;
+  }): Promise<boolean> {
+    const {
+      email,
+      influencerName,
+      receiptNumber,
+      amountUsd,
+      amountCop,
+      transactionId,
+      contractId,
+      isFiscalDte,
+      developmentDteNumber,
+      developmentDtePdfPath,
+    } = opts;
+    const subject = `Comprobante de pago del contrato #${contractId} — InfluSmart`;
+    const fiscalNote = isFiscalDte
+      ? 'Este documento corresponde a una factura electrónica autorizada.'
+      : 'Este documento es un comprobante interno y no sustituye una factura electrónica fiscal.';
+    const html = `
+      <p>Hola <strong>${influencerName}</strong>,</p>
+      <p>Se confirmó el pago correspondiente al contrato <strong>#${contractId}</strong>.</p>
+      <p>
+        <strong>Comprobante:</strong> ${receiptNumber}<br>
+        <strong>Monto:</strong> $${amountUsd.toFixed(2)} USD
+        (COP $${amountCop.toFixed(2)})<br>
+        <strong>Transacción:</strong> ${transactionId}
+      </p>
+      <p>${fiscalNote}</p>
+      ${developmentDteNumber ? `<p><strong>DTE de desarrollo:</strong> ${developmentDteNumber}</p>` : ''}
+      <p style="color:#888;font-size:12px;">
+        Puedes consultar el comprobante en la sección Pagos de tu cuenta de InfluSmart.
+      </p>
+    `;
+
+    if (!this.transporter) {
+      this.logger.warn(`[EMAIL NO ENVIADO — SMTP no configurado] Para: ${email} Asunto: ${subject}`);
+      return false;
+    }
+
+    try {
+      await this.transporter.sendMail({
+        from: `"InfluSmart" <${this.smtpUser}>`,
+        to: email,
+        subject,
+        html,
+        ...(developmentDtePdfPath ? {
+          attachments: [{ filename: `${developmentDteNumber ?? 'dte'}.pdf`, path: developmentDtePdfPath }],
+        } : {}),
+      });
+      this.logger.log(`Comprobante de payout enviado a ${email} para contrato ${contractId}`);
+      return true;
+    } catch (err: any) {
+      this.logger.error(`Error al enviar comprobante de payout a ${email}: ${err?.message}`);
+      return false;
     }
   }
 }

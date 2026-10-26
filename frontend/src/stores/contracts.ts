@@ -47,6 +47,8 @@ export interface Contract {
   status: string
   stripe_charge_id: string | null
   stripe_transfer_id: string | null
+  payout_status: 'pending' | 'processing' | 'paid' | 'failed'
+  payout_error: string | null
   created_at: string
   updated_at: string
   empresa?: any

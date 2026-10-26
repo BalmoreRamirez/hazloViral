@@ -33,5 +33,5 @@ export const authApi = {
     api.get('/auth/verify-email', { params: { token } }),
 
   resendVerification: () =>
-    api.post('/auth/resend-verification').then((r) => r.data as { dev_verify_url?: string }),
+    api.post('/auth/resend-verification').then((r) => r.data),
 }

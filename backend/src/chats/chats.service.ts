@@ -10,6 +10,7 @@ import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { EmpresaProfile, toPublicEmpresa } from '../empresas/entities/empresa-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
+import { CampaignBrief, BRIEF_CONTENT_FIELDS } from '../campaigns/entities/campaign-brief.entity';
 import { CreditsService } from '../credits/credits.service';
 import { ChatStatus, ProposalStatus, UserRole } from '../common/enums';
 import { OpenChatDto } from './dto/open-chat.dto';
@@ -27,6 +28,8 @@ export class ChatsService {
     private readonly empresasRepo: Repository<EmpresaProfile>,
     @InjectRepository(InfluencerProfile)
     private readonly influencersRepo: Repository<InfluencerProfile>,
+    @InjectRepository(CampaignBrief)
+    private readonly briefsRepo: Repository<CampaignBrief>,
     private readonly creditsService: CreditsService,
   ) {}
 
@@ -37,8 +40,14 @@ export class ChatsService {
 
     const influencer = await this.influencersRepo.findOne({
       where: { id: dto.influencer_id, disponibilidad: true },
+      relations: { metrics: true, user: true },
     });
     if (!influencer) throw new NotFoundException('Influencer no disponible.');
+    if (!influencer.is_verified) {
+      throw new BadRequestException(
+        'Este influencer tiene el perfil incompleto y no puede ser contratado. Debe completar su documento, correo, foto y al menos una red social verificada.',
+      );
+    }
 
     // Verificar umbral antes de gastar (claude.md §5.1)
     const balance = await this.creditsService.getBalanceByEmpresaId(empresa.id);
@@ -168,7 +177,39 @@ export class ChatsService {
     if (msg.is_proposal) msg.proposal_status = ProposalStatus.PENDING;
     if (dto.message_text) msg.message_text = dto.message_text;
     if (dto.proposal_data) msg.proposal_data = dto.proposal_data;
-    if (dto.campaign_brief_id) msg.campaign_brief_id = dto.campaign_brief_id;
+    if (dto.campaign_brief_id) {
+      // Solo la empresa del chat puede enviar un brief, y solo uno propio (evita ver briefs de otras empresas)
+      if (user.role !== UserRole.EMPRESA) {
+        throw new ForbiddenException('Solo la empresa puede enviar un brief de campaña.');
+      }
+      const influencer = await this.influencersRepo.findOne({
+        where: { id: chat.influencer_id },
+        relations: { metrics: true, user: true },
+      });
+      if (!influencer?.is_verified) {
+        throw new BadRequestException(
+          'Este influencer aún no tiene su perfil verificado. No puedes enviar briefs hasta que complete su perfil.',
+        );
+      }
+      const brief = await this.briefsRepo.findOne({ where: { id: dto.campaign_brief_id } });
+      if (!brief || brief.empresa_id !== chat.empresa_id) {
+        throw new ForbiddenException('Ese brief no pertenece a tu empresa.');
+      }
+      const alreadySent = await this.messagesRepo.exists({
+        where: {
+          chat_id: chat.id,
+          campaign_brief_id: brief.id,
+        },
+      });
+      if (alreadySent) {
+        throw new BadRequestException('Este brief ya fue enviado en este chat.');
+      }
+      msg.campaign_brief_id = brief.id;
+      // Copia del brief tal como se envió: no cambia si la empresa lo edita o lo borra después
+      msg.campaign_brief_snapshot = Object.fromEntries(
+        BRIEF_CONTENT_FIELDS.map((f) => [f, (brief as any)[f] ?? null]),
+      );
+    }
 
     const saved = await this.messagesRepo.save(msg);
     // Recargar con relaciones para que el evento WebSocket tenga datos completos

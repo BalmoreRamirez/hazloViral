@@ -52,6 +52,7 @@ const registeringPubs = ref(false)
 
 // Aprobación final / incumplimiento
 const approving  = ref(false)
+const retryingPayout = ref(false)
 const showNonCompliance = ref(false)
 const nonComplianceMotivo = ref('')
 const reportingNC = ref(false)
@@ -226,6 +227,19 @@ async function approve() {
   try { await contractsStore.approve(contrato.value.id) }
   catch (e: any) { alert(e.response?.data?.message ?? 'Error.') }
   finally { approving.value = false }
+}
+
+async function retryPayout() {
+  if (!contrato.value) return
+  retryingPayout.value = true
+  try {
+    await contractsApi.retryPayout(contrato.value.id)
+    await contractsStore.fetchContract(contrato.value.id)
+  } catch (e: any) {
+    alert(e.response?.data?.message ?? 'No se pudo reintentar el payout.')
+  } finally {
+    retryingPayout.value = false
+  }
 }
 
 async function reportNonCompliance() {
@@ -651,6 +665,14 @@ const TIPO_ICON: Record<string, string> = {
             <!-- Empresa: revisar publicaciones -->
             <template v-if="isEmpresa && contrato.status === 'publication_review'">
               <p class="text-sm text-ink-muted">El influencer publicó el contenido. Revisa los enlaces y confirma el cumplimiento.</p>
+              <div v-if="contrato.payout_status === 'failed'" class="bg-warning-tint border border-amber-200 rounded-lg p-3 text-sm text-warning">
+                <p class="font-semibold">El último payout falló.</p>
+                <p>{{ contrato.payout_error }}</p>
+                <button @click="retryPayout" :disabled="retryingPayout" class="btn-primary text-sm mt-2">
+                  <i class="pi pi-refresh" aria-hidden="true" />
+                  {{ retryingPayout ? 'Reintentando…' : 'Reintentar payout' }}
+                </button>
+              </div>
               <div class="flex gap-2 flex-wrap">
                 <button @click="approve" :disabled="approving" class="btn-primary text-sm">
                   <i v-if="!approving" class="pi pi-check-circle" aria-hidden="true" />
@@ -677,8 +699,18 @@ const TIPO_ICON: Record<string, string> = {
 
             <!-- Contrato completado -->
             <div v-if="contrato.status === 'completed'" class="bg-success-tint border border-green-200 rounded-lg p-4">
-              <p class="flex items-center gap-2 text-success font-semibold"><i class="pi pi-check-circle" aria-hidden="true" />Contrato completado exitosamente.</p>
-              <p class="text-success text-sm mt-1">El pago fue liberado al influencer.</p>
+              <template v-if="contrato.payout_status === 'failed' || !contrato.stripe_transfer_id">
+                <p class="flex items-center gap-2 text-coral-text font-semibold"><i class="pi pi-exclamation-triangle" aria-hidden="true" />El payout no fue confirmado.</p>
+                <p class="text-coral-text text-sm mt-1">{{ contrato.payout_error ?? 'No existe una transferencia confirmada para este contrato.' }}</p>
+                <button v-if="isEmpresa" @click="retryPayout" :disabled="retryingPayout" class="btn-primary text-sm mt-3">
+                  <i class="pi pi-refresh" aria-hidden="true" />
+                  {{ retryingPayout ? 'Reintentando…' : 'Reintentar payout' }}
+                </button>
+              </template>
+              <template v-else>
+                <p class="flex items-center gap-2 text-success font-semibold"><i class="pi pi-check-circle" aria-hidden="true" />Contrato completado exitosamente.</p>
+                <p class="text-success text-sm mt-1">El pago fue liberado al influencer.</p>
+              </template>
               <RouterLink v-if="!isEmpresa && contrato.empresa?.id" :to="`/empresas/${contrato.empresa.id}`"
                 class="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:text-violet/80 mt-2">
                 <i class="pi pi-star" aria-hidden="true" />
