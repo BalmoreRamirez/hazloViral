@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
@@ -25,7 +26,7 @@ async function openChat() {
   try {
     const profile = await influencerApi.getByUsername(raw)
     const chat    = await chatStore.openChat(profile.id)
-    router.push(`/chats/${chat.id}`)
+    router.push(viewPath(`/chats/${chat.id}`))
   } catch (e: any) {
     openError.value = e.response?.data?.message ?? 'No se encontró ese influencer.'
   } finally {
@@ -65,7 +66,7 @@ async function openChat() {
         </div>
         <div v-else class="divide-y divide-navy/5">
           <div v-for="chat in chatStore.chats" :key="chat.id"
-            @click="router.push(`/chats/${chat.id}`)"
+            @click="router.push(viewPath(`/chats/${chat.id}`))"
             class="py-4 flex items-center justify-between cursor-pointer hover:bg-slate rounded-lg -mx-5 px-5 transition-colors">
             <div class="flex items-center gap-3">
               <!-- Avatar con punto de no leído -->

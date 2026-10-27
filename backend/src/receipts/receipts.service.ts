@@ -243,6 +243,9 @@ export class ReceiptsService {
           estado: dte.estado,
           ambiente: dte.ambiente,
           fecha_emision: dte.fecha_emision,
+          subtotal: Number(dte.subtotal),
+          monto_iva: Number(dte.monto_iva),
+          total_pagar: Number(dte.total_pagar),
           pdf_url: dte.pdf_url,
         } : null,
       });

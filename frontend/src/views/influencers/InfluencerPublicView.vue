@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
@@ -92,7 +93,7 @@ async function startChat() {
   chatError.value = ''
   try {
     const chat = await chatStore.openChat(profile.value.id)
-    router.push(`/chats/${chat.id}`)
+    router.push(viewPath(`/chats/${chat.id}`))
   } catch (e: any) {
     chatError.value = e.response?.data?.message ?? 'Error al iniciar el chat.'
   } finally { chatting.value = false }

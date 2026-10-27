@@ -1,18 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { viewPath } from '@/router/paths'
+import { computed, onMounted, ref } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import { formatDate } from '@/utils/date'
+import { formatUsd } from '@/utils/money'
 import { useContractsStore } from '@/stores/contracts'
 import { useAuthStore } from '@/stores/auth'
 
-const router         = useRouter()
 const contractsStore = useContractsStore()
 const authStore      = useAuthStore()
 
 const isEmpresa = computed(() => authStore.isEmpresa)
 
-onMounted(() => contractsStore.fetchContracts())
+const loadError = ref('')
+async function loadContracts() {
+  loadError.value = ''
+  try { await contractsStore.fetchContracts() }
+  catch { loadError.value = 'No se pudieron cargar los contratos. Intenta de nuevo.' }
+}
+onMounted(loadContracts)
 
 const STATUS_LABEL: Record<string, { label: string; cls: string; icon: string }> = {
   pending_payment:  { label: 'Pago pendiente',  cls: 'badge-warning', icon: 'pi-clock' },
@@ -72,10 +78,6 @@ function counterpartName(c: any) {
   return c.empresa?.nombre_comercial ?? 'Empresa'
 }
 
-function counterpartInitial(c: any) {
-  return (counterpartName(c)[0] ?? '?').toUpperCase()
-}
-
 function neto(c: any) {
   return (Number(c.monto_total) - Number(c.comision_plataforma)).toFixed(2)
 }
@@ -109,93 +111,91 @@ function neto(c: any) {
       </div>
 
       <div v-if="contractsStore.loading" class="text-center py-8 text-ink-muted">Cargando…</div>
+      <div v-else-if="loadError" class="card text-center py-8" role="alert">
+        <p class="text-coral-text">{{ loadError }}</p>
+        <button type="button" class="btn-secondary mt-3" @click="loadContracts">Reintentar</button>
+      </div>
       <div v-else-if="contractsStore.contracts.length === 0" class="card text-center py-10 text-ink-muted">
         No tienes contratos aún. Acepta una propuesta en un chat para comenzar.
       </div>
 
-      <div v-else class="grid gap-4">
-        <div v-for="c in contractsStore.contracts" :key="c.id"
-          @click="router.push(`/contratos/${c.id}`)"
-          class="card cursor-pointer hover:shadow-md transition-shadow group">
+      <div v-else class="card p-0 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[1080px] table-fixed text-sm text-left">
+            <caption class="sr-only">Listado de contratos</caption>
+            <colgroup>
+              <col style="width: 11%" />
+              <col style="width: 10%" />
+              <col style="width: 12%" />
+              <col :style="{ width: isEmpresa ? '14%' : '20%' }" />
+              <col style="width: 10%" />
+              <col style="width: 10%" />
+              <col :style="{ width: isEmpresa ? '11%' : '21%' }" />
+              <col v-if="isEmpresa" style="width: 16%" />
+              <col style="width: 6%" />
+            </colgroup>
+            <thead class="bg-slate border-b border-border-strong text-xs uppercase tracking-wide text-ink-muted">
+              <tr>
+                <th scope="col" class="px-3 xl:px-4 py-3">Contrato</th>
+                <th scope="col" class="px-3 xl:px-4 py-3">{{ isEmpresa ? 'Influencer' : 'Empresa' }}</th>
+                <th scope="col" class="px-3 xl:px-4 py-3">Plataformas</th>
+                <th scope="col" class="px-3 xl:px-4 py-3">Estado</th>
+                <th scope="col" class="px-3 xl:px-4 py-3 text-right whitespace-nowrap">Monto total <span class="block text-[10px] font-normal mt-1">USD</span></th>
+                <th scope="col" class="px-3 xl:px-4 py-3 text-right">{{ isEmpresa ? 'Comisión' : 'Recibes (neto)' }} <span class="block text-[10px] font-normal mt-1">USD</span></th>
+                <th scope="col" class="px-3 xl:px-4 py-3">Fecha límite</th>
+                <th v-if="isEmpresa" scope="col" class="px-3 xl:px-4 py-3">Pago</th>
+                <th scope="col" class="px-3 xl:px-4 py-3 text-center"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr v-for="c in contractsStore.contracts" :key="c.id" class="align-middle hover:bg-slate/60">
+                <th scope="row" class="px-3 xl:px-4 py-5 font-semibold text-navy">
+                  <p>Contrato #{{ c.id }}</p>
+                  <p class="text-xs text-ink-muted font-normal mt-1">{{ formatDate(c.created_at) }}</p>
 
-          <!-- Fila superior: participante + estado -->
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="w-10 h-10 rounded-full bg-violet/20 flex items-center justify-center font-bold text-violet shrink-0 text-sm">
-                {{ counterpartInitial(c) }}
-              </div>
-              <div class="min-w-0">
-                <p class="font-display font-semibold text-navy leading-tight">{{ counterpartName(c) }}</p>
-                <p class="text-xs text-ink-muted mt-0.5">
-                  {{ formatDate(c.created_at) }}
-                </p>
-              </div>
-            </div>
-            <span :class="[STATUS_LABEL[c.status]?.cls ?? 'badge-muted', 'shrink-0 inline-flex items-center gap-1.5']">
-              <i v-if="STATUS_LABEL[c.status]" :class="['pi', STATUS_LABEL[c.status]?.icon]" aria-hidden="true" />
-              {{ STATUS_LABEL[c.status]?.label ?? c.status }}
-            </span>
-          </div>
-
-          <!-- Entregables -->
-          <div v-if="c.entregables?.length" class="mt-3 flex flex-wrap gap-1.5">
-            <span v-for="(e, i) in c.entregables" :key="i"
-              class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate text-ink-muted font-medium">
-              <i :class="['pi', REDES_ICON[e.tipo] ?? 'pi-box']" aria-hidden="true" />{{ e.tipo }}
-            </span>
-          </div>
-
-          <!-- Métricas financieras -->
-          <div class="mt-3 grid grid-cols-3 gap-3 text-sm border-t border-navy/5 pt-3">
-            <div>
-              <p class="text-xs text-ink-muted mb-0.5">Monto total</p>
-              <p class="font-semibold text-navy">${{ Number(c.monto_total).toFixed(2) }} <span class="text-xs font-normal text-ink-muted">USD</span></p>
-            </div>
-            <div>
-              <p class="text-xs text-ink-muted mb-0.5">{{ isEmpresa ? 'Comisión plataforma' : 'Recibes (neto)' }}</p>
-              <p class="font-semibold" :class="isEmpresa ? 'text-navy' : 'text-success'">
-                ${{ isEmpresa ? Number(c.comision_plataforma).toFixed(2) : neto(c) }}
-                <span class="text-xs font-normal text-ink-muted">USD</span>
-              </p>
-            </div>
-            <div>
-              <p class="text-xs text-ink-muted mb-0.5">Fecha límite</p>
-              <p class="font-semibold text-navy">{{ c.fecha_limite_entrega }}</p>
-            </div>
-          </div>
-
-          <div v-if="isEmpresa" class="mt-3 border-t border-navy/5 pt-3">
-            <div class="flex items-center justify-between gap-3">
-              <p class="text-xs text-ink-muted font-semibold uppercase tracking-wide">Seguimiento del pago</p>
-              <span :class="[paymentStatus(c).cls, 'inline-flex items-center gap-1.5']">
-                <i :class="['pi', paymentStatus(c).icon]" aria-hidden="true" />
-                {{ paymentStatus(c).label }}
-              </span>
-            </div>
-            <p v-if="paymentState(c) === 'failed'" class="text-xs text-coral-text mt-2">
-              {{ c.payout_error ?? 'No existe una transferencia confirmada.' }} Abre el contrato para reintentar.
-            </p>
-            <p v-else-if="paymentState(c) === 'paid'" class="text-xs text-success mt-2">
-              Transferencia confirmada: {{ c.stripe_transfer_id }}
-            </p>
-            <p v-else class="text-xs text-ink-muted mt-2">
-              El estado se actualizará conforme avance el fondeo, la revisión y la liberación.
-            </p>
-          </div>
-
-          <!-- CTA si requiere acción -->
-          <div v-if="c.status === 'pending_payment' && isEmpresa"
-            class="mt-3 text-xs text-coral-text font-medium flex items-center gap-1">
-            ← Fondea el contrato para que el influencer pueda comenzar
-          </div>
-          <div v-else-if="c.status === 'funded_in_escrow' && !isEmpresa"
-            class="mt-3 text-xs text-violet font-medium flex items-center gap-1">
-            ← Sube tus entregables para recibir el pago
-          </div>
-          <div v-else-if="c.status === 'under_review' && isEmpresa"
-            class="mt-3 text-xs text-violet font-medium flex items-center gap-1">
-            ← Revisa y aprueba los entregables del influencer
-          </div>
+                </th>
+                <td class="px-3 xl:px-4 py-5 text-navy"><span class="block break-words">{{ counterpartName(c) }}</span></td>
+                <td class="px-3 xl:px-4 py-5">
+                  <div v-if="c.entregables?.length" class="flex flex-col gap-2">
+                    <span v-for="(e, i) in c.entregables" :key="i" class="inline-flex items-center gap-1 text-xs font-normal text-ink-muted">
+                      <i :class="['pi', REDES_ICON[e.tipo] ?? 'pi-box']" aria-hidden="true" />{{ e.tipo }}
+                    </span>
+                  </div>
+                  <span v-else class="text-ink-muted">—</span>
+                </td>
+                <td class="px-3 xl:px-4 py-5">
+                  <span :class="[STATUS_LABEL[c.status]?.cls ?? 'badge-muted', 'inline-flex items-center gap-1.5']">
+                    <i v-if="STATUS_LABEL[c.status]" :class="['pi', STATUS_LABEL[c.status]?.icon]" aria-hidden="true" />
+                    {{ STATUS_LABEL[c.status]?.label ?? c.status }}
+                  </span>
+                  <p v-if="c.status === 'pending_payment' && isEmpresa" class="text-xs text-coral-text mt-2">Fondeo pendiente</p>
+                  <p v-else-if="c.status === 'funded_in_escrow' && !isEmpresa" class="text-xs text-violet mt-2">Entrega tus archivos</p>
+                  <p v-else-if="c.status === 'under_review' && isEmpresa" class="text-xs text-violet mt-2">Revisa los entregables</p>
+                </td>
+                <td class="px-3 xl:px-4 py-5 font-semibold text-navy whitespace-nowrap text-right tabular-nums">{{ formatUsd(c.monto_total) }}</td>
+                <td class="px-3 xl:px-4 py-5 font-semibold whitespace-nowrap text-right tabular-nums" :class="isEmpresa ? 'text-navy' : 'text-success'">
+                  {{ formatUsd(isEmpresa ? c.comision_plataforma : neto(c)) }}
+                </td>
+                <td class="px-3 xl:px-4 py-5 text-ink-muted whitespace-nowrap">{{ c.fecha_limite_entrega ? formatDate(c.fecha_limite_entrega) : 'Sin definir' }}</td>
+                <td v-if="isEmpresa" class="px-3 xl:px-4 py-5">
+                  <span :class="[paymentStatus(c).cls, 'inline-flex items-center gap-1.5']">
+                    <i :class="['pi', paymentStatus(c).icon]" aria-hidden="true" />{{ paymentStatus(c).label }}
+                  </span>
+                  <p v-if="paymentState(c) === 'failed'" class="text-xs text-coral-text mt-2 max-w-56 break-words">
+                    {{ c.payout_error ?? 'No existe una transferencia confirmada.' }} Abre el detalle para reintentar.
+                  </p>
+                  <p v-else-if="paymentState(c) === 'paid' && c.stripe_transfer_id" class="text-xs text-success mt-2 break-words [overflow-wrap:anywhere]">{{ c.stripe_transfer_id }}</p>
+                </td>
+                <td class="px-3 xl:px-4 py-5 text-center">
+                  <RouterLink :to="viewPath(`/contratos/${c.id}`)" v-tooltip.top="'Ver detalle'"
+                    :aria-label="`Ver detalle del contrato #${c.id}`"
+                    class="btn-ghost inline-flex items-center justify-center w-9 h-9 rounded-full text-violet">
+                    <i class="pi pi-eye" aria-hidden="true" />
+                  </RouterLink>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import BrandName from '@/components/BrandName.vue'
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -239,7 +240,7 @@ async function submit() {
         </p>
         <p class="text-ink-muted text-xs mb-5">Haz clic en el enlace del correo para activar tu cuenta. Expira en 24 h.</p>
 
-        <button class="btn-primary w-full" @click="router.push('/dashboard')">
+        <button class="btn-primary w-full" @click="router.push(viewPath('/dashboard'))">
           Ir al dashboard
         </button>
       </div>

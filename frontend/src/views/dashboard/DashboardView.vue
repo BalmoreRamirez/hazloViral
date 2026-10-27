@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import { onMounted, computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
@@ -84,7 +85,7 @@ onMounted(async () => {
   if (route.query.wompi === 'success' && route.query.tipo === 'creditos') {
     await new Promise(r => setTimeout(r, 1500))
     await creditsStore.fetchBalance()
-    router.replace({ path: '/dashboard' })
+    router.replace({ path: viewPath('/dashboard') })
   }
 })
 
@@ -236,12 +237,12 @@ watch(balance, (b) => {
           <p class="text-2xl font-display font-bold text-violet mt-1">{{ usd(totalEnCustodia) }}</p>
           <p class="text-xs text-ink-muted mt-0.5">Retenido hasta aprobar entregas</p>
         </div>
-        <RouterLink to="/contratos" class="card hover:border-coral/30 border border-transparent">
+        <RouterLink :to="viewPath('/contratos')" class="card hover:border-coral/30 border border-transparent">
           <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Esperan tu revisión</p>
           <p class="text-2xl font-display font-bold mt-1" :class="pendientesRevision ? 'text-coral-text' : 'text-navy'">{{ pendientesRevision }}</p>
           <p class="text-xs text-ink-muted mt-0.5">Entregables o publicaciones</p>
         </RouterLink>
-        <RouterLink to="/contratos" class="card hover:border-coral/30 border border-transparent">
+        <RouterLink :to="viewPath('/contratos')" class="card hover:border-coral/30 border border-transparent">
           <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Pendientes de pago</p>
           <p class="text-2xl font-display font-bold mt-1" :class="pendientesPago ? 'text-coral-text' : 'text-navy'">{{ pendientesPago }}</p>
           <p class="text-xs text-ink-muted mt-0.5">Contratos por fondear</p>
@@ -275,14 +276,14 @@ watch(balance, (b) => {
       <div class="card">
         <div class="flex items-center justify-between mb-4">
           <h2 class="font-display font-semibold text-navy">Chats recientes</h2>
-          <RouterLink to="/chats" class="text-violet text-sm font-semibold">Ver todos →</RouterLink>
+          <RouterLink :to="viewPath('/chats')" class="text-violet text-sm font-semibold">Ver todos →</RouterLink>
         </div>
         <div v-if="chatStore.chats.length === 0" class="text-ink-muted text-sm text-center py-4">
           No tienes chats aún.
         </div>
         <div v-else class="divide-y divide-navy/5">
           <div v-for="chat in chatStore.chats.slice(0,5)" :key="chat.id"
-            @click="router.push(`/chats/${chat.id}`)"
+            @click="router.push(viewPath(`/chats/${chat.id}`))"
             class="py-3 flex items-center justify-between cursor-pointer hover:bg-slate/50 -mx-5 px-5 rounded-lg transition-colors">
             <div>
               <p class="font-medium text-sm text-navy">
@@ -303,11 +304,11 @@ watch(balance, (b) => {
       <div class="card" v-if="contractsStore.contracts.length > 0">
         <div class="flex items-center justify-between mb-4">
           <h2 class="font-display font-semibold text-navy">Contratos recientes</h2>
-          <RouterLink to="/contratos" class="text-violet text-sm font-semibold">Ver todos →</RouterLink>
+          <RouterLink :to="viewPath('/contratos')" class="text-violet text-sm font-semibold">Ver todos →</RouterLink>
         </div>
         <div class="divide-y divide-navy/5">
           <div v-for="c in contractsStore.contracts.slice(0,5)" :key="c.id"
-            @click="router.push(`/contratos/${c.id}`)"
+            @click="router.push(viewPath(`/contratos/${c.id}`))"
             class="py-3 flex items-center justify-between cursor-pointer hover:bg-slate/50 -mx-5 px-5 rounded-lg">
             <div>
               <p class="font-medium text-sm">

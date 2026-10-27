@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
@@ -96,7 +97,7 @@ onMounted(async () => {
   if (route.query.wompi === 'success') {
     await new Promise(r => setTimeout(r, 1500))
     await contractsStore.fetchContract(contratoId)
-    router.replace({ path: `/contratos/${contratoId}` })
+    router.replace({ path: viewPath(`/contratos/${contratoId}`) })
   }
 
   const s = connectSocket()
@@ -335,7 +336,7 @@ const TIPO_ICON: Record<string, string> = {
 
         <!-- Header -->
         <div class="flex items-start gap-3">
-          <button @click="router.push('/contratos')" class="text-ink-muted hover:text-navy text-lg mt-0.5">←</button>
+          <button @click="router.push(viewPath('/contratos'))" class="text-ink-muted hover:text-navy text-lg mt-0.5">←</button>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
               <h1 class="text-2xl font-display font-bold text-navy">Contrato</h1>
@@ -350,7 +351,7 @@ const TIPO_ICON: Record<string, string> = {
                 <div class="w-6 h-6 rounded-full bg-violet/20 flex items-center justify-center text-xs font-bold text-violet">
                   {{ (contrato.empresa?.nombre_comercial?.[0] ?? 'E').toUpperCase() }}
                 </div>
-                <RouterLink v-if="contrato.empresa?.id" :to="`/empresas/${contrato.empresa.id}`"
+                <RouterLink v-if="contrato.empresa?.id" :to="viewPath(`/empresas/${contrato.empresa.id}`)"
                   class="font-medium text-navy hover:text-violet">{{ contrato.empresa.nombre_comercial ?? 'Empresa' }}</RouterLink>
                 <span v-else class="font-medium text-navy">Empresa</span>
                 <VerifiedBadge v-if="contrato.empresa?.is_verified" size="sm" />
@@ -712,7 +713,7 @@ const TIPO_ICON: Record<string, string> = {
                 <p class="flex items-center gap-2 text-success font-semibold"><i class="pi pi-check-circle" aria-hidden="true" />Contrato completado exitosamente.</p>
                 <p class="text-success text-sm mt-1">El pago fue liberado al influencer.</p>
               </template>
-              <RouterLink v-if="!isEmpresa && contrato.empresa?.id" :to="`/empresas/${contrato.empresa.id}`"
+              <RouterLink v-if="!isEmpresa && contrato.empresa?.id" :to="viewPath(`/empresas/${contrato.empresa.id}`)"
                 class="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:text-violet/80 mt-2">
                 <i class="pi pi-star" aria-hidden="true" />
                 Califica tu experiencia con {{ contrato.empresa.nombre_comercial }}

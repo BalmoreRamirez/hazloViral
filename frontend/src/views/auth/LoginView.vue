@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import BrandName from '@/components/BrandName.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -16,7 +17,7 @@ async function submit() {
   loading.value = true
   try {
     await authStore.login(email.value, password.value)
-    router.push('/dashboard')
+    router.push(viewPath('/dashboard'))
   } catch (e: any) {
     error.value = e.response?.data?.message ?? 'Credenciales incorrectas.'
   } finally {

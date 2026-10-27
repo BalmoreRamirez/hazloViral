@@ -1,4 +1,5 @@
 import { api } from './index'
+import { parseMoney } from '@/utils/money'
 
 export interface PaymentReceipt {
   id: number
@@ -20,6 +21,9 @@ export interface PaymentReceipt {
     estado: string
     ambiente: string
     fecha_emision: string
+    subtotal?: number | null
+    monto_iva?: number | null
+    total_pagar?: number | null
     pdf_url: string | null
   } | null
   created_at: string
@@ -28,10 +32,24 @@ export interface PaymentReceipt {
 function normalizeReceipt(receipt: PaymentReceipt): PaymentReceipt {
   // USD is the platform currency. Normalize historical receipts created before
   // the currency migration so the UI never presents COP.
-  return { ...receipt, currency: 'USD' }
+  return {
+    ...receipt,
+    currency: 'USD',
+    dte: receipt.dte ? {
+      ...receipt.dte,
+      subtotal: parseMoney(receipt.dte.subtotal),
+      monto_iva: parseMoney(receipt.dte.monto_iva),
+      total_pagar: parseMoney(receipt.dte.total_pagar),
+    } : null,
+  }
 }
 
 export const receiptsApi = {
   list: () => api.get<PaymentReceipt[]>('/receipts').then((r) => r.data.map(normalizeReceipt)),
   get: (id: number) => api.get<PaymentReceipt>(`/receipts/${id}`).then((r) => normalizeReceipt(r.data)),
+  downloadDte: async (url: string): Promise<Blob> => {
+    const path = url.replace(/^\/api/, '')
+    const response = await api.get<Blob>(path, { responseType: 'blob' })
+    return response.data
+  },
 }

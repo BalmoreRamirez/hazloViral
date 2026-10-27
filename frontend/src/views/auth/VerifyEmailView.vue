@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import BrandName from '@/components/BrandName.vue'
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -56,7 +57,7 @@ onMounted(async () => {
           <i class="pi pi-check-circle block text-5xl mb-4 text-success" aria-hidden="true" />
           <h2 class="text-xl font-display font-semibold text-navy mb-2">¡Correo verificado!</h2>
           <p class="text-ink-muted text-sm mb-6">Tu cuenta está activa y lista para usar.</p>
-          <button class="btn-primary w-full" @click="router.push(auth.isAuthenticated ? '/dashboard' : '/login')">
+          <button class="btn-primary w-full" @click="router.push(auth.isAuthenticated ? viewPath('/dashboard') : '/login')">
             {{ auth.isAuthenticated ? 'Ir al dashboard' : 'Iniciar sesión' }}
           </button>
         </template>
@@ -68,7 +69,7 @@ onMounted(async () => {
           <p class="text-ink-muted text-sm mb-6">{{ message }}</p>
           <div class="space-y-2">
             <button v-if="auth.isAuthenticated" class="btn-primary w-full"
-              @click="router.push('/dashboard')">
+              @click="router.push(viewPath('/dashboard'))">
               Ir al dashboard
             </button>
             <RouterLink to="/login" class="block text-sm text-violet text-center underline">

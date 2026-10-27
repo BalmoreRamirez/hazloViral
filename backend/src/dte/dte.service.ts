@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { DteDetail } from './entities/dte-detail.entity';
 import { DteDocument } from './entities/dte-document.entity';
 import { formatLocalTimeForDocument, getLocalDateTime } from '../common/date.util';
+import { splitIncludedIva } from './iva.util';
 
 const UNITS = [
   'CERO', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE',
@@ -33,7 +34,7 @@ function numberToSpanish(value: number): string {
   return `${millions === 1 ? 'UN MILLON' : `${numberToSpanish(millions)} MILLONES`}${remainder ? ` ${numberToSpanish(remainder)}` : ''}`;
 }
 
-function amountToSpanishWords(amount: number): string {
+export function amountToSpanishWords(amount: number): string {
   const rounded = Math.round(amount * 100);
   const whole = Math.floor(rounded / 100);
   const cents = String(rounded % 100).padStart(2, '0');
@@ -107,6 +108,8 @@ export class DteService implements OnModuleInit {
       date: localDateTime.date,
       time: formatLocalTimeForDocument(document.created_at),
       amountUsd: Number(document.total_pagar),
+      subtotal: Number(document.subtotal),
+      iva: Number(document.monto_iva),
       influencerName: source.receptor?.nombre ?? 'Receptor',
       influencerEmail: source.receptor?.correo ?? '',
       document: receptorDocument ?? source.receptor?.documento ?? null,
@@ -142,6 +145,9 @@ export class DteService implements OnModuleInit {
       };
     }
 
+    // Development assumption: the settled amount already includes IVA.
+    // Do not add tax to the transfer or treat this simulation as fiscal issuance.
+    const { subtotal, iva, total } = splitIncludedIva(input.amountUsd);
     const codigoGeneracion = randomUUID();
     const { date, time } = getLocalDateTime();
     const numeroControl = `DTE-DEV-${Date.now()}-${input.receiptId}`;
@@ -162,10 +168,19 @@ export class DteService implements OnModuleInit {
         numItem: 1,
         descripcion: `Pago de contrato #${input.contractId}`,
         cantidad: 1,
-        precioUni: input.amountUsd,
-        ventaGravada: input.amountUsd,
+        precioUni: subtotal,
+        ventaGravada: subtotal,
+        tributos: ['20'],
       }],
-      totalPagar: input.amountUsd,
+      resumen: {
+        totalGravada: subtotal,
+        subTotal: subtotal,
+        tributos: [{ codigo: '20', descripcion: 'IVA 13%', valor: iva }],
+        montoTotalOperacion: total,
+        totalPagar: total,
+      },
+      totalPagar: total,
+      calculoIva: { tasa: 13, incluidoEnMonto: true, simulado: true },
       contratoId: input.contractId,
       referenciaPago: input.transactionId,
       comprobante: input.receiptNumber,
@@ -176,7 +191,9 @@ export class DteService implements OnModuleInit {
       codigoGeneracion,
       date,
       time: formatLocalTimeForDocument(new Date()),
-      amountUsd: input.amountUsd,
+      amountUsd: total,
+      subtotal,
+      iva,
       influencerName: input.influencerName,
       influencerEmail: input.influencerEmail,
       document: input.document,
@@ -191,9 +208,10 @@ export class DteService implements OnModuleInit {
       fecha_emision: date,
       hora_emision: time,
       estado: 'BORRADOR',
-      total_gravada: input.amountUsd,
-      subtotal: input.amountUsd,
-      total_pagar: input.amountUsd,
+      total_gravada: subtotal,
+      subtotal,
+      monto_iva: iva,
+      total_pagar: total,
       total_letras: amountToSpanishWords(input.amountUsd),
       json_original: jsonOriginal,
       payment_receipt_id: input.receiptId,
@@ -205,8 +223,9 @@ export class DteService implements OnModuleInit {
       num_item: 1,
       descripcion: `Pago de contrato #${input.contractId}`,
       cantidad: 1,
-      precio_unitario: input.amountUsd,
-      venta_gravada: input.amountUsd,
+      precio_unitario: subtotal,
+      venta_gravada: subtotal,
+      tributos: ['20'],
     }));
 
     this.logger.log(`DTE de desarrollo generado ${numeroControl} para comprobante ${input.receiptNumber}`);
@@ -219,6 +238,8 @@ export class DteService implements OnModuleInit {
     date: string;
     time: string;
     amountUsd: number;
+    subtotal: number;
+    iva: number;
     influencerName: string;
     influencerEmail: string;
     document: string | null;
@@ -226,7 +247,7 @@ export class DteService implements OnModuleInit {
     transactionId: string;
   }): string {
     if (!existsSync(this.dtePdfDir)) mkdirSync(this.dtePdfDir, { recursive: true });
-    const filename = `${input.numeroControl}.pdf`;
+    const filename = `${randomUUID()}.pdf`;
     const path = join(this.dtePdfDir, filename);
     writeFileSync(path, this.buildInvoicePdf(input));
     return `/api/uploads/dte/${filename}`;
@@ -238,6 +259,8 @@ export class DteService implements OnModuleInit {
     date: string;
     time: string;
     amountUsd: number;
+    subtotal: number;
+    iva: number;
     influencerName: string;
     influencerEmail: string;
     document: string | null;
@@ -284,7 +307,7 @@ export class DteService implements OnModuleInit {
     text('INFLUSMART', 42, 780, 17, true, colors.white);
     text('PLATAFORMA DE MARKETING DE INFLUENCIA', 42, 763, 7, false, colors.slate);
     text('DOCUMENTO TRIBUTARIO ELECTRONICO', 355, 785, 8, true, colors.white);
-    text('FACTURA - DESARROLLO', 390, 770, 8, true, colors.slate);
+    text('CREDITO FISCAL - DESARROLLO', 390, 770, 8, true, colors.slate);
     text('SIN VALIDEZ FISCAL', 425, 752, 7, true, colors.coral);
     line(38, 738, 574, 738);
 
@@ -334,13 +357,13 @@ export class DteService implements OnModuleInit {
     label('Cantidad', 84, 481);
     label('Descripcion', 200, 481);
     label('Precio unitario', 378, 481);
-    label('Impuestos', 464, 481);
+    label('IVA 13%', 464, 481);
     label('Total', 535, 481);
     text('1', 52, 455, 8);
     text('1', 90, 455, 8);
     text(`Pago por contrato #${input.contractId}`, 132, 455, 8);
-    text(input.amountUsd.toFixed(2), 382, 455, 8);
-    text('0.00', 468, 455, 8);
+    text(input.subtotal.toFixed(2), 382, 455, 8);
+    text(input.iva.toFixed(2), 468, 455, 8);
     text(input.amountUsd.toFixed(2), 523, 455, 8);
 
     rect(365, 327, 209, 75, true, colors.slate);
@@ -348,9 +371,9 @@ export class DteService implements OnModuleInit {
     line(365, 365, 574, 365);
     line(365, 347, 574, 347);
     label('Subtotal', 390, 388);
-    text(`USD ${input.amountUsd.toFixed(2)}`, 492, 388, 8);
-    label('Impuestos', 390, 370);
-    text('USD 0.00', 492, 370, 8);
+    text(`USD ${input.subtotal.toFixed(2)}`, 492, 388, 8);
+    label('IVA 13%', 390, 370);
+    text(`USD ${input.iva.toFixed(2)}`, 492, 370, 8);
     label('Total a pagar', 390, 352);
     text(`USD ${input.amountUsd.toFixed(2)}`, 492, 352, 8, true, colors.violet);
     label('Estado', 390, 334);

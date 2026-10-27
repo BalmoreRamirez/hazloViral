@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import BrandName from '@/components/BrandName.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -30,7 +31,6 @@ async function resendVerification() {
 }
 
 onMounted(async () => {
-  await authStore.refreshUser()
   if (authStore.isEmpresa) await creditsStore.fetchBalance()
 })
 
@@ -45,31 +45,32 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
 <template>
   <div class="min-h-screen flex flex-col bg-slate">
     <!-- Navbar -->
-    <header class="bg-navy text-white px-6 py-3 flex items-center justify-between shadow-lg">
+    <header class="bg-navy text-white px-6 py-3 flex flex-wrap gap-3 items-center justify-between shadow-lg">
       <div class="flex items-center gap-3">
-        <RouterLink to="/dashboard" class="text-xl"><BrandName /></RouterLink>
-        <nav class="hidden sm:flex items-center gap-1 ml-6">
-          <RouterLink to="/dashboard" :class="navLinkClass">Dashboard</RouterLink>
+        <RouterLink :to="viewPath('/dashboard')" class="text-xl"><BrandName /></RouterLink>
+        <nav class="hidden sm:flex flex-wrap items-center gap-1 ml-6">
+          <RouterLink :to="viewPath('/dashboard')" :class="navLinkClass">Dashboard</RouterLink>
 
           <!-- Links para empresa -->
           <template v-if="user?.role === 'empresa'">
-            <RouterLink to="/influencers"    :class="navLinkClass"><span class="inline-flex items-center gap-1.5"><i class="pi pi-search" aria-hidden="true" />Buscar</span></RouterLink>
-            <RouterLink to="/chats"          :class="navLinkClass">Chats</RouterLink>
-            <RouterLink to="/contratos"      :class="navLinkClass">Contratos</RouterLink>
-            <RouterLink to="/pagos/comprobantes" :class="navLinkClass">Pagos</RouterLink>
-            <RouterLink to="/perfil/empresa" :class="navLinkClass">Mi perfil</RouterLink>
+            <RouterLink :to="viewPath('/briefs')" :class="navLinkClass">Briefs de campaña</RouterLink>
+            <RouterLink :to="viewPath('/influencers')"    :class="navLinkClass"><span class="inline-flex items-center gap-1.5"><i class="pi pi-search" aria-hidden="true" />Buscar</span></RouterLink>
+            <RouterLink :to="viewPath('/chats')"          :class="navLinkClass">Chats</RouterLink>
+            <RouterLink :to="viewPath('/contratos')"      :class="navLinkClass">Contratos</RouterLink>
+            <RouterLink :to="viewPath('/pagos/comprobantes')" :class="navLinkClass">Pagos</RouterLink>
+            <RouterLink :to="viewPath('/perfil/empresa')" :class="navLinkClass">Mi perfil</RouterLink>
           </template>
 
           <!-- Links para influencer -->
           <template v-else-if="user?.role === 'influencer'">
-            <RouterLink to="/chats"              :class="navLinkClass">Chats</RouterLink>
-            <RouterLink to="/contratos"          :class="navLinkClass">Contratos</RouterLink>
-            <RouterLink to="/pagos/comprobantes" :class="navLinkClass">Pagos</RouterLink>
-            <RouterLink to="/perfil/influencer"  :class="navLinkClass">Mi perfil</RouterLink>
+            <RouterLink :to="viewPath('/chats')"              :class="navLinkClass">Chats</RouterLink>
+            <RouterLink :to="viewPath('/contratos')"          :class="navLinkClass">Contratos</RouterLink>
+            <RouterLink :to="viewPath('/pagos/comprobantes')" :class="navLinkClass">Pagos</RouterLink>
+            <RouterLink :to="viewPath('/perfil/influencer')"  :class="navLinkClass">Mi perfil</RouterLink>
           </template>
 
           <!-- Link exclusivo admin -->
-          <RouterLink v-if="isAdmin" to="/admin" :class="navLinkClass">
+          <RouterLink v-if="isAdmin" :to="viewPath('/admin')" :class="navLinkClass">
             <span class="inline-flex items-center gap-1.5"><i class="pi pi-cog" aria-hidden="true" />Admin</span>
           </RouterLink>
         </nav>
@@ -78,7 +79,7 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
       <div class="flex items-center gap-4">
         <!-- Balance de créditos (solo empresa) -->
         <template v-if="authStore.isEmpresa && balance">
-          <RouterLink to="/dashboard" class="flex items-center gap-2 text-sm" title="Saldo disponible — clic para recargar">
+          <RouterLink :to="viewPath('/dashboard')" class="flex items-center gap-2 text-sm" title="Saldo disponible — clic para recargar">
             <span class="inline-flex items-center gap-1.5" :class="isLow ? 'text-coral-text font-semibold' : 'text-slate/80'">
               <i :class="['pi', isLow ? 'pi-exclamation-triangle' : 'pi-wallet']" aria-hidden="true" />
               ${{ balance.balance_creditos.toFixed(2) }} USD
@@ -96,6 +97,12 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
         </div>
       </div>
     </header>
+
+    <nav v-if="authStore.isEmpresa" class="sm:hidden px-4 py-2 bg-white border-b border-border" aria-label="Campañas">
+      <RouterLink :to="viewPath('/briefs')" class="text-sm font-semibold text-violet inline-flex items-center gap-2">
+        <i class="pi pi-clipboard" aria-hidden="true" />Briefs de campaña
+      </RouterLink>
+    </nav>
 
     <!-- Alerta email no verificado -->
     <div v-if="emailUnverified" class="bg-warning-tint border-b border-amber-200 px-6 py-2">
@@ -119,10 +126,10 @@ const navLinkClass = 'px-3 py-1.5 rounded-lg text-sm text-slate/70 hover:text-wh
         <i class="pi pi-exclamation-triangle mr-1.5" aria-hidden="true" />Saldo bajo el mínimo (te faltan ${{ balance?.deficit.toFixed(2) }} USD).
         Los chats están en <strong>solo lectura</strong>.
       </p>
-      <RouterLink to="/dashboard" class="text-sm underline text-coral-text font-semibold">Recargar saldo →</RouterLink>
+      <RouterLink :to="viewPath('/dashboard')" class="text-sm underline text-coral-text font-semibold">Recargar saldo →</RouterLink>
     </div>
 
-    <main class="flex-1 px-4 sm:px-6 py-6 max-w-6xl mx-auto w-full">
+    <main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6 mx-auto w-full max-w-[1600px] xl:w-[90%]">
       <slot />
     </main>
   </div>

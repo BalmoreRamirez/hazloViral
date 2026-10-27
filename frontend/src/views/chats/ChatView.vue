@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
@@ -115,7 +116,7 @@ const counterpart = computed(() => {
       initials:   (emp.nombre_comercial?.[0] ?? 'E').toUpperCase(),
       avatar_url: emp.user?.avatar_url ?? null,
       is_verified: emp.is_verified ?? false,
-      profile_url: `/empresas/${emp.id}`,
+      profile_url: viewPath(`/empresas/${emp.id}`),
     } : null
   }
 })
@@ -123,7 +124,7 @@ const counterpart = computed(() => {
 onMounted(async () => {
   await chatStore.loadChats()
   const chat = chatStore.chats.find(c => c.id === chatId)
-  if (!chat) { router.push('/chats'); return }
+  if (!chat) { router.push(viewPath('/chats')); return }
   await chatStore.enterChat(chat)
   if (isEmpresa.value) await profileStore.loadBriefs()
   scrollToBottom()
@@ -203,7 +204,7 @@ async function acceptProposal(msg: ChatMessage) {
   acceptLoading.value = msg.id
   try {
     await contractsStore.acceptProposal(msg.id)
-    router.push('/contratos')
+    router.push(viewPath('/contratos'))
   } catch (e: any) {
     alert(e.response?.data?.message ?? 'Error al aceptar propuesta.')
   } finally {
@@ -251,7 +252,7 @@ async function resolveCounter(msg: ChatMessage, action: 'accept' | 'reject') {
   resolveLoading.value = msg.id
   try {
     await contractsStore.resolveCounter(msg.id, action)
-    if (action === 'accept') router.push('/contratos')
+    if (action === 'accept') router.push(viewPath('/contratos'))
   } catch (e: any) {
     alert(e.response?.data?.message ?? 'Error al resolver contraoferta.')
   } finally {
@@ -291,7 +292,7 @@ function formatTime(dt: string) {
       <!-- Header del chat -->
       <div class="card mb-3 flex items-center justify-between py-3">
         <div class="flex items-center gap-3">
-          <button @click="router.push('/chats')" class="text-ink-muted hover:text-navy text-lg leading-none">←</button>
+          <button @click="router.push(viewPath('/chats'))" class="text-ink-muted hover:text-navy text-lg leading-none">←</button>
           <template v-if="counterpart">
             <img v-if="counterpart.avatar_url"
               :src="counterpart.avatar_url"
@@ -439,7 +440,7 @@ function formatTime(dt: string) {
 
               <!-- Link al contrato generado -->
               <p v-if="msg.contrato_id" class="text-xs text-violet text-center pt-1">
-                <RouterLink :to="`/contratos/${msg.contrato_id}`" class="underline">Ver contrato →</RouterLink>
+                <RouterLink :to="viewPath(`/contratos/${msg.contrato_id}`)" class="underline">Ver contrato →</RouterLink>
               </p>
             </div>
           </div>
@@ -556,7 +557,7 @@ function formatTime(dt: string) {
         </p>
         <div v-if="!profileStore.briefs.length" class="text-ink-muted text-sm text-center py-3">
           No tienes briefs creados.
-          <RouterLink to="/perfil/empresa" class="text-violet underline ml-1">Crear uno →</RouterLink>
+          <RouterLink :to="viewPath('/perfil/empresa')" class="text-violet underline ml-1">Crear uno →</RouterLink>
         </div>
         <div v-else class="divide-y divide-navy/5 max-h-48 overflow-y-auto">
           <button v-for="b in profileStore.briefs" :key="b.id"

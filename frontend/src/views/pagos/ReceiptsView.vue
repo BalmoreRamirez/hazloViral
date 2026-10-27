@@ -3,7 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import { useReceiptsStore } from '@/stores/receipts'
 import type { PaymentReceipt } from '@/api/receipts'
-import { formatDate, formatLocalDateTimeForDocument } from '@/utils/date'
+import { APP_TIME_ZONE, formatDate, formatLocalDateTimeForDocument } from '@/utils/date'
+import { receiptsApi } from '@/api/receipts'
+import { formatUsd, parseMoney } from '@/utils/money'
 
 const store = useReceiptsStore()
 
@@ -14,7 +16,42 @@ const labels: Record<string, string> = {
   influencer_payout: 'Pago al influencer',
 }
 
-const sortedReceipts = computed(() => store.receipts)
+const startDate = ref('')
+const endDate = ref('')
+const operationType = ref<PaymentReceipt['operation_type'] | ''>('')
+const invalidDateRange = computed(() => Boolean(startDate.value && endDate.value && startDate.value > endDate.value))
+const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: APP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+})
+const sortedReceipts = computed(() => {
+  if (invalidDateRange.value) return []
+  return store.receipts.filter((receipt) => {
+    if (operationType.value && receipt.operation_type !== operationType.value) return false
+    const parts = dateFormatter.formatToParts(new Date(receipt.created_at))
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]))
+    const day = `${values.year}-${values.month}-${values.day}`
+    return (!startDate.value || day >= startDate.value) && (!endDate.value || day <= endDate.value)
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+})
+const totalAmount = computed(() => {
+  let cents = 0
+  for (const receipt of sortedReceipts.value) {
+    const amount = parseMoney(receipt.amount_usd)
+    if (amount === null) return null
+    cents += Math.round(amount * 100)
+  }
+  return cents / 100
+})
+const missingDteAmounts = computed(() => {
+  const dte = selectedReceipt.value?.dte
+  return dte && [dte.subtotal, dte.monto_iva, dte.total_pagar].some((value) => parseMoney(value) === null)
+})
+
+function clearFilters() {
+  startDate.value = ''
+  endDate.value = ''
+  operationType.value = ''
+}
 const selectedReceipt = ref<PaymentReceipt | null>(null)
 
 function showDetails(receipt: PaymentReceipt) {
@@ -25,6 +62,13 @@ function closeDetails() {
   selectedReceipt.value = null
 }
 
+async function openDte(url: string) {
+  const blob = await receiptsApi.downloadDte(url)
+  const objectUrl = URL.createObjectURL(blob)
+  window.open(objectUrl, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+}
+
 onMounted(() => store.fetchReceipts())
 </script>
 
@@ -32,14 +76,49 @@ onMounted(() => store.fetchReceipts())
   <AppLayout>
     <div class="space-y-5">
       <div>
-        <h1 class="text-2xl font-display font-bold text-navy">Comprobantes de pago</h1>
+        <h1 class="text-2xl font-display font-bold text-navy">Historial de pagos</h1>
         <p class="text-ink-muted text-sm mt-1">Comprobantes internos de operaciones. No son DTE fiscales.</p>
       </div>
 
+      <section class="card space-y-4" aria-label="Filtros del historial de pagos">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+          <div>
+            <label for="payment-start-date" class="label">Desde</label>
+            <input id="payment-start-date" v-model="startDate" type="date" class="input" :max="endDate || undefined"
+              :aria-invalid="invalidDateRange" :aria-describedby="invalidDateRange ? 'payment-date-error' : undefined" />
+          </div>
+          <div>
+            <label for="payment-end-date" class="label">Hasta</label>
+            <input id="payment-end-date" v-model="endDate" type="date" class="input" :min="startDate || undefined"
+              :aria-invalid="invalidDateRange" :aria-describedby="invalidDateRange ? 'payment-date-error' : undefined" />
+          </div>
+          <div>
+            <label for="payment-operation" class="label">Tipo de operación</label>
+            <select id="payment-operation" v-model="operationType" class="input">
+              <option value="">Todas las operaciones</option>
+              <option v-for="(label, type) in labels" :key="type" :value="type">{{ label }}</option>
+            </select>
+          </div>
+          <button type="button" class="btn-secondary" @click="clearFilters">Limpiar filtros</button>
+        </div>
+        <p v-if="invalidDateRange" id="payment-date-error" role="alert" class="text-sm text-coral-text">
+          La fecha inicial debe ser anterior o igual a la fecha final.
+        </p>
+        <p class="text-xs text-ink-muted">Fechas inclusivas en horario de El Salvador. Sin fechas, se muestra todo el historial.</p>
+      </section>
+
+      <section v-if="!store.loading && !store.error && !invalidDateRange" class="card" aria-label="Resumen del período" aria-live="polite">
+        <p class="text-sm text-ink-muted">Total del período</p>
+        <p class="text-2xl font-display font-bold text-navy mt-1">{{ formatUsd(totalAmount) }} USD</p>
+        <p class="text-sm text-ink-muted mt-1">{{ sortedReceipts.length }} operaciones encontradas</p>
+        <p class="text-xs text-ink-muted mt-2">Suma de los comprobantes filtrados; no representa un saldo neto. Un contrato puede incluir fondeo, comisión y pago.</p>
+      </section>
+
       <div v-if="store.loading" class="card text-center py-8 text-ink-muted">Cargando…</div>
       <div v-else-if="store.error" class="card text-center py-8 text-coral-text">{{ store.error }}</div>
+      <div v-else-if="invalidDateRange" class="card text-center py-10 text-ink-muted">Corrige el rango de fechas para consultar el historial.</div>
       <div v-else-if="!sortedReceipts.length" class="card text-center py-10 text-ink-muted">
-        Aún no tienes comprobantes de pago.
+        {{ store.receipts.length ? 'No hay pagos que coincidan con los filtros seleccionados.' : 'Aún no tienes comprobantes de pago.' }}
       </div>
       <div v-else class="card p-0 overflow-hidden">
         <div class="overflow-x-auto">
@@ -64,7 +143,7 @@ onMounted(() => store.fetchReceipts())
                   <p class="text-xs text-ink-muted mt-1">Contrato #{{ receipt.contrato_id ?? '—' }}</p>
                 </td>
                 <td class="px-4 py-4 whitespace-nowrap">
-                  <p class="font-semibold text-navy">${{ Number(receipt.amount_usd).toFixed(2) }} USD</p>
+                  <p class="font-semibold text-navy">{{ formatUsd(receipt.amount_usd) }} USD</p>
                   <p class="text-xs text-ink-muted mt-1">{{ receipt.currency }}</p>
                 </td>
                 <td class="px-4 py-4">
@@ -74,13 +153,16 @@ onMounted(() => store.fetchReceipts())
                   </span>
                 </td>
                 <td class="px-4 py-4 text-right whitespace-nowrap">
-                  <button type="button" class="btn-secondary inline-flex items-center gap-1.5" @click="showDetails(receipt)">
-                    <i class="pi pi-eye" aria-hidden="true" /> Ver detalle
+                  <button type="button" class="btn-ghost inline-flex items-center justify-center w-9 h-9 rounded-full"
+                    v-tooltip.top="'Ver detalle'" :aria-label="`Ver detalle de ${receipt.receipt_number}`" @click="showDetails(receipt)">
+                    <i class="pi pi-eye" aria-hidden="true" />
                   </button>
-                  <a v-if="receipt.dte?.pdf_url" :href="receipt.dte.pdf_url" target="_blank"
-                    class="btn-primary inline-flex items-center gap-1.5 ml-2">
-                    <i class="pi pi-file-pdf" aria-hidden="true" /> Ver factura
-                  </a>
+                  <button v-if="receipt.dte?.pdf_url" type="button"
+                    class="btn-ghost inline-flex items-center justify-center w-9 h-9 rounded-full text-violet ml-1"
+                    v-tooltip.top="'Ver factura PDF'" :aria-label="`Ver factura de ${receipt.receipt_number}`"
+                    @click="openDte(receipt.dte.pdf_url)">
+                    <i class="pi pi-file-pdf" aria-hidden="true" />
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -108,7 +190,7 @@ onMounted(() => store.fetchReceipts())
         <div class="grid sm:grid-cols-2 gap-4 py-5 text-sm">
           <div><p class="text-xs text-ink-muted">Operación</p><p class="font-semibold text-navy">{{ labels[selectedReceipt.operation_type] ?? selectedReceipt.operation_type }}</p></div>
           <div><p class="text-xs text-ink-muted">Fecha y hora</p><p class="font-semibold text-navy">{{ formatLocalDateTimeForDocument(selectedReceipt.created_at) }}</p></div>
-          <div><p class="text-xs text-ink-muted">Monto USD</p><p class="font-semibold text-navy">${{ Number(selectedReceipt.amount_usd).toFixed(2) }}</p></div>
+          <div><p class="text-xs text-ink-muted">Monto USD</p><p class="font-semibold text-navy">{{ formatUsd(selectedReceipt.amount_usd) }}</p></div>
           <div><p class="text-xs text-ink-muted">Moneda</p><p class="font-semibold text-navy">{{ selectedReceipt.currency }}</p></div>
           <div><p class="text-xs text-ink-muted">Contrato</p><p class="font-semibold text-navy">#{{ selectedReceipt.contrato_id ?? '—' }}</p></div>
           <div><p class="text-xs text-ink-muted">Transacción</p><p class="font-semibold text-navy break-all">{{ selectedReceipt.wompi_transaction_id ?? 'Sin transacción' }}</p></div>
@@ -121,9 +203,17 @@ onMounted(() => store.fetchReceipts())
             <div><p class="text-xs text-ink-muted">Estado</p><p class="font-semibold text-navy">{{ selectedReceipt.dte.estado }}</p></div>
             <div><p class="text-xs text-ink-muted">Ambiente</p><p class="font-semibold text-navy">{{ selectedReceipt.dte.ambiente === '00' ? 'Desarrollo' : 'Producción' }}</p></div>
           </div>
-          <a v-if="selectedReceipt.dte.pdf_url" :href="selectedReceipt.dte.pdf_url" target="_blank" class="btn-primary inline-flex items-center gap-2 mt-4">
+          <p v-if="missingDteAmounts" class="text-sm text-ink-muted mt-3" role="status">
+            El desglose fiscal no está disponible en los datos recibidos. Consulta el PDF de la factura.
+          </p>
+          <dl class="grid sm:grid-cols-3 gap-3 mt-4 text-sm">
+            <div><dt class="text-xs text-ink-muted">Subtotal sin IVA</dt><dd class="font-semibold text-navy">{{ formatUsd(selectedReceipt.dte.subtotal) }}</dd></div>
+            <div><dt class="text-xs text-ink-muted">IVA (13%)</dt><dd class="font-semibold text-navy">{{ formatUsd(selectedReceipt.dte.monto_iva) }}</dd></div>
+            <div><dt class="text-xs text-ink-muted">Total</dt><dd class="font-semibold text-navy">{{ formatUsd(selectedReceipt.dte.total_pagar) }}</dd></div>
+          </dl>
+          <button v-if="selectedReceipt.dte.pdf_url" type="button" class="btn-primary inline-flex items-center gap-2 mt-4" @click="openDte(selectedReceipt.dte.pdf_url)">
             <i class="pi pi-file-pdf" aria-hidden="true" /> Ver factura PDF
-          </a>
+          </button>
           <p class="text-xs text-ink-muted mt-3">El DTE de desarrollo es simulado y no tiene validez fiscal.</p>
         </div>
         <div v-else class="rounded-lg border border-border-strong p-4 text-sm text-ink-muted">

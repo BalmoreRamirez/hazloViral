@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
@@ -175,7 +176,7 @@ const REDES_ICON: Record<string, string> = {
       <template v-else>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div v-for="inf in results" :key="inf.id"
-            @click="router.push(`/influencers/${inf.id}`)"
+            @click="router.push(viewPath(`/influencers/${inf.id}`))"
             class="card cursor-pointer hover:shadow-md transition-shadow flex flex-col">
             <!-- Foto + nombre + @username -->
             <div class="flex items-center gap-3 mb-3">

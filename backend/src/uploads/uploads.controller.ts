@@ -16,11 +16,14 @@ import { diskStorage, memoryStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import sharp from 'sharp';
+import { randomUUID } from 'crypto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../common/decorators/get-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PaymentReceipt } from '../receipts/entities/payment-receipt.entity';
+import { DteDocument } from '../dte/entities/dte-document.entity';
 
 const PDFS_DIR    = join(process.cwd(), 'uploads', 'pdfs');
 const DTE_DIR     = join(process.cwd(), 'uploads', 'dte');
@@ -71,6 +74,8 @@ function mimeFromExt(filename: string): string {
 export class UploadsController {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(PaymentReceipt) private readonly receiptsRepo: Repository<PaymentReceipt>,
+    @InjectRepository(DteDocument) private readonly dteRepo: Repository<DteDocument>,
   ) {}
 
   // ── Avatar de perfil ──────────────────────────────────────────────────────
@@ -169,10 +174,25 @@ export class UploadsController {
   }
 
   @Get('dte/:filename')
-  serveDte(@Param('filename') filename: string, @Res() res: any) {
+  @UseGuards(JwtAuthGuard)
+  async serveDte(
+    @Param('filename') filename: string,
+    @GetUser() user: User,
+    @Res() res: any,
+  ) {
     if (filename.includes('/') || filename.includes('..')) throw new NotFoundException();
     const filePath = join(DTE_DIR, filename);
     if (!existsSync(filePath)) throw new NotFoundException('DTE no encontrado');
+    const dte = await this.dteRepo.findOne({ where: { pdf_url: `/api/uploads/dte/${filename}` } });
+    if (!dte?.payment_receipt_id) throw new NotFoundException('DTE no encontrado');
+    const ownedReceipt = await this.receiptsRepo
+      .createQueryBuilder('receipt')
+      .leftJoin('empresas_profiles', 'empresa', 'empresa.id = receipt.empresa_id')
+      .leftJoin('influencers_profiles', 'influencer', 'influencer.id = receipt.influencer_id')
+      .where('receipt.id = :id', { id: dte.payment_receipt_id })
+      .andWhere('(empresa.user_id = :userId OR influencer.user_id = :userId)', { userId: user.id })
+      .getOne();
+    if (!ownedReceipt) throw new NotFoundException('DTE no encontrado');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -187,7 +207,7 @@ export class UploadsController {
       storage: diskStorage({
         destination: (_req, _file, cb) => { ensureDir(FILES_DIR); cb(null, FILES_DIR); },
         filename: (_req, file, cb) => {
-          cb(null, `${Date.now()}-${Math.round(Math.random() * 1e6)}${extname(file.originalname)}`);
+          cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`);
         },
       }),
       limits: { fileSize: 500 * 1024 * 1024 },
