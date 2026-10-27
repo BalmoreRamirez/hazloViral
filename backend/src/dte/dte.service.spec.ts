@@ -21,7 +21,7 @@ describe('IVA de borradores de desarrollo', () => {
     expect(() => splitIncludedIva(amount)).toThrow();
   });
 
-  it('persiste el desglose, tributo 20 y resumen y los representa en el PDF', async () => {
+  it.each([false, true])('persiste IVA y PDF para pago o recarga (recarga=%s)', async (isRecharge) => {
     const documents = {
       findOne: jest.fn().mockResolvedValue(null),
       create: jest.fn((data) => data),
@@ -40,7 +40,8 @@ describe('IVA de borradores de desarrollo', () => {
       return '/api/uploads/dte/test.pdf';
     });
     await service.createDevelopmentPayoutDte({
-      receiptId: 1, receiptNumber: 'REC-1', transactionId: 'TX-1', contractId: 1,
+      receiptId: 1, receiptNumber: 'REC-1', transactionId: 'TX-1', contractId: isRecharge ? null : 1,
+      ...(isRecharge ? { operation: 'credits_top_up' as const } : {}),
       amountUsd: 113, influencerName: 'Prueba', influencerEmail: 'test@example.com', document: null,
     });
     expect(documents.save).toHaveBeenCalledWith(expect.objectContaining({
@@ -52,6 +53,8 @@ describe('IVA de borradores de desarrollo', () => {
     expect(details.save).toHaveBeenCalledWith(expect.objectContaining({
       precio_unitario: 100, venta_gravada: 100, tributos: ['20'],
     }));
+    expect(pdf).toContain(isRecharge ? 'Recarga de creditos de plataforma' : 'Pago de contrato #1');
+    if (isRecharge) expect(pdf).not.toContain('contrato #null');
     expect(pdf).toContain('IVA 13%');
     expect(pdf).toContain('USD 100.00');
     expect(pdf).toContain('USD 13.00');

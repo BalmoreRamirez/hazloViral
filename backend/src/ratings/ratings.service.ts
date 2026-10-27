@@ -72,21 +72,24 @@ export class RatingsService {
     };
   }
 
-  async getAll(influencerId: number) {
-    const ratings = await this.repo.find({
+  async getAll(influencerId: number, page = 1) {
+    const pageSize = 6;
+    const [ratings, total] = await this.repo.findAndCount({
       where: { influencer_id: influencerId },
       relations: { empresa: true },
-      order: { created_at: 'DESC' },
+      order: { updated_at: 'DESC', id: 'DESC' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
     });
 
-    return ratings.map(r => ({
+    return { total, page, pageSize, items: ratings.map(r => ({
       id:                r.id,
       estrellas:         r.estrellas,
       comentario:        r.comentario,
       created_at:        r.created_at,
       updated_at:        r.updated_at,
       empresa_nombre:    r.empresa?.nombre_comercial ?? 'Empresa',
-    }));
+    })) };
   }
 
   /** Calificación propia y si la empresa puede calificar (tiene un contrato completado con el influencer). */

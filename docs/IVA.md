@@ -40,3 +40,9 @@ El modo de aplicación usa `--apply`; solo corrige borradores simulados sin IVA 
 El usuario autorizó actualizar ambas facturas. Se comprobó que los contratos netos de comisión y sus comprobantes coinciden en $180.00 y $315.00. Se corrigió el DTE 1 a base $159.29, IVA $20.71 y total $180.00. El DTE 2 conserva base $278.76, IVA $36.24 y total $315.00. Ambos JSON, detalles, montos en letras y PDF fueron actualizados y verificados por API.
 
 El modo explícito `--reconcile-receipts` de la herramienta permite tomar como total el comprobante únicamente si coincide con el neto del contrato. Sin `--apply` solo evalúa. La incidencia del total histórico de $720,000.00 queda resuelta.
+
+## Factura de recarga de desarrollo
+
+Las nuevas recargas simuladas generan comprobante, cabecera DTE y detalle dentro de la transacción de acreditación. El PDF incluye descripción de recarga, receptor empresa e IVA incluido, sin un contrato ficticio. El historial de recarga ofrece descarga autenticada del PDF y muestra el IVA almacenado.
+
+El flujo conserva la restricción de documentos sin validez fiscal. La emisión oficial requiere integrar firma y transmisión a Hacienda y definir el documento y tratamiento tributario aplicables a los créditos. No se crean facturas retroactivas de recargas anteriores.

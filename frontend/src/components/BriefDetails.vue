@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatDate } from '@/utils/date'
 import { derechosUsoLabel, formatPresupuesto } from '@/constants/brief'
 
 /**
@@ -16,7 +17,7 @@ const b = computed(() => props.brief)
 const presupuesto = computed(() => formatPresupuesto(b.value.presupuesto_min, b.value.presupuesto_max))
 
 const fechas = computed(() => {
-  const fmt = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('es-SV', { timeZone: 'America/El_Salvador', day: 'numeric', month: 'short', year: 'numeric' })
+  const fmt = (d: string) => formatDate(d, { day: 'numeric', month: 'short', year: 'numeric' })
   const { fecha_inicio: i, fecha_fin: f } = b.value
   if (i && f) return `${fmt(i)} → ${fmt(f)}`
   if (i) return `Desde ${fmt(i)}`

@@ -183,6 +183,28 @@ export class NotificationsService {
     }
   }
 
+  async sendCreditsTopUpReceipt(opts: {
+    email: string; companyName: string; receiptNumber: string; amountUsd: number;
+    pdfPath: string; documentNumber: string; subtotal: number; iva: number;
+  }): Promise<boolean> {
+    if (!this.transporter || !opts.email) return false;
+    const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+    try {
+      const result = await this.transporter.sendMail({
+        from: `"InfluSmart" <${this.smtpUser}>`, to: opts.email,
+        subject: `Factura de recarga — ${opts.receiptNumber} — InfluSmart`,
+        html: `<p>Hola ${escape(opts.companyName)},</p><p>Tu recarga de <strong>$${opts.amountUsd.toFixed(2)} USD</strong> fue registrada.</p>
+          <p>Base: $${opts.subtotal.toFixed(2)} · IVA incluido: $${opts.iva.toFixed(2)} · Total: $${opts.amountUsd.toFixed(2)} USD.</p>
+          <p>Adjuntamos el documento ${escape(opts.documentNumber)}. Es un documento simulado de desarrollo, sin validez fiscal.</p>`,
+        attachments: [{ filename: `${opts.documentNumber}.pdf`, path: opts.pdfPath }],
+      });
+      return !!result.accepted?.length && !result.rejected?.length;
+    } catch (error: any) {
+      this.logger.error(`No se pudo enviar la factura de recarga ${opts.receiptNumber}: ${error?.code ?? 'SMTP_ERROR'}`);
+      return false;
+    }
+  }
+
   async sendInfluencerPayoutReceipt(opts: {
     email: string;
     influencerName: string;

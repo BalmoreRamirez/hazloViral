@@ -1,3 +1,4 @@
+import { calculateAge } from '../../common/date.util';
 import {
   IsArray,
   IsBoolean,
@@ -92,9 +93,6 @@ export class RegisterInfluencerDto {
 
   get _es_menor(): boolean {
     if (!this.fecha_nacimiento) return false;
-    const birth = new Date(this.fecha_nacimiento);
-    const age18 = new Date();
-    age18.setFullYear(age18.getFullYear() - 18);
-    return birth > age18;
+    return calculateAge(this.fecha_nacimiento) < 18;
   }
 }

@@ -78,6 +78,13 @@ const router = createRouter({
     { path: '/contratos/:id', name: 'contrato',  component: () => import('@/views/contratos/ContratoDetailView.vue'),  meta: { auth: true, roles: ['empresa', 'influencer'] } },
     { path: '/pagos/comprobantes', name: 'payment-receipts', component: () => import('@/views/pagos/ReceiptsView.vue'), meta: { auth: true, roles: ['empresa', 'influencer'] } },
 
+    {
+      path: '/saldo/recargar',
+      name: 'credit-recharge',
+      component: () => import('@/views/credits/RechargeView.vue'),
+      meta: { auth: true, role: 'empresa' },
+    },
+
     // ── Admin ───────────────────────────────────────────────────────────────
     { path: '/admin', name: 'admin', component: () => import('@/views/admin/AdminView.vue'), meta: { auth: true, role: 'admin' } },
 

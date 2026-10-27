@@ -2,6 +2,7 @@ import type { RouteRecordRaw } from 'vue-router'
 
 // Stable, opaque presentation paths. Authorization is enforced separately.
 export const VIEW_PATHS: Record<string, string> = {
+  "/saldo/recargar": "/v/8f39c2a1b76de045",
   "/dashboard": "/v/2a71f7866bc48c60",
   "/perfil/empresa": "/v/549abc017e2e6d9f",
   "/perfil/influencer": "/v/26eb9a4d29e00ed0",

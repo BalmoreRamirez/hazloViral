@@ -1,4 +1,4 @@
-const APP_TIME_ZONE = 'America/El_Salvador';
+export const APP_TIME_ZONE = 'America/El_Salvador';
 
 function getParts(date: Date): Record<string, string> {
   return Object.fromEntries(
@@ -34,4 +34,10 @@ export function formatLocalTimeForDocument(date: Date): string {
     second: '2-digit',
     hour12: true,
   }).format(date);
+}
+
+export function calculateAge(dateOfBirth: string, now = new Date()): number {
+  const today = getLocalDateTime(now).date;
+  const birth = dateOfBirth.slice(0, 10);
+  return Number(today.slice(0, 4)) - Number(birth.slice(0, 4)) - (today.slice(5) < birth.slice(5) ? 1 : 0);
 }

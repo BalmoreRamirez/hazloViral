@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { RatingPageDto } from './dto/rating-page.dto';
+import { Body, Controller, Get, Query, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import { RatingsService } from './ratings.service';
 import { UpsertRatingDto } from './dto/upsert-rating.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -34,8 +35,8 @@ export class RatingsController {
   // Todas las calificaciones (lista pública)
   @Get(':influencerId/ratings')
   @Roles(UserRole.EMPRESA, UserRole.INFLUENCER, UserRole.ADMIN)
-  getAll(@Param('influencerId', ParseIntPipe) influencerId: number) {
-    return this.svc.getAll(influencerId);
+  getAll(@Param('influencerId', ParseIntPipe) influencerId: number, @Query() query: RatingPageDto) {
+    return this.svc.getAll(influencerId, query.page);
   }
 
   // La calificación propia de esta empresa para ese influencer

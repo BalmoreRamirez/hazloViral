@@ -1,3 +1,4 @@
+import { calculateAge as calcAge } from '../../common/date.util';
 import {
   Column,
   Entity,
@@ -10,15 +11,6 @@ import { User } from '../../users/entities/user.entity';
 import { InfluencerMetric } from './influencer-metric.entity';
 import { Chat } from '../../chats/entities/chat.entity';
 import { ContratoEscrow } from '../../contratos/entities/contrato-escrow.entity';
-
-function calcAge(dob: string): number {
-  const birth = new Date(dob);
-  const now = new Date();
-  let age = now.getFullYear() - birth.getFullYear();
-  const m = now.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-  return age;
-}
 
 @Entity('influencers_profiles')
 export class InfluencerProfile {
@@ -78,10 +70,7 @@ export class InfluencerProfile {
   // Computed in application layer (mirrors DB generated column logic)
   get es_menor_edad(): boolean {
     if (!this.fecha_nacimiento) return false;
-    const birth = new Date(this.fecha_nacimiento);
-    const age18 = new Date();
-    age18.setFullYear(age18.getFullYear() - 18);
-    return birth > age18;
+    return calcAge(this.fecha_nacimiento) < 18;
   }
 
   @Column({ nullable: true, length: 255 })

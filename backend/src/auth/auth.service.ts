@@ -1,3 +1,4 @@
+import { calculateAge } from '../common/date.util';
 import {
   BadRequestException,
   ConflictException,
@@ -297,10 +298,7 @@ export class AuthService {
   }
 
   private calcularEsMenor(fechaNacimiento: string): boolean {
-    const birth = new Date(fechaNacimiento);
-    const age18 = new Date();
-    age18.setFullYear(age18.getFullYear() - 18);
-    return birth > age18;
+    return calculateAge(fechaNacimiento) < 18;
   }
 
   private sign(user: User): string {

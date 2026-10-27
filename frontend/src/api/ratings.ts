@@ -1,5 +1,7 @@
 import { api } from './index'
 
+export interface RatingPage<T> { items: T[]; total: number; page: number; pageSize: number }
+
 export interface RatingSummary {
   promedio: number | null
   total: number
@@ -26,8 +28,8 @@ export const ratingsApi = {
     return data
   },
 
-  async getAll(influencerId: number): Promise<RatingItem[]> {
-    const { data } = await api.get(`/influencers/${influencerId}/ratings`)
+  async getAll(influencerId: number, page = 1): Promise<RatingPage<RatingItem>> {
+    const { data } = await api.get(`/influencers/${influencerId}/ratings`, { params: { page } })
     return data
   },
 
@@ -64,8 +66,8 @@ export const empresaRatingsApi = {
     return data
   },
 
-  async getAll(empresaId: number): Promise<EmpresaRatingItem[]> {
-    const { data } = await api.get(`/empresas/${empresaId}/ratings`)
+  async getAll(empresaId: number, page = 1): Promise<RatingPage<EmpresaRatingItem>> {
+    const { data } = await api.get(`/empresas/${empresaId}/ratings`, { params: { page } })
     return data
   },
 

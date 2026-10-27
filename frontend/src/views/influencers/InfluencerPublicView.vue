@@ -2,6 +2,7 @@
 import { viewPath } from '@/router/paths'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ReviewPagination from '@/components/ReviewPagination.vue'
 import AppLayout from '@/components/AppLayout.vue'
 import StarRating from '@/components/StarRating.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
@@ -27,6 +28,22 @@ const chatError = ref('')
 // Rating state
 const summary      = ref<RatingSummary | null>(null)
 const reviews      = ref<RatingItem[]>([])
+const reviewPage = ref(1)
+const reviewTotal = ref(0)
+const reviewsLoading = ref(false)
+const reviewsError = ref('')
+async function loadReviews(page = 1) {
+  if (reviewsLoading.value) return
+  reviewsLoading.value = true
+  reviewsError.value = ''
+  try {
+    const result = await ratingsApi.getAll(Number(route.params.id), page)
+    reviews.value = result.items
+    reviewTotal.value = result.total
+    reviewPage.value = result.page
+  } catch { reviewsError.value = 'No se pudieron cargar las reseñas. Intenta nuevamente.' }
+  finally { reviewsLoading.value = false }
+}
 const myRating     = ref<MyRating | null>(null)
 const ratingForm   = ref({ estrellas: 0, comentario: '' })
 const savingRating = ref(false)
@@ -65,10 +82,7 @@ onMounted(async () => {
   try {
     profile.value = await influencerApi.getPublic(id)
     // Load summary for all authenticated users
-    ;[summary.value, reviews.value] = await Promise.all([
-      ratingsApi.getSummary(id),
-      ratingsApi.getAll(id),
-    ])
+    await Promise.all([ratingsApi.getSummary(id).then(value => { summary.value = value }), loadReviews()])
     // Empresa: su calificación, si puede calificar, costo del chat y si ya tiene chat abierto
     if (authStore.isEmpresa) {
       const [mine, cost] = await Promise.all([
@@ -109,10 +123,7 @@ async function submitRating() {
       comentario: ratingForm.value.comentario.trim() || undefined,
     })
     // Refresh summary and reviews
-    ;[summary.value, reviews.value] = await Promise.all([
-      ratingsApi.getSummary(profile.value.id),
-      ratingsApi.getAll(profile.value.id),
-    ])
+    await Promise.all([ratingsApi.getSummary(profile.value.id).then(value => { summary.value = value }), loadReviews(1)])
     ratingDone.value = true
   } catch (e: any) {
     ratingError.value = e.response?.data?.message ?? 'Error al guardar la calificación.'
@@ -275,23 +286,31 @@ async function submitRating() {
         </div>
 
         <!-- Reseñas de otras empresas -->
-        <div v-if="reviews.length" class="card">
+        <div class="card">
           <h2 class="font-display font-semibold text-navy mb-4">
-            Reseñas <span class="text-ink-muted font-normal text-sm">({{ reviews.length }})</span>
+            Reseñas <span class="text-ink-muted font-normal text-sm">({{ reviewTotal }})</span>
           </h2>
-          <div class="space-y-4">
-            <div v-for="r in reviews" :key="r.id"
-              class="border border-border rounded-xl p-4 bg-slate/50">
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <p class="font-semibold text-navy text-sm">{{ r.empresa_nombre }}</p>
-                  <p class="text-ink-muted text-xs mt-0.5">{{ formatDate(r.created_at) }}</p>
+          <p v-if="reviewsLoading" role="status" class="py-8 text-center text-ink-muted">Cargando reseñas…</p>
+          <div v-else-if="reviewsError" role="alert" class="py-5 space-y-3"><p class="text-sm text-coral-text">{{ reviewsError }}</p><button type="button" class="btn-secondary" @click="loadReviews(reviewPage)">Reintentar</button></div>
+          <p v-else-if="!reviews.length" class="py-8 text-center text-sm text-ink-muted">Todavía no hay reseñas publicadas.</p>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">
+            <article v-for="r in reviews" :key="r.id"
+              class="min-w-0 border border-border rounded-xl p-5 bg-slate/50 space-y-4">
+              <div class="flex items-center gap-3">
+                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-tint text-violet font-semibold" aria-hidden="true">{{ r.empresa_nombre?.[0]?.toUpperCase() ?? 'E' }}</span>
+                <div class="min-w-0">
+                  <h3 class="font-semibold text-navy text-sm break-words">{{ r.empresa_nombre }}</h3>
+                  <time :datetime="r.created_at" class="block text-ink-muted text-xs mt-1">{{ formatDate(r.created_at) }}</time>
                 </div>
-                <StarRating :model-value="r.estrellas" readonly size="sm" />
               </div>
-              <p v-if="r.comentario" class="text-sm text-ink-muted mt-2">{{ r.comentario }}</p>
-            </div>
+              <div class="flex items-center gap-2">
+                <StarRating :model-value="r.estrellas" readonly size="sm" />
+                <span class="text-xs font-semibold text-navy">{{ r.estrellas }} / 5</span>
+              </div>
+              <p v-if="r.comentario" class="text-sm text-ink-muted whitespace-pre-line break-words leading-relaxed border-t border-border pt-3">{{ r.comentario }}</p>
+            </article>
           </div>
+          <ReviewPagination :page="reviewPage" :total="reviewTotal" :loading="reviewsLoading" @change="loadReviews" />
         </div>
       </div>
     </template>

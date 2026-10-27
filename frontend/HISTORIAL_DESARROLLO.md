@@ -4,6 +4,149 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-27 — Paginación real de reseñas
+
+- Requerimientos: FE-009, BE-011.
+- Backend: endpoints de reseñas de influencers y empresas devuelven { items, total, page, pageSize }, limitados a 6 por consulta con skip/take y orden updated_at DESC, id DESC para desempate estable. Query page validada como entero entre 1 y 100000; primera página por defecto.
+- Frontend: ambos perfiles públicos consumen una sola página, muestran total general, controles Anterior/Siguiente, número de página, carga, error/reintento y estado vacío. Se elimina la descarga completa y el recorte local progresivo. Tras guardar una reseña se vuelve a la primera página.
+- Resumen: promedio y total de todas las reseñas se conservan en el endpoint de resumen, independientemente de la página visible.
+- Compatibilidad: respuesta de listado cambió de array a objeto paginado; todos los consumidores del repositorio fueron adaptados. Sin cambios de BD ni permisos para calificar.
+- Validación: compilaciones backend/frontend, 8 pruebas de paginación/validación y pruebas de perfil público satisfactorias. Contenedores reiniciados y ambos endpoints verificados por API autenticada: tamaño 6 y página inválida devuelve 400.
+
+## 2026-10-27 — Distribución compacta de reseñas de influencers
+
+- Requerimiento: FE-009.
+- Cambio: reseñas en tarjetas de una, dos o tres columnas según pantalla; cada tarjeta agrupa inicial de la empresa, nombre, fecha y puntuación. Las estrellas quedan junto al contenido y no en el extremo opuesto de una fila de ancho completo.
+- Lectura: comentarios con saltos de línea, ajuste de palabras largas y separación visual; fecha semántica y puntuación numérica junto a estrellas.
+- Validación: compilación y tipos correctos; sin cambios de datos ni permisos.
+
+## 2026-10-27 — Acceso al perfil del influencer desde el chat
+
+- Requerimientos: FE-002, FE-003.
+- Causa: el interlocutor de tipo influencer no incluía profile_url, por lo que su nombre no se renderizaba como enlace para la empresa.
+- Corrección: enlace al perfil público del influencer usando influencer_id del chat y viewPath para la ruta opaca. Nombre clicable y acción explícita con icono de ojo en cabecera para ambos roles, con tooltip y etiqueta accesible correspondientes.
+- Validación: compilación y tipos correctos; no se modifican permisos ni endpoints de backend.
+
+## 2026-10-27 — Rediseño de perfil público de empresa
+
+- Requerimientos: FE-002, FE-008.
+- UI: portada compacta por rubro, logo con fallback, identidad de marca y reputación; indicadores de colaboraciones, creadores distintos y reportes con explicación de su alcance. Descripción y reseñas en columna principal; datos generales, verificación y canales públicos en lateral.
+- Propietario: se comprueba el ID de su empresa para mostrar aviso de vista previa y enlace de edición solamente en su propio perfil. Otros visitantes ven únicamente el DTO público ya existente.
+- UX: carga visual, distinción entre 404 y error de conexión, reintento independiente de reseñas y comprobación de elegibilidad. Un fallo de valoraciones ya no oculta una empresa existente. Reseñas ordenadas con carga progresiva de cinco en cinco.
+- Calificaciones: formulario accesible con contador, prevención de doble envío y comentario conservado ante fallo. Mensaje de éxito solo tras guardar; error al refrescar opiniones no se presenta como fallo de guardado.
+- Enlaces: solo HTTP/HTTPS, pestaña nueva con noopener/noreferrer. No se agregan datos bancarios, fiscales ni personales privados a la vista pública.
+- Validación: compilación y tipos correctos; pruebas para reseñas caídas, perfil 404, preservación del comentario ante fallo y protocolos de enlaces. Pendiente revisión visual en navegador.
+
+## 2026-10-27 — Rediseño de Mi perfil de empresa e influencer
+
+- Requerimientos: FE-002, FE-008.
+- UI común: resumen de identidad con avatar editable y estado, panel de requisitos con progreso, navegación por secciones y contenido principal adaptable. Se eliminan portadas altas y duplicaciones de identidad para priorizar los datos útiles.
+- Empresa: identidad, presencia online, contacto/facturación y representante en secciones delimitadas. Vista pública y acceso a briefs conservados; requisitos se obtienen del checklist del servidor.
+- Influencer: presentación y ubicación, oferta/disponibilidad e identificación privada separadas; redes y cuenta bancaria con accesos directos. Verificación usa los requisitos existentes, sin cambiar las reglas de negocio.
+- UX: guardar/cancelar visibles al editar, prevención de envíos duplicados, restauración de datos al reabrir edición tras cancelar, etiquetas de formulario asociadas a controles, foco visible y mensajes de carga/error/reintento/éxito.
+- Privacidad visual: cuenta bancaria oculta por defecto salvo últimos cuatro caracteres, con control accesible para mostrar/ocultar; la identificación y los datos bancarios siguen disponibles para su titular.
+- Errores: fallos de carga, guardado bancario y acciones sobre redes ya no quedan sin mensaje. Los datos introducidos se conservan si guardar falla.
+- Validación: compilación y tipos correctos; no se modificó la API ni la BD. Pendiente revisión visual e interacción en navegador con ambos roles.
+
+## 2026-10-27 — Rediseño del inicio de empresa e influencer
+
+- Requerimiento: FE-018.
+- UI: cabecera con identidad del perfil, fecha local y CTA principal; cuatro indicadores prioritarios, área principal para siguientes pasos/contratos y columna de cuenta/perfil/conversaciones. Distribución adaptable de una a cuatro columnas y navegación por enlaces accesibles.
+- Empresa: actividad contractual, fondos en custodia, revisión y fondeo; acceso visible a saldo, recarga y facturas.
+- Influencer: tareas de entrega/cambios/publicación, ingresos netos en proceso y confirmados; nombre artístico, verificación y cuenta bancaria según datos reales del perfil.
+- UX: pendientes específicos por rol, ordenados por prioridad y plazo; estados vacíos con siguiente paso; carga explícita y fallo independiente por sección, sin presentar una consulta fallida como cero. Actualización manual y hora de última consulta de El Salvador.
+- Cálculos: confirmados según payout_status o referencia de transferencia válida, excluyendo estados failed/processing; montos de contratos en curso separados de ingresos recibidos. Operaciones monetarias en centavos para evitar errores de suma.
+- Compatibilidad: se mantiene el retorno de checkout anterior al dashboard y el acceso al panel de administración.
+- Validación: compilación y tipos correctos; pruebas de tareas por rol, ingresos confirmados frente a pendientes/fallidos, resumen vacío y centavos, además de pruebas existentes de acceso y fechas.
+- Pendiente: revisión visual e interacción con sesiones reales en navegador; no se dispone de navegador automatizado en el entorno.
+
+## 2026-10-27 — Históricos normalizados a UTC−6
+
+- Solicitud: actualizar también los datos históricos.
+- Auditoría: se distinguieron timestamps locales generados por BD, instantes con zona y campos escritos explícitamente por Node cuando corría en UTC.
+- Aplicado en BD: 15 lecturas de mensajes, 1 verificación social, 5 vencimientos de correo y fecha/hora del JSON de 1 DTE de desarrollo. Total: 22 registros.
+- Conservado: fechas de creación ya locales, timestamptz e ISO con offset y campos de calendario. Sin cambios de saldo, importes ni estados de correo.
+- Respaldo: `/app/uploads/maintenance/historical-timezone-24fa043c-4a0f-498e-9b39-c5542f480d6c/before.json`.
+- Migración: `backend/src/common/scripts/normalize-historical-timezone.cjs`, transaccional, con registro en `app_maintenance_runs` para evitar doble desplazamiento.
+- Validación: comparación de los 22 registros contra el respaldo y valores calculados; ninguna lectura anterior a creación. Reejecución protegida devuelve alreadyApplied sin modificar datos. Ver [política de fechas](../docs/FECHAS.md).
+
+## 2026-10-27 — Unificación de fechas en UTC−6
+
+- Auditoría: PostgreSQL en El Salvador, Node en UTC y columnas timestamp sin zona; combinación capaz de producir desfase de seis horas.
+- Cambio: TZ de aplicación y Docker en America/El_Salvador; pool PostgreSQL con zona explícita. Frontend interpreta fechas sin hora y timestamps locales en UTC−6, independientemente del navegador; briefs y edades reutilizan utilidades compartidas.
+- Histórico conocido: corregida hora del comprobante recuperado 3 de 18:00 a 12:00 local, con respaldo previo, sin cambios económicos.
+- Validación: compilaciones correctas, 23 pruebas backend y pruebas frontend bajo Tokio y Los Ángeles; servicios recreados, roundtrip en tabla temporal y API autenticada satisfactorios.
+- Alcance: ISO Z se conserva para transportar instantes inequívocos. No se desplazaron masivamente registros históricos mixtos. Detalle y limitaciones en [política de fechas](../docs/FECHAS.md).
+
+## 2026-10-27 — Modal de creación y edición de briefs
+
+- Requerimiento: FE-012.
+- Cambio: formulario inline trasladado a Dialog de PrimeVue para crear y editar. Ancho adaptable hasta 64rem y altura máxima 90dvh; contenido con scroll interno, encabezado y pie de acciones fuera del área desplazable, y bloqueo del scroll del fondo.
+- Organización: cinco secciones delimitadas (campaña, entregables/calendario, contenido, presupuesto/condiciones y recursos), pares de campos relacionados en dos columnas desde sm y una columna en móvil. Etiquetas asociadas a controles por ID.
+- Operación: submit de formulario, validaciones y archivos existentes conservados; se previenen guardados duplicados y cierres/cancelación durante guardado o subida. Cerrar restablece el formulario.
+- Validación: compilación y tipos correctos; pendiente revisión visual del modal en navegador.
+
+## 2026-10-27 — Columna Fecha contrato
+
+- Requerimiento: FE-005.
+- Cambio: fecha de creación (`created_at`) movida desde la celda Contrato a la columna independiente Fecha contrato, para empresa e influencer. Se usa el formato de fecha de El Salvador y se redistribuyen los anchos de columnas al 100% por rol.
+- Validación: compilación y tipos de frontend.
+
+## 2026-10-27 — Corrección de historial y envío de factura de recarga
+
+- Solicitud: una recarga no aparecía en historial ni llegaba al correo. Auditoría encontró saldo 109.00 y ningún comprobante de recarga; SMTP estaba configurado. No existía conexión de envío de facturas de recarga.
+- Corrección: nuevas recargas simuladas envían el PDF después de confirmar la transacción; errores de correo conservan factura_enviada=false sin repetir ni revertir el abono. Pagos vía comprobante de Wompi también invocan el envío de desarrollo. No se simula autorización fiscal oficial.
+- Reintento: POST /receipts/:id/send-invoice, restringido a empresa y comprobantes propios. Historial muestra correo Enviado/Pendiente y acción de icono para enviar pendientes. No reenvía automáticamente comprobantes ya marcados como enviados.
+- Recuperación: usuario confirmó $100 alrededor de las 12 p. m.; se creó comprobante id 3 con marca recovered y timestamp_approximate, a las 12:00 de El Salvador (18:00 UTC), sin nuevo abono. Base 88.50, IVA 11.50, total 100.00. Saldo verificado antes/después: 109.00.
+- Correo: SMTP aceptó el mensaje con PDF adjunto al correo registrado de empresa; esto no confirma lectura ni llegada a bandeja principal.
+- Herramienta: src/credits/scripts/recover-recharge.cjs; evalúa por defecto, requiere --apply para recuperar y enviar. Usa referencia estable para evitar duplicar la recuperación.
+- Operación: reiniciados frontend/backend. API autenticada confirmó comprobante, DTE y estado de envío; descarga PDF correcta. Vite sirve el historial y controles de correo actualizados.
+- Validación: compilaciones frontend/backend y 19 pruebas satisfactorias, incluidas aceptación de correo, fallo SMTP y no reenvío automático de documentos ya enviados.
+
+## 2026-10-27 — Mejoras de recarga y factura PDF de desarrollo
+
+- Requerimientos: FE-016, BE-009.
+- Interfaz: tarjetas de saldo y recarga con alturas coherentes y todo el ancho disponible; paquetes más visibles, resumen de base/IVA incluido/total y saldo estimado. Historial con estado de factura, IVA y descarga PDF mediante icono, tooltip y etiqueta accesible.
+- Documentos: nuevas recargas simuladas generan DTE BORRADOR de desarrollo con IVA incluido y receptor empresa. Acreditación, comprobante y registros de DTE/detalle comparten la transacción; un fallo de generación aborta la operación. La generación física del PDF ocurre antes del commit y puede dejar un archivo sin referencia si la transacción falla; no es descargable mediante la ruta protegida sin registro asociado.
+- Pagos Wompi: creación de comprobante conecta con el mismo generador cuando DTE_MODE=development. Se reutiliza el documento existente si ya fue creado para ese comprobante.
+- PDF: descripción y referencia propias de recarga, nombre de empresa y NIT cuando existe, sin inventar contrato; regeneración conserva la descripción guardada.
+- Límite: no implementa firma, transmisión ni autorización fiscal de Hacienda. En producción no se emite un PDF de desarrollo como documento fiscal oficial; el historial muestra Sin emitir cuando no existe DTE. Las recargas anteriores no se facturan retroactivamente.
+- Validación: compilaciones frontend/backend y 16 pruebas satisfactorias de desglose, PDF de recarga/pago y fallos de transacción. No se ejecutaron recargas reales ni se añadieron datos a la BD de usuario para probar.
+
+## 2026-10-27 — Encabezado de navegación en una sola fila
+
+- Requerimiento: FE-017.
+- Cambio: logo, enlaces agrupados con separadores discretos, saldo y Mi cuenta comparten una fila en escritorio amplio. Los títulos de grupo se mantienen como etiquetas accesibles sin ocupar otra fila.
+- Adaptación: por debajo de 1536 px, botón de menú con panel desplegable sobre el contenido; evita saltos de línea o compresión de enlaces. El rol permanece dentro de Mi cuenta.
+- Validación: compilación y tipos de frontend; pendiente revisión visual en navegador.
+
+## 2026-10-27 — Menú por rol y tareas
+
+- Requerimiento: FE-017.
+- Cambio: navegación de empresa agrupada en General/Inicio, Campañas (briefs, búsqueda, chats, contratos) y Finanzas (recarga, historial). Influencer: Inicio, Colaboraciones y Mis pagos; administrador: Inicio y Administración.
+- Cuenta: correo y rol dentro de Mi cuenta, con acceso a perfil y cerrar sesión. Saldo de empresa visible y enlazado a recarga.
+- Móvil: botón de apertura con aria-expanded y menú completo por rol, reemplazando la navegación parcial anterior. Estado activo también en detalles de chat, contrato e influencer.
+- Accesibilidad: controles nativos, etiquetas de navegación, iconos decorativos, foco visible, cierre de cuenta mediante Escape, salida de foco o clic exterior.
+- Validación: compilación y tipos correctos; pendiente revisión visual e interacción en navegador.
+
+## 2026-10-27 — Historial de recargas en tabla
+
+- Requerimientos: FE-016, BE-003, BE-009.
+- Cambio: tabla en Recargar saldo con fecha/hora de El Salvador, comprobante, transacción, monto y distinción de simulaciones. Solo incluye comprobantes credits_top_up de la empresa, ordenados del más reciente al más antiguo.
+- Actualización: carga al entrar, al actualizar saldo y al terminar una simulación; estados de carga, error con reintento y listado vacío.
+- Backend: las nuevas recargas simuladas guardan comprobante junto con la acreditación en la misma transacción; no se modifica la generación de comprobantes de pagos reales.
+- Limitación: las simulaciones anteriores sin comprobante no se reconstruyen porque no hay registro de fecha y monto individual que permita hacerlo con certeza.
+- Validación: compilaciones frontend/backend correctas y tres pruebas de registro transaccional, fallo de comprobante y no duplicación del flujo real. No se realizaron recargas contra la BD durante la validación.
+
+## 2026-10-27 — Vista de recarga de saldo para empresas
+
+- Requerimiento: FE-016.
+- Cambio: formulario y checkout simulado extraídos del dashboard a la vista Recargar saldo, con ruta exclusiva para empresa y URL opaca. Incluye paquetes, monto personalizado validado, saldo actual, estado de chats, errores y acceso al historial de pagos.
+- Accesos: menú de escritorio y móvil, indicador de saldo, alerta de saldo bajo, dashboard y chat.
+- Flujo: se reutilizan los endpoints existentes; el monto de simulación queda fijado al abrir la confirmación y se bloquea la confirmación duplicada mientras procesa.
+- Backend: retorno de Wompi actualizado a `/saldo/recargar`; retornos anteriores al dashboard se derivan a la nueva vista conservando la query. El mensaje de retorno indica que el abono depende de confirmación del proveedor.
+- Validación: compilación frontend y backend, tipos y pruebas existentes de acceso; pendiente prueba visual y checkout real, sin ejecutar recargas durante la implementación.
+
 ## 2026-10-27 — Ancho adaptable como diseño general
 
 - Requerimiento: FE-008.

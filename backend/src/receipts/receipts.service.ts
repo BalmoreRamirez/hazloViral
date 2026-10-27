@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { join } from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,6 +21,7 @@ const INTERNAL_ISSUER = {
 
 @Injectable()
 export class ReceiptsService {
+  private readonly logger = new Logger(ReceiptsService.name);
   constructor(
     @InjectRepository(PaymentReceipt)
     private readonly receiptsRepo: Repository<PaymentReceipt>,
@@ -46,7 +47,7 @@ export class ReceiptsService {
       relations: { user: true },
     });
     if (!empresa) throw new NotFoundException('Empresa no encontrada.');
-    return this.createOnce({
+    const receipt = await this.createOnce({
       operation_type: 'credits_top_up',
       operation_reference: `creditos-${transactionId}`,
       wompi_transaction_id: transactionId,
@@ -57,6 +58,53 @@ export class ReceiptsService {
       customer_snapshot: this.companySnapshot(empresa),
       metadata: { credit_amount: amountUsd },
     });
+    if (this.dteService.isDevelopmentMode()) {
+      await this.dteService.createDevelopmentPayoutDte({
+        receiptId: receipt.id, receiptNumber: receipt.receipt_number, transactionId,
+        contractId: null, operation: 'credits_top_up', amountUsd,
+        influencerName: empresa.razon_social || empresa.nombre_comercial,
+        influencerEmail: empresa.user?.email ?? '', document: empresa.nit ?? null,
+      });
+    }
+    await this.sendCreditsTopUpInvoice(receipt.id);
+    return receipt;
+  }
+
+  async sendCreditsTopUpInvoice(receiptId: number): Promise<boolean> {
+    try {
+      const receipt = await this.receiptsRepo.findOne({ where: { id: receiptId } });
+      if (!receipt || receipt.operation_type !== 'credits_top_up' || !receipt.empresa_id) return false;
+      if (receipt.factura_enviada) return true;
+      const empresa = await this.empresasRepo.findOne({ where: { id: receipt.empresa_id }, relations: { user: true } });
+      if (!empresa?.user?.email || !this.dteService.isDevelopmentMode()) return false;
+      await this.dteService.createDevelopmentPayoutDte({
+        receiptId: receipt.id, receiptNumber: receipt.receipt_number,
+        transactionId: receipt.wompi_transaction_id ?? receipt.operation_reference,
+        contractId: null, operation: 'credits_top_up', amountUsd: Number(receipt.amount_usd),
+        influencerName: empresa.razon_social || empresa.nombre_comercial,
+        influencerEmail: empresa.user.email, document: empresa.nit ?? null,
+      });
+      const dte = await this.dteRepo.findOne({ where: { payment_receipt_id: receipt.id } });
+      if (!dte?.pdf_url || dte.ambiente !== '00' || !dte.pdf_url.startsWith('/api/uploads/dte/')) return false;
+      const sent = await this.notifications.sendCreditsTopUpReceipt({
+        email: empresa.user.email, companyName: empresa.razon_social || empresa.nombre_comercial,
+        receiptNumber: receipt.receipt_number, amountUsd: Number(receipt.amount_usd),
+        documentNumber: dte.numero_control, subtotal: Number(dte.subtotal), iva: Number(dte.monto_iva),
+        pdfPath: join(process.cwd(), dte.pdf_url.replace(/^\/api\/uploads\//, 'uploads/')),
+      });
+      if (sent) await this.receiptsRepo.update(receipt.id, { factura_enviada: true });
+      return sent;
+    } catch {
+      // The credit operation has already committed; mail errors must not invite a second charge.
+      this.logger.error(`Factura de recarga pendiente de envío para comprobante ${receiptId}`);
+      return false;
+    }
+  }
+
+  async sendInvoiceForUser(user: User, id: number) {
+    const receipt = await this.findForUser(user, id);
+    if (receipt.operation_type !== 'credits_top_up') throw new BadRequestException('Solo disponible para recargas.');
+    return { sent: await this.sendCreditsTopUpInvoice(receipt.id) };
   }
 
   async createEscrowReceipts(contratoId: number, transactionId: string): Promise<void> {

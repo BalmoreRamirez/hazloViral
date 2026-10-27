@@ -67,7 +67,7 @@ export class WompiService {
 
     const reference     = `creditos-${empresa.id}-${Date.now()}`;
     const amountCentavos = Math.round(amountUsd * 100);
-    const redirectUrl   = `${this.frontendUrl}/dashboard?wompi=success&tipo=creditos`;
+    const redirectUrl   = `${this.frontendUrl}/saldo/recargar?wompi=success&tipo=creditos`;
     const signature     = this.generateIntegritySignature(reference, amountCentavos);
 
     const url = this.buildCheckoutUrl({

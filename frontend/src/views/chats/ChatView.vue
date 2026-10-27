@@ -107,6 +107,7 @@ const counterpart = computed(() => {
       initials:   (inf.nombre_artistico?.[0] ?? 'I').toUpperCase(),
       avatar_url: inf.user?.avatar_url ?? null,
       is_verified: inf.is_verified ?? false,
+      profile_url: viewPath(`/influencers/${chat.influencer_id}`),
     } : null
   } else {
     const emp = chat.empresa
@@ -304,7 +305,7 @@ function formatTime(dt: string) {
               <div class="flex items-center gap-1.5">
                 <RouterLink v-if="counterpart.profile_url" :to="counterpart.profile_url"
                   class="font-display font-semibold text-navy leading-tight hover:text-violet"
-                  title="Ver perfil de la marca">{{ counterpart.name }}</RouterLink>
+                  :title="isEmpresa ? 'Ver perfil del influencer' : 'Ver perfil de la marca'">{{ counterpart.name }}</RouterLink>
                 <p v-else class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
                 <VerifiedBadge v-if="counterpart.is_verified" size="sm" />
               </div>
@@ -314,6 +315,12 @@ function formatTime(dt: string) {
           <p v-else class="font-display font-semibold text-navy">Chat</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <RouterLink v-if="counterpart?.profile_url" :to="counterpart.profile_url"
+            v-tooltip.top="isEmpresa ? 'Ver perfil del influencer' : 'Ver perfil de la marca'"
+            :aria-label="`Ver perfil público de ${counterpart.name}`"
+            class="btn-ghost inline-flex items-center justify-center w-9 h-9 rounded-full text-violet">
+            <i class="pi pi-eye" aria-hidden="true" />
+          </RouterLink>
           <span v-if="isBlocked" class="badge-warning">Solo lectura</span>
           <span v-else class="badge-active">Activo</span>
         </div>
@@ -328,9 +335,9 @@ function formatTime(dt: string) {
       <!-- Alerta saldo bajo -->
       <div v-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral-text">
         <i class="pi pi-exclamation-triangle mr-1.5" aria-hidden="true" />{{ blockMsg }}
-        <button v-if="isEmpresa" @click="creditsStore.recharge(10)" :disabled="creditsStore.recharging"
+        <button v-if="isEmpresa" @click="router.push(viewPath('/saldo/recargar'))"
           class="ml-2 underline font-semibold disabled:opacity-50">
-          {{ creditsStore.recharging ? 'Procesando…' : 'Recargar $10' }}
+          Recargar saldo
         </button>
       </div>
 

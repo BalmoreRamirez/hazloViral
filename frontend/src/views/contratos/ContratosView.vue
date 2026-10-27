@@ -121,22 +121,24 @@ function neto(c: any) {
 
       <div v-else class="card p-0 overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[1080px] table-fixed text-sm text-left">
+          <table class="w-full min-w-[1200px] table-fixed text-sm text-left">
             <caption class="sr-only">Listado de contratos</caption>
             <colgroup>
-              <col style="width: 11%" />
-              <col style="width: 10%" />
-              <col style="width: 12%" />
-              <col :style="{ width: isEmpresa ? '14%' : '20%' }" />
+              <col style="width: 8%" />
               <col style="width: 10%" />
               <col style="width: 10%" />
-              <col :style="{ width: isEmpresa ? '11%' : '21%' }" />
-              <col v-if="isEmpresa" style="width: 16%" />
+              <col style="width: 10%" />
+              <col :style="{ width: isEmpresa ? '13%' : '20%' }" />
+              <col style="width: 9%" />
+              <col style="width: 9%" />
+              <col :style="{ width: isEmpresa ? '10%' : '18%' }" />
+              <col v-if="isEmpresa" style="width: 15%" />
               <col style="width: 6%" />
             </colgroup>
             <thead class="bg-slate border-b border-border-strong text-xs uppercase tracking-wide text-ink-muted">
               <tr>
                 <th scope="col" class="px-3 xl:px-4 py-3">Contrato</th>
+                <th scope="col" class="px-3 xl:px-4 py-3">Fecha contrato</th>
                 <th scope="col" class="px-3 xl:px-4 py-3">{{ isEmpresa ? 'Influencer' : 'Empresa' }}</th>
                 <th scope="col" class="px-3 xl:px-4 py-3">Plataformas</th>
                 <th scope="col" class="px-3 xl:px-4 py-3">Estado</th>
@@ -151,9 +153,8 @@ function neto(c: any) {
               <tr v-for="c in contractsStore.contracts" :key="c.id" class="align-middle hover:bg-slate/60">
                 <th scope="row" class="px-3 xl:px-4 py-5 font-semibold text-navy">
                   <p>Contrato #{{ c.id }}</p>
-                  <p class="text-xs text-ink-muted font-normal mt-1">{{ formatDate(c.created_at) }}</p>
-
                 </th>
+                <td class="px-3 xl:px-4 py-5 text-ink-muted whitespace-nowrap">{{ c.created_at ? formatDate(c.created_at) : 'Sin definir' }}</td>
                 <td class="px-3 xl:px-4 py-5 text-navy"><span class="block break-words">{{ counterpartName(c) }}</span></td>
                 <td class="px-3 xl:px-4 py-5">
                   <div v-if="c.entregables?.length" class="flex flex-col gap-2">

@@ -2,8 +2,8 @@
 import { viewPath } from '@/router/paths'
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
-import AvatarUpload from '@/components/AvatarUpload.vue'
-import CoverBanner from '@/components/CoverBanner.vue'
+import ProfileOverview from '@/components/ProfileOverview.vue'
+import ProfileProgress from '@/components/ProfileProgress.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { useProfileStore, type EmpresaProfile } from '@/stores/profile'
 import { useAuthStore } from '@/stores/auth'
@@ -35,9 +35,13 @@ const CHECKLIST_LABELS: Record<string, string> = {
 
 const p = computed(() => store.empresaProfile)
 
-const pendientes = computed(() =>
-  Object.entries(p.value?.verification_checklist ?? {}).filter(([, ok]) => !ok).map(([k]) => CHECKLIST_LABELS[k] ?? k),
-)
+const checklist = computed(() => Object.entries(CHECKLIST_LABELS).map(([key, label]) => ({ label, ok: !!p.value?.verification_checklist?.[key as keyof typeof p.value.verification_checklist] })))
+const loadError = ref('')
+async function loadProfile() {
+  loadError.value = ''
+  try { await store.loadEmpresaProfile() }
+  catch { loadError.value = 'No se pudo cargar el perfil de empresa. Intenta nuevamente.' }
+}
 
 const ubicacionTexto = computed(() => {
   if (!p.value) return ''
@@ -119,6 +123,7 @@ function apiError(err: any): string {
 }
 
 async function saveProfile() {
+  if (store.saving) return
   if (!(await pv$.value.$validate())) return
   profileError.value = ''
   const { departamento, pais, ...rest } = form.value
@@ -131,9 +136,7 @@ async function saveProfile() {
   }
 }
 
-onMounted(async () => {
-  await store.loadEmpresaProfile()
-})
+onMounted(loadProfile)
 
 </script>
 
@@ -145,62 +148,45 @@ onMounted(async () => {
       <!-- Header -->
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-display font-bold text-navy">Mi Perfil — Empresa</h1>
-          <p class="text-sm mt-1 text-navy-lighter">Gestiona los datos de tu marca</p>
+          <h1 class="text-2xl font-display font-bold text-navy">Mi perfil</h1>
+          <p class="text-sm mt-1 text-navy-lighter">Presenta tu marca y mantén actualizados tus datos de contacto y facturación.</p>
         </div>
         <RouterLink v-if="p" :to="viewPath(`/empresas/${p.id}`)"
-          class="text-sm font-semibold text-violet hover:text-violet/80">
+          class="btn-secondary inline-flex items-center gap-2">
           <i class="pi pi-eye mr-1" />Ver mi perfil público
         </RouterLink>
       </div>
 
-      <CoverBanner :rubro="p?.rubro" :nombre="p?.nombre_comercial" />
-
-      <!-- ── Verificación de marca ─────────────────────────────────────────── -->
-      <div v-if="p" class="card border"
-        :class="p.is_verified ? 'bg-violet/5 border-violet/20' : 'bg-warning-tint border-amber-200'">
-        <div class="flex items-start gap-3">
-          <VerifiedBadge v-if="p.is_verified" size="md" />
-          <i v-else class="pi pi-shield text-warning text-xl mt-0.5" />
-          <div class="flex-1">
-            <p class="font-semibold text-navy">
-              {{ p.is_verified ? 'Marca verificada' : 'Completa tu perfil para obtener la insignia de marca verificada' }}
-            </p>
-            <p class="text-xs text-ink-muted mt-0.5">
-              {{ p.is_verified
-                ? 'Los influencers ven la insignia en tu perfil público y en el chat. Genera confianza y mejora la tasa de respuesta.'
-                : 'Los influencers responden más rápido a marcas verificadas. Te falta:' }}
-            </p>
-            <ul v-if="!p.is_verified" class="mt-2 space-y-1 text-sm">
-              <li v-for="item in pendientes" :key="item" class="flex items-center gap-2 text-ink-muted">
-                <i class="pi pi-circle text-[0.5rem] text-warning" />{{ item }}
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Datos de la empresa ───────────────────────────────────────────── -->
+      <div v-if="loadError" class="card text-coral-text flex flex-wrap items-center justify-between gap-3" role="alert"><p>{{ loadError }}</p><button type="button" class="btn-secondary" @click="loadProfile">Reintentar</button></div>
+      <ProfileOverview :name="loadError || store.loading ? '' : p?.nombre_comercial ?? ''" label="Empresa / marca"
+        :subtitle="p?.rubro ? rubroLabel(p.rubro) : 'Completa tu identidad de marca'" :verified="p?.is_verified" :disabled="editing || store.loading || !!loadError" @updated="toast.add({ severity: 'success', summary: 'Logo actualizado', life: 3000 }); loadProfile()">
+        <div><p class="text-xs text-ink-muted">Estado de marca</p><p class="text-sm font-semibold mt-1" :class="p?.is_verified ? 'text-success' : 'text-ink-muted'">{{ p?.is_verified ? 'Verificada' : 'Por completar' }}</p></div>
+      </ProfileOverview>
+      <div v-if="!loadError" class="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)] items-start">
+        <aside class="space-y-4 xl:sticky xl:top-6">
+          <ProfileProgress :items="checklist" :loading="store.loading" />
+          <nav class="card space-y-1" aria-label="Secciones de mi perfil">
+            <p class="text-xs uppercase tracking-wide text-ink-muted font-semibold mb-3">En esta página</p>
+            <a v-for="section in [{ id: 'marca', label: 'Identidad de marca' }, { id: 'presencia', label: 'Presencia online' }, { id: 'facturacion', label: 'Contacto y facturación' }, { id: 'representante', label: 'Representante legal' }]" :key="section.id" :href="`#company-${section.id}`" class="block rounded-lg px-3 py-2 text-sm text-navy hover:bg-slate focus-visible:outline-2 focus-visible:outline-violet">{{ section.label }}</a>
+          </nav>
+          <p class="text-xs text-ink-muted px-2 leading-relaxed"><i class="pi pi-lock mr-1" aria-hidden="true" />Los datos de facturación y del representante son privados. Tu marca y presencia online forman tu perfil público.</p>
+        </aside>
+        <div class="space-y-6 min-w-0">
+      <!-- ── Información de la empresa ───────────────────────────────────────────── -->
       <div class="card">
         <div class="flex items-center justify-between mb-5">
           <div class="flex items-center gap-4">
-            <AvatarUpload
-              :name="p?.nombre_comercial ?? authStore.user?.email ?? ''"
-              size="lg"
-              editable
-              @updated="toast.add({ severity: 'success', summary: 'Logo actualizado', life: 3000 }); store.loadEmpresaProfile()"
-            />
             <div>
               <h2 class="font-display font-semibold text-navy text-lg flex items-center gap-2">
                 <i class="pi pi-building" aria-hidden="true" />
-                Datos de la empresa
+                Información de la empresa
                 <VerifiedBadge v-if="p?.is_verified" size="sm" />
               </h2>
-              <p class="text-xs text-ink-muted">Haz clic en la imagen para subir el logo de tu marca</p>
+              <p class="text-xs text-ink-muted">Separa tu información pública de los datos privados de tu cuenta.</p>
             </div>
           </div>
-          <Button v-if="!editing" @click="startEdit"
-            label="Editar" icon="pi pi-pencil" severity="secondary" size="small" outlined />
+          <Button v-if="!editing" :disabled="store.loading || !!loadError" @click="startEdit"
+            label="Editar información" icon="pi pi-pencil" severity="secondary" size="small" outlined />
         </div>
 
         <div v-if="store.loading" class="py-6 text-center text-ink-muted text-sm">
@@ -210,7 +196,7 @@ onMounted(async () => {
         <!-- Vista de datos -->
         <div v-else-if="!editing && p" class="space-y-6 text-sm">
           <!-- Marca -->
-          <section>
+          <section id="company-marca" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Marca</h3>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -234,7 +220,7 @@ onMounted(async () => {
           </section>
 
           <!-- Presencia online -->
-          <section class="border-t border-border pt-4">
+          <section id="company-presencia" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Presencia online</h3>
             <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div v-for="link in [
@@ -253,7 +239,7 @@ onMounted(async () => {
           </section>
 
           <!-- Contacto y facturación -->
-          <section class="border-t border-border pt-4">
+          <section id="company-facturacion" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Contacto y facturación <span class="font-normal text-ink-muted">— privado, no visible para influencers</span></h3>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -282,7 +268,7 @@ onMounted(async () => {
           </section>
 
           <!-- Representante legal -->
-          <section class="border-t border-border pt-4">
+          <section id="company-representante" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Representante legal</h3>
             <template v-if="p.representante_nombre">
               <p class="font-semibold text-navy">{{ p.representante_nombre }}</p>
@@ -316,20 +302,20 @@ onMounted(async () => {
 
         <!-- Formulario de edición -->
         <form v-else-if="editing" @submit.prevent="saveProfile" novalidate class="space-y-6">
-          <section class="space-y-4">
+          <section id="company-marca" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Marca</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="field">
-                <label class="label">Nombre comercial</label>
-                <input v-model="form.nombre_comercial" required maxlength="255"
+                <label class="label" for="company-nombre-comercial">Nombre comercial</label>
+                <input id="company-nombre-comercial" v-model="form.nombre_comercial" required maxlength="255"
                   :class="['input', { '!border-coral': pv$.nombre_comercial.$error }]" />
                 <p v-if="pv$.nombre_comercial.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.nombre_comercial.$errors[0]?.$message }}
                 </p>
               </div>
               <div class="field">
-                <label class="label">Rubro / industria</label>
-                <select v-model="form.rubro" required
+                <label class="label" for="company-rubro">Rubro / industria</label>
+                <select id="company-rubro" v-model="form.rubro" required
                   :class="['input', { '!border-coral': pv$.rubro.$error }]">
                   <option value="">— Selecciona —</option>
                   <option v-for="r in RUBROS" :key="r.value" :value="r.value">{{ r.label }}</option>
@@ -340,14 +326,14 @@ onMounted(async () => {
               </div>
             </div>
             <div class="field">
-              <label class="label">Descripción de la marca <span class="text-ink-muted font-normal text-xs">— visible en tu perfil público</span></label>
-              <textarea v-model="form.descripcion" class="input" rows="3" maxlength="1000"
+              <label class="label" for="company-descripcion">Descripción de la marca <span class="text-ink-muted font-normal text-xs">— visible en tu perfil público</span></label>
+              <textarea id="company-descripcion" v-model="form.descripcion" class="input" rows="3" maxlength="1000"
                 placeholder="Qué vende tu marca, a quién le habla y qué tipo de colaboraciones buscas…" />
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div class="field">
-                <label class="label">País</label>
-                <select v-model="form.pais" required @change="form.departamento = ''"
+                <label class="label" for="company-pais">País</label>
+                <select id="company-pais" v-model="form.pais" required @change="form.departamento = ''"
                   :class="['input', { '!border-coral': pv$.pais.$error }]">
                   <option value="">— Selecciona —</option>
                   <option v-for="pa in PAISES" :key="pa" :value="pa">{{ pa }}</option>
@@ -357,20 +343,20 @@ onMounted(async () => {
                 </p>
               </div>
               <div v-if="form.pais === 'El Salvador'" class="field">
-                <label class="label">Departamento</label>
-                <select v-model="form.departamento" class="input">
+                <label class="label" for="company-departamento">Departamento</label>
+                <select id="company-departamento" v-model="form.departamento" class="input">
                   <option value="">— Selecciona —</option>
                   <option v-for="d in DEPARTAMENTOS_SV" :key="d" :value="d">{{ d }}</option>
                 </select>
               </div>
               <div class="field" :class="form.pais === 'El Salvador' ? '' : 'sm:col-span-2'">
-                <label class="label">Dirección</label>
-                <input v-model="form.direccion" class="input" maxlength="255" placeholder="Colonia, calle, municipio…" />
+                <label class="label" for="company-direccion">Dirección</label>
+                <input id="company-direccion" v-model="form.direccion" class="input" maxlength="255" placeholder="Colonia, calle, municipio…" />
               </div>
             </div>
           </section>
 
-          <section class="space-y-4 border-t border-border pt-4">
+          <section id="company-presencia" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Presencia online</h3>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div v-for="f in ([
@@ -388,40 +374,40 @@ onMounted(async () => {
             </div>
           </section>
 
-          <section class="space-y-4 border-t border-border pt-4">
+          <section id="company-facturacion" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Contacto y facturación</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="field">
-                <label class="label">Teléfono / WhatsApp</label>
-                <input v-model="form.telefono" type="tel" required placeholder="+503 7000-0000"
+                <label class="label" for="company-telefono">Teléfono / WhatsApp</label>
+                <input id="company-telefono" v-model="form.telefono" type="tel" required placeholder="+503 7000-0000"
                   :class="['input', { '!border-coral': pv$.telefono.$error }]" />
                 <p v-if="pv$.telefono.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.telefono.$errors[0]?.$message }}
                 </p>
               </div>
               <div class="field">
-                <label class="label">Correo de facturación <span class="text-ink-muted font-normal text-xs">— si es distinto a tu correo de acceso</span></label>
-                <input v-model="form.email_facturacion" type="email" placeholder="facturacion@tumarca.com"
+                <label class="label" for="company-email-facturacion">Correo de facturación <span class="text-ink-muted font-normal text-xs">— si es distinto a tu correo de acceso</span></label>
+                <input id="company-email-facturacion" v-model="form.email_facturacion" type="email" placeholder="facturacion@tumarca.com"
                   :class="['input', { '!border-coral': pv$.email_facturacion.$error }]" />
                 <p v-if="pv$.email_facturacion.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.email_facturacion.$errors[0]?.$message }}
                 </p>
               </div>
               <div class="field sm:col-span-2">
-                <label class="label">Razón social</label>
-                <input v-model="form.razon_social" class="input" maxlength="255" placeholder="Nombre legal, ej. Mi Marca S.A. de C.V." />
+                <label class="label" for="company-razon-social">Razón social</label>
+                <input id="company-razon-social" v-model="form.razon_social" class="input" maxlength="255" placeholder="Nombre legal, ej. Mi Marca S.A. de C.V." />
               </div>
               <div class="field">
-                <label class="label">NIT</label>
-                <input v-model="form.nit" placeholder="0614-010190-101-1"
+                <label class="label" for="company-nit">NIT</label>
+                <input id="company-nit" v-model="form.nit" placeholder="0614-010190-101-1"
                   :class="['input', { '!border-coral': pv$.nit.$error }]" />
                 <p v-if="pv$.nit.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.nit.$errors[0]?.$message }}
                 </p>
               </div>
               <div class="field">
-                <label class="label">NRC <span class="text-ink-muted font-normal text-xs">— para crédito fiscal</span></label>
-                <input v-model="form.nrc" placeholder="123456-7"
+                <label class="label" for="company-nrc">NRC <span class="text-ink-muted font-normal text-xs">— para crédito fiscal</span></label>
+                <input id="company-nrc" v-model="form.nrc" placeholder="123456-7"
                   :class="['input', { '!border-coral': pv$.nrc.$error }]" />
                 <p v-if="pv$.nrc.$error" class="text-coral-text text-xs mt-1">
                   {{ pv$.nrc.$errors[0]?.$message }}
@@ -430,11 +416,11 @@ onMounted(async () => {
             </div>
           </section>
 
-          <section class="space-y-4 border-t border-border pt-4">
+          <section id="company-representante" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Representante legal</h3>
             <div class="field">
-              <label class="label">Nombre completo del representante</label>
-              <input v-model="form.representante_nombre" required placeholder="Nombre Apellido"
+              <label class="label" for="company-representante-nombre">Nombre completo del representante</label>
+              <input id="company-representante-nombre" v-model="form.representante_nombre" required placeholder="Nombre Apellido"
                 :class="['input', { '!border-coral': pv$.representante_nombre.$error }]" />
               <p v-if="pv$.representante_nombre.$error" class="text-coral-text text-xs mt-1">
                 {{ pv$.representante_nombre.$errors[0]?.$message }}
@@ -442,15 +428,15 @@ onMounted(async () => {
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="field">
-                <label class="label">Tipo de identificación</label>
-                <select v-model="form.representante_tipo_identificacion" class="input"
+                <label class="label" for="company-representante-tipo-identificacion">Tipo de identificación</label>
+                <select id="company-representante-tipo-identificacion" v-model="form.representante_tipo_identificacion" class="input"
                   @change="pv$.representante_numero_identificacion.$reset()">
                   <option v-for="t in TIPOS_ID" :key="t">{{ t }}</option>
                 </select>
               </div>
               <div class="field">
-                <label class="label">Número de identificación</label>
-                <input v-model="form.representante_numero_identificacion" required
+                <label class="label" for="company-representante-numero-identificacion">Número de identificación</label>
+                <input id="company-representante-numero-identificacion" v-model="form.representante_numero_identificacion" required
                   :placeholder="form.representante_tipo_identificacion === 'DUI' ? '00000000-0' : 'A00000000'"
                   :class="['input', { '!border-coral': pv$.representante_numero_identificacion.$error }]" />
                 <p v-if="pv$.representante_numero_identificacion.$error" class="text-coral-text text-xs mt-1">
@@ -462,9 +448,9 @@ onMounted(async () => {
 
           <p v-if="pv$.$error" class="text-coral-text text-sm">Revisa los campos marcados en rojo.</p>
           <p v-else-if="profileError" class="text-coral-text text-sm">{{ profileError }}</p>
-          <div class="flex gap-2 pt-1">
+          <div class="sticky bottom-0 z-10 bg-white border-t border-border py-4 flex flex-wrap justify-end gap-2">
             <Button type="submit" :loading="store.saving" label="Guardar cambios" icon="pi pi-check" size="small" />
-            <Button type="button" @click="editing = false" label="Cancelar" icon="pi pi-times" severity="secondary" outlined size="small" />
+            <Button type="button" :disabled="store.saving" @click="editing = false" label="Cancelar" icon="pi pi-times" severity="secondary" outlined size="small" />
           </div>
         </form>
       </div>
@@ -473,6 +459,8 @@ onMounted(async () => {
         <span><span class="font-semibold text-navy">Briefs de campaña</span><span class="block text-sm text-ink-muted mt-1">Crea y gestiona los briefs de tu marca.</span></span>
         <i class="pi pi-arrow-right text-violet" aria-hidden="true" />
       </RouterLink>
+        </div>
+      </div>
     </div>
   </AppLayout>
 </template>

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ReceiptsService } from './receipts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -16,6 +16,12 @@ export class ReceiptsController {
   @Get()
   list(@GetUser() user: User) {
     return this.receiptsService.listForUser(user);
+  }
+
+  @Post(':id/send-invoice')
+  @Roles(UserRole.EMPRESA)
+  sendInvoice(@GetUser() user: User, @Param('id', ParseIntPipe) id: number) {
+    return this.receiptsService.sendInvoiceForUser(user, id);
   }
 
   @Get(':id')

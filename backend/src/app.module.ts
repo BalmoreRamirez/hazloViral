@@ -29,6 +29,7 @@ import { DteModule } from './dte/dte.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
+        extra: { options: '-c timezone=America/El_Salvador' },
         host: config.get<string>('DB_HOST'),
         port: config.get<number>('DB_PORT'),
         database: config.get<string>('DB_DATABASE'),

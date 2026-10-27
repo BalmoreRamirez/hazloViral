@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { calculateAge } from '@/utils/date'
 import { viewPath } from '@/router/paths'
 import BrandName from '@/components/BrandName.vue'
 import { ref, computed, watch } from 'vue'
@@ -75,9 +76,7 @@ function onRepNumeroIdInput(e: Event) {
 
 const esMenor = computed(() => {
   if (!fecha_nacimiento.value) return false
-  const birth  = new Date(fecha_nacimiento.value)
-  const age18  = new Date(); age18.setFullYear(age18.getFullYear() - 18)
-  return birth > age18
+  return calculateAge(fecha_nacimiento.value) < 18
 })
 
 // ── Seguridad de contraseña ───────────────────────────────────────────────────

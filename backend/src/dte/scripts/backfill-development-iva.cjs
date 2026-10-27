@@ -2,6 +2,7 @@
 // Only updates the legacy, single-item simulated payout format. Never fiscal DTEs.
 require('dotenv').config({ quiet: true });
 require('ts-node/register');
+require('../../common/timezone');
 const { Client } = require('pg');
 const { mkdirSync, writeFileSync, readFileSync, existsSync } = require('fs');
 const { join } = require('path');

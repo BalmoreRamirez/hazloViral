@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { DteDetail } from './entities/dte-detail.entity';
 import { DteDocument } from './entities/dte-document.entity';
 import { formatLocalTimeForDocument, getLocalDateTime } from '../common/date.util';
@@ -45,7 +45,8 @@ export interface DevelopmentDteInput {
   receiptId: number;
   receiptNumber: string;
   transactionId: string;
-  contractId: number;
+  contractId: number | null;
+  operation?: 'credits_top_up';
   amountUsd: number;
   influencerName: string;
   influencerEmail: string;
@@ -100,6 +101,8 @@ export class DteService implements OnModuleInit {
       contratoId?: number;
       contrato_id?: number;
       referenciaPago?: string;
+      comprobante?: string;
+      cuerpoDocumento?: { descripcion?: string }[];
     };
     const localDateTime = getLocalDateTime(document.created_at);
     const pdfUrl = this.createDevelopmentPdf({
@@ -119,6 +122,8 @@ export class DteService implements OnModuleInit {
         ?? source.contrato
         ?? 0,
       transactionId: source.referenciaPago ?? '',
+      description: source.cuerpoDocumento?.[0]?.descripcion,
+      receiptNumber: source.comprobante,
     });
     document.fecha_emision = localDateTime.date;
     document.hora_emision = localDateTime.time;
@@ -128,12 +133,15 @@ export class DteService implements OnModuleInit {
     return pdfUrl;
   }
 
-  async createDevelopmentPayoutDte(input: DevelopmentDteInput): Promise<DevelopmentDteResult | null> {
+  async createDevelopmentPayoutDte(input: DevelopmentDteInput, manager?: EntityManager): Promise<DevelopmentDteResult | null> {
     if (!this.isDevelopmentMode()) {
       throw new Error('La emisión fiscal oficial requiere configurar el firmador y Hacienda.');
     }
 
-    const existing = await this.documentsRepo.findOne({
+    const documentsRepo = manager ? manager.getRepository(DteDocument) : this.documentsRepo;
+    const detailsRepo = manager ? manager.getRepository(DteDetail) : this.detailsRepo;
+    const description = input.operation === 'credits_top_up' ? 'Recarga de créditos de plataforma' : `Pago de contrato #${input.contractId}`;
+    const existing = await documentsRepo.findOne({
       where: { payment_receipt_id: input.receiptId },
     });
     if (existing) {
@@ -152,6 +160,7 @@ export class DteService implements OnModuleInit {
     const { date, time } = getLocalDateTime();
     const numeroControl = `DTE-DEV-${Date.now()}-${input.receiptId}`;
     const jsonOriginal = {
+      operacion: input.operation ?? 'influencer_payout',
       ambiente: '00',
       tipoDte: '03',
       codigoGeneracion,
@@ -166,7 +175,7 @@ export class DteService implements OnModuleInit {
       },
       cuerpoDocumento: [{
         numItem: 1,
-        descripcion: `Pago de contrato #${input.contractId}`,
+        descripcion: description,
         cantidad: 1,
         precioUni: subtotal,
         ventaGravada: subtotal,
@@ -198,9 +207,11 @@ export class DteService implements OnModuleInit {
       influencerEmail: input.influencerEmail,
       document: input.document,
       contractId: input.contractId,
+      description,
+      receiptNumber: input.receiptNumber,
       transactionId: input.transactionId,
     });
-    const document = await this.documentsRepo.save(this.documentsRepo.create({
+    const document = await documentsRepo.save(documentsRepo.create({
       tipo_dte: '03',
       codigo_generacion: codigoGeneracion,
       numero_control: numeroControl,
@@ -218,10 +229,10 @@ export class DteService implements OnModuleInit {
       pdf_url: pdfUrl,
     }));
 
-    await this.detailsRepo.save(this.detailsRepo.create({
+    await detailsRepo.save(detailsRepo.create({
       dte_id: document.id,
       num_item: 1,
-      descripcion: `Pago de contrato #${input.contractId}`,
+      descripcion: description,
       cantidad: 1,
       precio_unitario: subtotal,
       venta_gravada: subtotal,
@@ -243,7 +254,9 @@ export class DteService implements OnModuleInit {
     influencerName: string;
     influencerEmail: string;
     document: string | null;
-    contractId: number;
+    contractId: number | null;
+    description?: string;
+    receiptNumber?: string;
     transactionId: string;
   }): string {
     if (!existsSync(this.dtePdfDir)) mkdirSync(this.dtePdfDir, { recursive: true });
@@ -264,7 +277,9 @@ export class DteService implements OnModuleInit {
     influencerName: string;
     influencerEmail: string;
     document: string | null;
-    contractId: number;
+    contractId: number | null;
+    description?: string;
+    receiptNumber?: string;
     transactionId: string;
   }): Buffer {
     const escape = (value: string) => value
@@ -334,15 +349,15 @@ export class DteService implements OnModuleInit {
     value('Establecimiento', 'Casa matriz', 48, 574);
     value('Nombre', input.influencerName.slice(0, 35), 318, 622);
     value('Correo', input.influencerEmail.slice(0, 35), 318, 606);
-    value('Contrato', `#${input.contractId}`, 318, 590);
+    value(input.contractId ? 'Contrato' : 'Comprobante', input.contractId ? `#${input.contractId}` : (input.receiptNumber ?? '').slice(0, 35), 318, 590);
     value('Documento', input.document ?? 'No registrado', 318, 574);
 
     rect(38, 530, 536, 38, true, colors.slate);
     text('DOCUMENTOS RELACIONADOS', 224, 556, 7, true, colors.violet);
     label('Tipo', 50, 540);
-    text('Pago de contrato', 80, 540, 7);
+    text(input.contractId ? 'Pago de contrato' : 'Recarga de creditos', 80, 540, 7);
     label('Referencia', 330, 540);
-    text(`Comprobante ${input.contractId}`, 380, 540, 7);
+    text((input.receiptNumber ?? `Contrato ${input.contractId}`).slice(0, 35), 380, 540, 7);
 
     rect(38, 415, 536, 98, true, colors.white);
     rect(38, 493, 536, 20, true, colors.violet);
@@ -361,7 +376,7 @@ export class DteService implements OnModuleInit {
     label('Total', 535, 481);
     text('1', 52, 455, 8);
     text('1', 90, 455, 8);
-    text(`Pago por contrato #${input.contractId}`, 132, 455, 8);
+    text((input.description ?? `Pago por contrato #${input.contractId}`).slice(0, 46), 132, 455, 8);
     text(input.subtotal.toFixed(2), 382, 455, 8);
     text(input.iva.toFixed(2), 468, 455, 8);
     text(input.amountUsd.toFixed(2), 523, 455, 8);

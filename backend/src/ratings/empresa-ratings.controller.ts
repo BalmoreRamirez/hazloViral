@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { RatingPageDto } from './dto/rating-page.dto';
+import { Body, Controller, Get, Query, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import { EmpresaRatingsService } from './empresa-ratings.service';
 import { UpsertRatingDto } from './dto/upsert-rating.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -38,7 +39,7 @@ export class EmpresaRatingsController {
 
   @Get(':empresaId/ratings')
   @Roles(UserRole.EMPRESA, UserRole.INFLUENCER, UserRole.ADMIN)
-  getAll(@Param('empresaId', ParseIntPipe) empresaId: number) {
-    return this.svc.getAll(empresaId);
+  getAll(@Param('empresaId', ParseIntPipe) empresaId: number, @Query() query: RatingPageDto) {
+    return this.svc.getAll(empresaId, query.page);
   }
 }
