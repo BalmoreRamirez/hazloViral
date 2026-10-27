@@ -9,6 +9,7 @@ import AvatarUpload from '@/components/AvatarUpload.vue'
 import CoverBanner from '@/components/CoverBanner.vue'
 import StarRating from '@/components/StarRating.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
+import { formatDate } from '@/utils/date'
 import { useProfileStore } from '@/stores/profile'
 import { ratingsApi, type RatingSummary } from '@/api/ratings'
 
@@ -493,7 +494,7 @@ function formatFollowers(n: number) {
               </div>
 
               <p v-if="m.verified_at" class="text-[10px] text-ink-muted mt-1">
-                Verificado {{ new Date(m.verified_at).toLocaleDateString('es-SV') }}
+                Verificado {{ formatDate(m.verified_at) }}
               </p>
             </div>
 

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import StarRating from '@/components/StarRating.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
+import { formatDate as formatAppDate } from '@/utils/date'
 import { empresaApi, type EmpresaPublicProfile } from '@/api/profiles'
 import { empresaRatingsApi, type RatingSummary, type EmpresaRatingItem } from '@/api/ratings'
 import { useAuthStore } from '@/stores/auth'
@@ -38,7 +39,7 @@ const links = computed(() => {
 })
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-SV', { year: 'numeric', month: 'short', day: 'numeric' })
+  return formatAppDate(iso, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 async function loadRatings() {

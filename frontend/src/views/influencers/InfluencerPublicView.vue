@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import StarRating from '@/components/StarRating.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
+import { formatDate as formatAppDate } from '@/utils/date'
 import CoverBanner from '@/components/CoverBanner.vue'
 import { useChatStore } from '@/stores/chat'
 import { influencerApi } from '@/api/profiles'
@@ -49,7 +50,7 @@ function formatFollowers(n: number) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-SV', { year: 'numeric', month: 'short', day: 'numeric' })
+  return formatAppDate(iso, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 const starsDisplay = computed(() => {

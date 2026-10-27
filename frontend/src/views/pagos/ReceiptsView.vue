@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import { useReceiptsStore } from '@/stores/receipts'
 import type { PaymentReceipt } from '@/api/receipts'
+import { formatDate, formatLocalDateTimeForDocument } from '@/utils/date'
 
 const store = useReceiptsStore()
 
@@ -56,7 +57,7 @@ onMounted(() => store.fetchReceipts())
               <tr v-for="receipt in sortedReceipts" :key="receipt.id" class="align-top hover:bg-slate/60">
                 <td class="px-4 py-4">
                   <p class="font-semibold text-navy">{{ labels[receipt.operation_type] ?? receipt.operation_type }}</p>
-                  <span class="text-xs text-ink-muted mt-1 inline-block">{{ new Date(receipt.created_at).toLocaleDateString('es-SV') }}</span>
+                  <span class="text-xs text-ink-muted mt-1 inline-block">{{ formatDate(receipt.created_at) }}</span>
                 </td>
                 <td class="px-4 py-4">
                   <p class="font-semibold text-navy">{{ receipt.receipt_number }}</p>
@@ -106,9 +107,9 @@ onMounted(() => store.fetchReceipts())
         </div>
         <div class="grid sm:grid-cols-2 gap-4 py-5 text-sm">
           <div><p class="text-xs text-ink-muted">Operación</p><p class="font-semibold text-navy">{{ labels[selectedReceipt.operation_type] ?? selectedReceipt.operation_type }}</p></div>
-          <div><p class="text-xs text-ink-muted">Fecha</p><p class="font-semibold text-navy">{{ new Date(selectedReceipt.created_at).toLocaleString('es-SV') }}</p></div>
+          <div><p class="text-xs text-ink-muted">Fecha y hora</p><p class="font-semibold text-navy">{{ formatLocalDateTimeForDocument(selectedReceipt.created_at) }}</p></div>
           <div><p class="text-xs text-ink-muted">Monto USD</p><p class="font-semibold text-navy">${{ Number(selectedReceipt.amount_usd).toFixed(2) }}</p></div>
-          <div><p class="text-xs text-ink-muted">Monto COP</p><p class="font-semibold text-navy">COP ${{ Number(selectedReceipt.amount_cop).toFixed(2) }}</p></div>
+          <div><p class="text-xs text-ink-muted">Moneda</p><p class="font-semibold text-navy">{{ selectedReceipt.currency }}</p></div>
           <div><p class="text-xs text-ink-muted">Contrato</p><p class="font-semibold text-navy">#{{ selectedReceipt.contrato_id ?? '—' }}</p></div>
           <div><p class="text-xs text-ink-muted">Transacción</p><p class="font-semibold text-navy break-all">{{ selectedReceipt.wompi_transaction_id ?? 'Sin transacción' }}</p></div>
           <div><p class="text-xs text-ink-muted">Factura enviada</p><span :class="selectedReceipt.factura_enviada ? 'badge-success' : 'badge-warning'">{{ selectedReceipt.factura_enviada ? 'Enviada' : 'No enviada' }}</span></div>

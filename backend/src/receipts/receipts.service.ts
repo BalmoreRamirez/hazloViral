@@ -39,7 +39,6 @@ export class ReceiptsService {
   async createCreditsTopUp(
     empresaId: number,
     amountUsd: number,
-    amountCop: number,
     transactionId: string,
   ): Promise<PaymentReceipt> {
     const empresa = await this.empresasRepo.findOne({
@@ -55,7 +54,6 @@ export class ReceiptsService {
       influencer_id: null,
       contrato_id: null,
       amount_usd: amountUsd,
-      amount_cop: amountCop,
       customer_snapshot: this.companySnapshot(empresa),
       metadata: { credit_amount: amountUsd },
     });
@@ -69,14 +67,12 @@ export class ReceiptsService {
     if (!contrato) throw new NotFoundException('Contrato no encontrado.');
 
     const amountUsd = Number(contrato.monto_total);
-    const amountCop = Number((amountUsd * this.usdToCop()).toFixed(2));
     const base = {
       wompi_transaction_id: transactionId,
       empresa_id: contrato.empresa_id,
       influencer_id: contrato.influencer_id,
       contrato_id: contrato.id,
       amount_usd: amountUsd,
-      amount_cop: amountCop,
       customer_snapshot: this.companySnapshot(contrato.empresa),
     };
 
@@ -94,7 +90,6 @@ export class ReceiptsService {
         operation_type: 'platform_commission',
         operation_reference: `comision-contrato-${contrato.id}-${transactionId}`,
         amount_usd: commission,
-        amount_cop: Number((commission * this.usdToCop()).toFixed(2)),
         metadata: { included_in_escrow_funding: true },
       });
     }
@@ -123,7 +118,6 @@ export class ReceiptsService {
       influencer_id: contrato.influencer_id,
       contrato_id: contrato.id,
       amount_usd: amountUsd,
-      amount_cop: Number((amountUsd * this.usdToCop()).toFixed(2)),
       customer_snapshot: this.influencerSnapshot(contrato.influencer),
       metadata: { payout_status: 'accepted_by_wompi' },
     });
@@ -134,9 +128,10 @@ export class ReceiptsService {
         receiptNumber: receipt.receipt_number,
         transactionId,
         contractId: contrato.id,
-        amountCop: Number((amountUsd * this.usdToCop()).toFixed(2)),
+        amountUsd,
         influencerName: contrato.influencer.nombre_artistico,
         influencerEmail: contrato.influencer.user?.email ?? '',
+        document: contrato.influencer.numero_identificacion ?? null,
       });
     }
     receipt.factura_enviada = await this.notifications.sendInfluencerPayoutReceipt({
@@ -144,7 +139,6 @@ export class ReceiptsService {
       influencerName: contrato.influencer.nombre_artistico,
       receiptNumber: receipt.receipt_number,
       amountUsd,
-      amountCop: Number((amountUsd * this.usdToCop()).toFixed(2)),
       transactionId,
       contractId: contrato.id,
       isFiscalDte: receipt.is_fiscal_dte,
@@ -206,7 +200,7 @@ export class ReceiptsService {
     const receipt = this.receiptsRepo.create({
       ...data,
       receipt_number: `REC-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-      currency: 'COP',
+      currency: 'USD',
       is_fiscal_dte: false,
       issuer_snapshot: INTERNAL_ISSUER,
     });
@@ -223,7 +217,24 @@ export class ReceiptsService {
     const enriched = await Promise.all(receipts.map(async (receipt) => {
       const dte = byReceipt.get(receipt.id);
       if (dte && this.dteService.isDevelopmentMode()) {
-        await this.dteService.ensureDevelopmentPdf(dte);
+        const influencer = receipt.influencer_id
+          ? await this.influencersRepo.findOne({ where: { id: receipt.influencer_id } })
+          : null;
+        const source = dte.json_original as { receptor?: { documento?: string | null } };
+        if (influencer?.numero_identificacion && !source.receptor?.documento) {
+          dte.json_original = {
+            ...dte.json_original,
+            receptor: {
+              ...(source.receptor ?? {}),
+              documento: influencer.numero_identificacion,
+            },
+          };
+        }
+        await this.dteService.ensureDevelopmentPdf(
+          dte,
+          receipt.contrato_id,
+          influencer?.numero_identificacion ?? source.receptor?.documento ?? null,
+        );
       }
       return Object.assign(receipt, {
         dte: dte ? {
@@ -257,7 +268,4 @@ export class ReceiptsService {
     };
   }
 
-  private usdToCop(): number {
-    return Number(process.env.WOMPI_USD_TO_COP ?? 4000);
-  }
 }

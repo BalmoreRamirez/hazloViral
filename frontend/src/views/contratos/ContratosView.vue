@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import { formatDate } from '@/utils/date'
 import { useContractsStore } from '@/stores/contracts'
 import { useAuthStore } from '@/stores/auth'
 
@@ -126,7 +127,7 @@ function neto(c: any) {
               <div class="min-w-0">
                 <p class="font-display font-semibold text-navy leading-tight">{{ counterpartName(c) }}</p>
                 <p class="text-xs text-ink-muted mt-0.5">
-                  {{ new Date(c.created_at).toLocaleDateString('es-CO') }}
+                  {{ formatDate(c.created_at) }}
                 </p>
               </div>
             </div>

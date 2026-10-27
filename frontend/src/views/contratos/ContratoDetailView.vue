@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import { formatDate as formatAppDate, formatDateTime } from '@/utils/date'
 import BriefDetails from '@/components/BriefDetails.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import { useContractsStore } from '@/stores/contracts'
@@ -317,7 +318,7 @@ const AUDIT_ACTIONS: Record<string, string> = {
 function auditLabel(action: string) { return AUDIT_ACTIONS[action] ?? action }
 
 function formatDate(dt: string) {
-  return new Date(dt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+  return formatDateTime(dt, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 const TIPO_ICON: Record<string, string> = {
@@ -362,7 +363,7 @@ const TIPO_ICON: Record<string, string> = {
                 <span class="font-medium text-navy">{{ contrato.influencer?.nombre_artistico ?? 'Influencer' }}</span>
               </div>
               <span class="text-ink-muted">·</span>
-              <span class="text-ink-muted">{{ new Date(contrato.created_at).toLocaleDateString('es-CO') }}</span>
+              <span class="text-ink-muted">{{ formatAppDate(contrato.created_at) }}</span>
             </div>
           </div>
         </div>

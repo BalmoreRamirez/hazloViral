@@ -26,8 +26,7 @@ export class WompiService {
   private readonly integrityKey: string;
   private readonly eventsKey: string;
   private readonly frontendUrl: string;
-  private readonly usdToCop: number;
-  private readonly currency = 'COP';
+  private readonly currency = 'USD';
   private readonly checkoutBaseUrl = 'https://checkout.wompi.co/p/';
 
   constructor(
@@ -52,8 +51,6 @@ export class WompiService {
     this.integrityKey = config.get<string>(`${prefix}_INTEGRITY_KEY`) ?? '';
     this.eventsKey    = config.get<string>(`${prefix}_EVENTS_KEY`)    ?? '';
     this.frontendUrl  = config.get<string>('FRONTEND_URL', 'http://localhost:5173');
-    this.usdToCop     = Number(config.get<string>('WOMPI_USD_TO_COP', '4000'));
-
     this.logger.log(`Wompi inicializado en modo: ${mode.toUpperCase()}`);
   }
 
@@ -69,7 +66,7 @@ export class WompiService {
     if (!empresa) throw new NotFoundException('Perfil de empresa no encontrado.');
 
     const reference     = `creditos-${empresa.id}-${Date.now()}`;
-    const amountCentavos = Math.round(amountUsd * this.usdToCop * 100);
+    const amountCentavos = Math.round(amountUsd * 100);
     const redirectUrl   = `${this.frontendUrl}/dashboard?wompi=success&tipo=creditos`;
     const signature     = this.generateIntegritySignature(reference, amountCentavos);
 
@@ -81,7 +78,7 @@ export class WompiService {
       customerEmail: empresa.user.email,
     });
 
-    this.logger.log(`Checkout créditos creado — ref: ${reference}, monto: ${amountCentavos} centavos`);
+    this.logger.log(`Checkout créditos creado — ref: ${reference}, monto: ${amountUsd.toFixed(2)} USD`);
     return { url, reference };
   }
 
@@ -107,7 +104,7 @@ export class WompiService {
     }
 
     const reference      = `contrato-${contratoId}-${Date.now()}`;
-    const amountCentavos = Math.round(Number(contrato.monto_total) * this.usdToCop * 100);
+    const amountCentavos = Math.round(Number(contrato.monto_total) * 100);
     const redirectUrl    = `${this.frontendUrl}/contratos/${contratoId}?wompi=success`;
     const signature      = this.generateIntegritySignature(reference, amountCentavos);
 
@@ -119,7 +116,7 @@ export class WompiService {
       customerEmail: empresa.user.email,
     });
 
-    this.logger.log(`Checkout contrato creado — ref: ${reference}, monto: ${amountCentavos} centavos`);
+    this.logger.log(`Checkout contrato creado — ref: ${reference}, monto: ${Number(contrato.monto_total).toFixed(2)} USD`);
     return { url, reference };
   }
 
@@ -135,6 +132,13 @@ export class WompiService {
 
     if (eventName === 'transaction.updated') {
       const tx = body['data']?.['transaction'];
+      if (tx?.['status'] === 'APPROVED' && tx?.['currency'] !== this.currency) {
+        this.logger.error(
+          `Transacción Wompi rechazada: moneda ${String(tx?.['currency'] ?? 'desconocida')} ` +
+          `distinta de ${this.currency}.`,
+        );
+        throw new BadRequestException('La transacción no está expresada en USD.');
+      }
       if (tx?.['status'] === 'APPROVED') {
         await this.handleApprovedTransaction(tx);
       }
@@ -194,7 +198,7 @@ export class WompiService {
       return null;
     }
 
-    const amountCentavos = Math.round(Number(contrato.monto_total) * this.usdToCop * 100);
+    const amountCentavos = Math.round(Number(contrato.monto_total) * 100);
     const reference      = `payout-contrato-${contratoId}-${contrato.id}`;
 
     const apiBase =
@@ -312,23 +316,24 @@ export class WompiService {
 
   private async handleApprovedTransaction(tx: Record<string, any>): Promise<void> {
     const reference: string = String(tx['reference'] ?? '');
+    const amountUsd = Number(tx['amount_in_cents']) / 100;
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      throw new BadRequestException('El importe aprobado de Wompi no es válido.');
+    }
 
     // ── Pago de créditos ────────────────────────────────────────────────────────
     if (reference.startsWith('creditos-')) {
       const parts     = reference.split('-');
       const empresaId = Number(parts[1]);
-      const amountCop = Number(tx['amount_in_cents']) / 100;
-      // Convertir COP pagados de regreso a unidades de crédito (1 crédito = 1 USD equiv.)
-      const credits   = Math.round(amountCop / this.usdToCop);
+      const credits   = amountUsd;
       await this.creditsService.addCredits(empresaId, credits);
       await this.receiptsService.createCreditsTopUp(
         empresaId,
         credits,
-        amountCop,
         String(tx['id']),
       );
       this.logger.log(
-        `Créditos añadidos — empresa ${empresaId}: ${credits} créditos (${amountCop} COP)`,
+        `Créditos añadidos — empresa ${empresaId}: ${credits.toFixed(2)} USD`,
       );
     }
 
@@ -336,6 +341,14 @@ export class WompiService {
     if (reference.startsWith('contrato-')) {
       const parts      = reference.split('-');
       const contratoId = Number(parts[1]);
+      const contrato = await this.contratosRepo.findOne({ where: { id: contratoId } });
+      if (!contrato || Math.round(Number(contrato.monto_total) * 100) !== Math.round(amountUsd * 100)) {
+        this.logger.error(
+          `Importe USD de Wompi no coincide con contrato ${contratoId}: ` +
+          `${amountUsd.toFixed(2)} USD.`,
+        );
+        throw new BadRequestException('El importe aprobado no coincide con el contrato.');
+      }
       const funded = await this.applyContractFunding(contratoId, String(tx['id']));
       if (funded) {
         await this.receiptsService.createEscrowReceipts(contratoId, String(tx['id']));

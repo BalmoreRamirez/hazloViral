@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import { formatDate } from '@/utils/date'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { influencerApi } from '@/api/profiles'
@@ -95,7 +96,7 @@ async function openChat() {
                   <span v-else>Sin nombre</span>
                 </p>
                 <p :class="['text-xs', chatStore.isRead(chat.id) ? 'text-ink-muted' : 'text-violet/70 font-medium']">
-                  {{ chatStore.isRead(chat.id) ? new Date(chat.created_at).toLocaleDateString('es-SV', { day:'2-digit', month:'short', year:'numeric' }) : 'Nuevo mensaje' }}
+                  {{ chatStore.isRead(chat.id) ? formatDate(chat.created_at, { day:'2-digit', month:'short', year:'numeric' }) : 'Nuevo mensaje' }}
                 </p>
               </div>
             </div>

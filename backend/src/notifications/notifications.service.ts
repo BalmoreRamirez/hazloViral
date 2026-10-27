@@ -188,7 +188,6 @@ export class NotificationsService {
     influencerName: string;
     receiptNumber: string;
     amountUsd: number;
-    amountCop: number;
     transactionId: string;
     contractId: number;
     isFiscalDte: boolean;
@@ -200,7 +199,6 @@ export class NotificationsService {
       influencerName,
       receiptNumber,
       amountUsd,
-      amountCop,
       transactionId,
       contractId,
       isFiscalDte,
@@ -216,8 +214,7 @@ export class NotificationsService {
       <p>Se confirmó el pago correspondiente al contrato <strong>#${contractId}</strong>.</p>
       <p>
         <strong>Comprobante:</strong> ${receiptNumber}<br>
-        <strong>Monto:</strong> $${amountUsd.toFixed(2)} USD
-        (COP $${amountCop.toFixed(2)})<br>
+        <strong>Monto:</strong> $${amountUsd.toFixed(2)} USD<br>
         <strong>Transacción:</strong> ${transactionId}
       </p>
       <p>${fiscalNote}</p>

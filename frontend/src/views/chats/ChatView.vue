@@ -5,6 +5,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import BriefDetails from '@/components/BriefDetails.vue'
 import { useChatStore } from '@/stores/chat'
+import { formatTime as formatAppTime, todayInAppTimeZone } from '@/utils/date'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
 import { useContractsStore } from '@/stores/contracts'
@@ -157,7 +158,7 @@ function onPdfChange(e: Event) {
 }
 
 // ─── Validación de la propuesta (mismo patrón que los formularios de perfil) ──
-const todayIso = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en hora local
+const todayIso = todayInAppTimeZone()
 const propForm = computed(() => ({ tarifa: propTarifa.value, entregables: propEntregables.value, plazo: propPlazo.value }))
 const propRules = {
   tarifa: {
@@ -280,7 +281,7 @@ const STATUS_LABELS: Record<string, string> = {
 function statusLabel(s: string) { return STATUS_LABELS[s] ?? s }
 
 function formatTime(dt: string) {
-  return new Date(dt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+  return formatAppTime(dt)
 }
 </script>
 

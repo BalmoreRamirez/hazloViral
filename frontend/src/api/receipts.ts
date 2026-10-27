@@ -8,8 +8,7 @@ export interface PaymentReceipt {
   wompi_transaction_id: string | null
   contrato_id: number | null
   amount_usd: number
-  amount_cop: number
-  currency: string
+  currency: 'USD'
   issuer_snapshot: Record<string, string | null>
   customer_snapshot: Record<string, string | null>
   metadata: Record<string, unknown> | null
@@ -26,7 +25,13 @@ export interface PaymentReceipt {
   created_at: string
 }
 
+function normalizeReceipt(receipt: PaymentReceipt): PaymentReceipt {
+  // USD is the platform currency. Normalize historical receipts created before
+  // the currency migration so the UI never presents COP.
+  return { ...receipt, currency: 'USD' }
+}
+
 export const receiptsApi = {
-  list: () => api.get<PaymentReceipt[]>('/receipts').then((r) => r.data),
-  get: (id: number) => api.get<PaymentReceipt>(`/receipts/${id}`).then((r) => r.data),
+  list: () => api.get<PaymentReceipt[]>('/receipts').then((r) => r.data.map(normalizeReceipt)),
+  get: (id: number) => api.get<PaymentReceipt>(`/receipts/${id}`).then((r) => normalizeReceipt(r.data)),
 }

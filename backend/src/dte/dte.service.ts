@@ -7,15 +7,48 @@ import { join } from 'path';
 import { Repository } from 'typeorm';
 import { DteDetail } from './entities/dte-detail.entity';
 import { DteDocument } from './entities/dte-document.entity';
+import { formatLocalTimeForDocument, getLocalDateTime } from '../common/date.util';
+
+const UNITS = [
+  'CERO', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE',
+  'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE',
+  'DIECIOCHO', 'DIECINUEVE', 'VEINTE',
+];
+const TENS = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+const HUNDREDS = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+
+function numberToSpanish(value: number): string {
+  if (value < 21) return UNITS[value];
+  if (value < 30) return value === 20 ? 'VEINTE' : `VEINTI${UNITS[value - 20]}`;
+  if (value < 100) return value % 10 ? `${TENS[Math.floor(value / 10)]} Y ${UNITS[value % 10]}` : TENS[value / 10];
+  if (value === 100) return 'CIEN';
+  if (value < 1000) return value % 100 ? `${HUNDREDS[Math.floor(value / 100)]} ${numberToSpanish(value % 100)}` : HUNDREDS[value / 100];
+  if (value < 1_000_000) {
+    const thousands = Math.floor(value / 1000);
+    const remainder = value % 1000;
+    return `${thousands === 1 ? 'MIL' : `${numberToSpanish(thousands)} MIL`}${remainder ? ` ${numberToSpanish(remainder)}` : ''}`;
+  }
+  const millions = Math.floor(value / 1_000_000);
+  const remainder = value % 1_000_000;
+  return `${millions === 1 ? 'UN MILLON' : `${numberToSpanish(millions)} MILLONES`}${remainder ? ` ${numberToSpanish(remainder)}` : ''}`;
+}
+
+function amountToSpanishWords(amount: number): string {
+  const rounded = Math.round(amount * 100);
+  const whole = Math.floor(rounded / 100);
+  const cents = String(rounded % 100).padStart(2, '0');
+  return `${numberToSpanish(whole)} ${whole === 1 ? 'DOLAR' : 'DOLARES'} CON ${cents}/100 USD`;
+}
 
 export interface DevelopmentDteInput {
   receiptId: number;
   receiptNumber: string;
   transactionId: string;
   contractId: number;
-  amountCop: number;
+  amountUsd: number;
   influencerName: string;
   influencerEmail: string;
+  document: string | null;
 }
 
 export interface DevelopmentDteResult {
@@ -52,26 +85,41 @@ export class DteService implements OnModuleInit {
     }
   }
 
-  async ensureDevelopmentPdf(document: DteDocument): Promise<string> {
+  async ensureDevelopmentPdf(
+    document: DteDocument,
+    contractId?: number | null,
+    receptorDocument?: string | null,
+  ): Promise<string> {
     if (!this.isDevelopmentMode()) {
       return document.pdf_url ?? '';
     }
     const source = document.json_original as {
-      receptor?: { nombre?: string; correo?: string };
+      receptor?: { nombre?: string; correo?: string; documento?: string | null };
       contrato?: number;
+      contratoId?: number;
+      contrato_id?: number;
       referenciaPago?: string;
     };
+    const localDateTime = getLocalDateTime(document.created_at);
     const pdfUrl = this.createDevelopmentPdf({
       numeroControl: document.numero_control,
       codigoGeneracion: document.codigo_generacion,
-      date: document.fecha_emision,
-      time: document.hora_emision,
-      amountCop: Number(document.total_pagar),
+      date: localDateTime.date,
+      time: formatLocalTimeForDocument(document.created_at),
+      amountUsd: Number(document.total_pagar),
       influencerName: source.receptor?.nombre ?? 'Receptor',
       influencerEmail: source.receptor?.correo ?? '',
-      contractId: source.contrato ?? 0,
+      document: receptorDocument ?? source.receptor?.documento ?? null,
+      contractId: contractId
+        ?? source.contratoId
+        ?? source.contrato_id
+        ?? source.contrato
+        ?? 0,
       transactionId: source.referenciaPago ?? '',
     });
+    document.fecha_emision = localDateTime.date;
+    document.hora_emision = localDateTime.time;
+    document.total_letras = amountToSpanishWords(Number(document.total_pagar));
     document.pdf_url = pdfUrl;
     await this.documentsRepo.save(document);
     return pdfUrl;
@@ -95,10 +143,8 @@ export class DteService implements OnModuleInit {
     }
 
     const codigoGeneracion = randomUUID();
-    const now = new Date();
-    const date = now.toISOString().slice(0, 10);
-    const time = now.toISOString().slice(11, 19);
-    const numeroControl = `DTE-DEV-${now.getTime()}-${input.receiptId}`;
+    const { date, time } = getLocalDateTime();
+    const numeroControl = `DTE-DEV-${Date.now()}-${input.receiptId}`;
     const jsonOriginal = {
       ambiente: '00',
       tipoDte: '03',
@@ -107,15 +153,20 @@ export class DteService implements OnModuleInit {
       fecha: date,
       hora: time,
       emisor: { nombre: 'InfluSmart', modo: 'desarrollo' },
-      receptor: { nombre: input.influencerName, correo: input.influencerEmail },
+      receptor: {
+        nombre: input.influencerName,
+        correo: input.influencerEmail,
+        documento: input.document,
+      },
       cuerpoDocumento: [{
         numItem: 1,
         descripcion: `Pago de contrato #${input.contractId}`,
         cantidad: 1,
-        precioUni: input.amountCop,
-        ventaGravada: input.amountCop,
+        precioUni: input.amountUsd,
+        ventaGravada: input.amountUsd,
       }],
-      totalPagar: input.amountCop,
+      totalPagar: input.amountUsd,
+      contratoId: input.contractId,
       referenciaPago: input.transactionId,
       comprobante: input.receiptNumber,
     };
@@ -124,10 +175,11 @@ export class DteService implements OnModuleInit {
       numeroControl,
       codigoGeneracion,
       date,
-      time,
-      amountCop: input.amountCop,
+      time: formatLocalTimeForDocument(new Date()),
+      amountUsd: input.amountUsd,
       influencerName: input.influencerName,
       influencerEmail: input.influencerEmail,
+      document: input.document,
       contractId: input.contractId,
       transactionId: input.transactionId,
     });
@@ -139,10 +191,10 @@ export class DteService implements OnModuleInit {
       fecha_emision: date,
       hora_emision: time,
       estado: 'BORRADOR',
-      total_gravada: input.amountCop,
-      subtotal: input.amountCop,
-      total_pagar: input.amountCop,
-      total_letras: `${input.amountCop.toFixed(2)} COP`,
+      total_gravada: input.amountUsd,
+      subtotal: input.amountUsd,
+      total_pagar: input.amountUsd,
+      total_letras: amountToSpanishWords(input.amountUsd),
       json_original: jsonOriginal,
       payment_receipt_id: input.receiptId,
       pdf_url: pdfUrl,
@@ -153,8 +205,8 @@ export class DteService implements OnModuleInit {
       num_item: 1,
       descripcion: `Pago de contrato #${input.contractId}`,
       cantidad: 1,
-      precio_unitario: input.amountCop,
-      venta_gravada: input.amountCop,
+      precio_unitario: input.amountUsd,
+      venta_gravada: input.amountUsd,
     }));
 
     this.logger.log(`DTE de desarrollo generado ${numeroControl} para comprobante ${input.receiptNumber}`);
@@ -166,9 +218,10 @@ export class DteService implements OnModuleInit {
     codigoGeneracion: string;
     date: string;
     time: string;
-    amountCop: number;
+    amountUsd: number;
     influencerName: string;
     influencerEmail: string;
+    document: string | null;
     contractId: number;
     transactionId: string;
   }): string {
@@ -184,9 +237,10 @@ export class DteService implements OnModuleInit {
     codigoGeneracion: string;
     date: string;
     time: string;
-    amountCop: number;
+    amountUsd: number;
     influencerName: string;
     influencerEmail: string;
+    document: string | null;
     contractId: number;
     transactionId: string;
   }): Buffer {
@@ -245,7 +299,7 @@ export class DteService implements OnModuleInit {
     label('Forma de pago', 395, 698);
     text('Transferencia', 458, 698, 7);
     label('Transaccion', 395, 682);
-    text(input.transactionId.slice(0, 20), 458, 682, 6);
+    text(input.transactionId, 458, 682, 5);
 
     rect(38, 560, 258, 98, true, colors.slate);
     rect(308, 560, 266, 98, true, colors.slate);
@@ -258,14 +312,14 @@ export class DteService implements OnModuleInit {
     value('Nombre', input.influencerName.slice(0, 35), 318, 622);
     value('Correo', input.influencerEmail.slice(0, 35), 318, 606);
     value('Contrato', `#${input.contractId}`, 318, 590);
-    value('Documento', 'No registrado', 318, 574);
+    value('Documento', input.document ?? 'No registrado', 318, 574);
 
-    rect(38, 530, 536, 20, true, colors.slate);
-    text('DOCUMENTOS RELACIONADOS', 245, 537, 7, true, colors.violet);
-    label('Tipo', 50, 537);
-    text('Pago de contrato', 80, 537, 7);
-    label('Referencia', 330, 537);
-    text(`Comprobante ${input.contractId}`, 380, 537, 7);
+    rect(38, 530, 536, 38, true, colors.slate);
+    text('DOCUMENTOS RELACIONADOS', 224, 556, 7, true, colors.violet);
+    label('Tipo', 50, 540);
+    text('Pago de contrato', 80, 540, 7);
+    label('Referencia', 330, 540);
+    text(`Comprobante ${input.contractId}`, 380, 540, 7);
 
     rect(38, 415, 536, 98, true, colors.white);
     rect(38, 493, 536, 20, true, colors.violet);
@@ -285,25 +339,25 @@ export class DteService implements OnModuleInit {
     text('1', 52, 455, 8);
     text('1', 90, 455, 8);
     text(`Pago por contrato #${input.contractId}`, 132, 455, 8);
-    text(input.amountCop.toFixed(2), 382, 455, 8);
+    text(input.amountUsd.toFixed(2), 382, 455, 8);
     text('0.00', 468, 455, 8);
-    text(input.amountCop.toFixed(2), 523, 455, 8);
+    text(input.amountUsd.toFixed(2), 523, 455, 8);
 
     rect(365, 327, 209, 75, true, colors.slate);
     line(365, 383, 574, 383);
     line(365, 365, 574, 365);
     line(365, 347, 574, 347);
     label('Subtotal', 390, 388);
-    text(`COP ${input.amountCop.toFixed(2)}`, 492, 388, 8);
+    text(`USD ${input.amountUsd.toFixed(2)}`, 492, 388, 8);
     label('Impuestos', 390, 370);
-    text('COP 0.00', 492, 370, 8);
+    text('USD 0.00', 492, 370, 8);
     label('Total a pagar', 390, 352);
-    text(`COP ${input.amountCop.toFixed(2)}`, 492, 352, 8, true, colors.violet);
+    text(`USD ${input.amountUsd.toFixed(2)}`, 492, 352, 8, true, colors.violet);
     label('Estado', 390, 334);
     text('BORRADOR', 492, 334, 8, true, colors.coral);
 
     rect(38, 275, 536, 34, true, colors.slate);
-    value('Valores en letras', `${input.amountCop.toFixed(2)} COP`, 50, 292);
+    value('Valores en letras', amountToSpanishWords(input.amountUsd), 50, 292);
     value('Condicion', 'Contado', 350, 292);
     value('Observaciones', 'Documento simulado para pruebas', 50, 278);
 

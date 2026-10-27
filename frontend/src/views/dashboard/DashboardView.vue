@@ -7,6 +7,7 @@ import { useCreditsStore } from '@/stores/credits'
 import { useChatStore } from '@/stores/chat'
 import { useContractsStore } from '@/stores/contracts'
 import { useProfileStore } from '@/stores/profile'
+import { formatDate } from '@/utils/date'
 
 const router         = useRouter()
 const route          = useRoute()
@@ -289,7 +290,7 @@ watch(balance, (b) => {
                 <span v-else-if="chat.empresa">{{ chat.empresa.nombre_comercial }}</span>
                 <span v-else>Sin nombre</span>
               </p>
-              <p class="text-xs text-ink-muted">{{ new Date(chat.created_at).toLocaleDateString() }}</p>
+              <p class="text-xs text-ink-muted">{{ formatDate(chat.created_at) }}</p>
             </div>
             <span :class="chat.status === 'active' ? 'badge-active' : chat.status === 'completed' ? 'badge-muted' : 'badge-warning'">
               {{ CHAT_STATUS_LABEL[chat.status] ?? chat.status }}

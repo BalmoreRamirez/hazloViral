@@ -44,10 +44,7 @@ export class PaymentReceipt {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount_usd: number;
 
-  @Column({ type: 'decimal', precision: 15, scale: 2 })
-  amount_cop: number;
-
-  @Column({ length: 3, default: 'COP' })
+  @Column({ length: 3, default: 'USD' })
   currency: string;
 
   @Column({ type: 'jsonb' })
