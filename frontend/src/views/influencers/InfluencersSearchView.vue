@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
@@ -99,7 +100,7 @@ const REDES_ICON: Record<string, string> = {
     <div class="space-y-5">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-display font-bold text-navy">Buscar influencers</h1>
+          <h1 class="page-title font-display font-bold text-navy">Buscar influencers</h1>
           <p class="text-ink-muted text-sm mt-1">{{ total }} influencer{{ total !== 1 ? 's' : '' }} encontrados</p>
         </div>
         <div class="field">
@@ -175,8 +176,8 @@ const REDES_ICON: Record<string, string> = {
       <template v-else>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div v-for="inf in results" :key="inf.id"
-            @click="router.push(`/influencers/${inf.id}`)"
-            class="card cursor-pointer hover:shadow-md transition-shadow flex flex-col">
+            @click="router.push(viewPath(`/influencers/${inf.id}`))"
+            class="card cursor-pointer ui-hover-card transition-shadow flex flex-col">
             <!-- Foto + nombre + @username -->
             <div class="flex items-center gap-3 mb-3">
               <img v-if="inf.user?.avatar_url" :src="inf.user.avatar_url" :alt="inf.nombre_artistico"
@@ -227,7 +228,7 @@ const REDES_ICON: Record<string, string> = {
             <div v-if="inf.metrics?.length" class="space-y-1.5">
               <div v-for="m in inf.metrics.slice(0, 3)" :key="m.id"
                 class="flex items-center justify-between text-xs bg-slate rounded-lg px-2 py-1">
-                <span class="inline-flex items-center gap-1.5 min-w-0 truncate"><i :class="['pi', REDES_ICON[m.red_social] ?? 'pi-mobile']" aria-hidden="true" /> {{ m.red_social }} · {{ m.username }}</span>
+                <span class="inline-flex items-center gap-1.5 min-w-0 truncate"><i :class="['pi', REDES_ICON[m.red_social] ?? 'pi-mobile']" aria-hidden="true" /> {{ m.red_social }}<span v-if="m.username"> · {{ m.username }}</span></span>
                 <div class="flex gap-1.5 shrink-0">
                   <span class="badge-info text-xs">{{ formatFollowers(m.seguidores) }}</span>
                   <span v-if="Number(m.engagement_rate) > 0" class="badge-active text-xs">{{ m.engagement_rate }}%</span>

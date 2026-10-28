@@ -25,8 +25,8 @@ Plataforma web responsive que conecta marcas con influencers en Latinoamérica. 
 *   **Fondo de Superficies (Light Slate - `#F8FAFC`):** Fondo para tarjetas de perfiles, contenedores de chat y secciones internas para un contraste limpio.
 
 ### 3.2 Tipografía
-*   **Cuerpo y Datos (Plus Jakarta Sans):** Alta legibilidad en pantallas móviles para mensajería, métricas y contratos. Cifras tabulares en montos.
-*   **Títulos y Encabezados (Bricolage Grotesque):** Personalidad editorial para nombres de influencers, marcas y títulos de dashboards, sin perder seriedad en contratos.
+*   **Cuerpo y Datos (Helvetica Neue):** Alta legibilidad en pantallas móviles para mensajería, métricas y contratos. Cifras tabulares en montos.
+*   **Títulos y Encabezados (Helvetica Neue):** Una sola familia para toda la interfaz, con jerarquía de tamaños y pesos. Respaldo local: Helvetica, Arial, sans-serif. Cuerpo 16 px, datos y controles 14 px, metadatos 12 px y títulos de página adaptables de 24 a 30 px.
 
 ### 3.3 Reglas de uso (sistema de diseño)
 *   **Contraste AA:** el texto secundario usa `text-ink-muted` (no `text-navy/40`–`/70`). El coral solo marca (iconos, bordes, puntos); el texto de error usa `text-coral-text`. Los botones destructivos usan `bg-danger`. Los bordes de controles usan `border-border-strong`.
@@ -375,22 +375,22 @@ CREATE INDEX idx_revision_rounds_contrato ON contrato_revision_rounds(contrato_i
 
 ### Bloque B — Backend: Enums y Entidades (NestJS)
 **B1.** Actualizar `src/common/enums.ts`:
-- `ContratoStatus`: agregar `CHANGES_REQUESTED`, `PENDING_PUBLICATION`, `PUBLICATION_REVIEW`, `INCUMPLIMIENTO`
+- `ContractStatus`: agregar `CHANGES_REQUESTED`, `PENDING_PUBLICATION`, `PUBLICATION_REVIEW`, `INCUMPLIMIENTO`
 - `ProposalStatus`: agregar `REJECTED`, `COUNTER_REJECTED`
 
-**B2.** Actualizar la entidad `ContratoEscrow` (`contrato-escrow.entity.ts`):
+**B2.** Actualizar la entidad `EscrowContract` (`contrato-escrow.entity.ts`):
 - Agregar campos `contrato_pdf_url`, `revision_round`, `publication_links`, `motivo_incumplimiento`
 
 **B3.** Actualizar la entidad `Message`:
 - Agregar campo `contraoferta_data`
 
 **B4.** Crear entidades para las nuevas tablas:
-- `ContratoRevisionRound` (`contrato-revision-round.entity.ts`)
-- `ContratoAuditLog` (`contrato-audit-log.entity.ts`)
+- `ContractRevisionRound` (`contrato-revision-round.entity.ts`)
+- `ContractAuditLog` (`contrato-audit-log.entity.ts`)
 
 ---
 
-### Bloque C — Backend: Lógica de Negocio (ContratosService)
+### Bloque C — Backend: Lógica de Negocio (ContractsService)
 **C1.** Nuevo método `rejectProposal(user, dto)` — influencer rechaza propuesta → `proposal_status = rejected`.
 
 **C2.** Nuevo método `counterProposal(user, dto)` — influencer envía contraoferta → crea nuevo mensaje con `contraoferta_data` y `proposal_status = countered`.
@@ -436,7 +436,7 @@ CREATE INDEX idx_revision_rounds_contrato ON contrato_revision_rounds(contrato_i
 - `RegisterPublicationsDto` (`{ contrato_id, publications: [{ red_social, url }] }`)
 - `ReportNonComplianceDto` (`{ contrato_id, motivo }`)
 
-**E2.** Agregar los nuevos endpoints al `ContratosController`:
+**E2.** Agregar los nuevos endpoints al `ContractsController`:
 - `POST /contratos/reject-proposal`
 - `POST /contratos/counter-proposal`
 - `POST /contratos/resolve-counter`
@@ -599,7 +599,7 @@ Solo se permiten 4 redes sociales en la plataforma:
 > Twitter/X, Twitch y LinkedIn han sido eliminados de la plataforma.
 
 ### 9.2 Arquitectura de verificación
-- **`SocialVerificationService`** (`backend/src/influencers/social-verification.service.ts`): servicio inyectable que consulta RapidAPI con `fetch()` nativo (Node 18+).
+- **`SocialVerificationService`** (`backend/src/modules/influencers/social-verification.service.ts`): servicio inyectable que consulta RapidAPI con `fetch()` nativo (Node 18+).
 - La verificación se ejecuta **antes de guardar** la métrica. Si falla → se lanza `BadRequestException` y no se persiste nada.
 - Columnas añadidas a `influencer_metrics`: `is_verified BOOLEAN DEFAULT false`, `verified_at TIMESTAMP NULL`.
 - **Cron semanal** (`@Cron('0 3 * * 0')`): re-verifica todas las métricas de plataformas soportadas cada domingo a las 3 AM.

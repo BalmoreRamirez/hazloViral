@@ -1,327 +1,220 @@
 <script setup lang="ts">
-import { onMounted, computed, ref, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import { viewPath } from '@/router/paths'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
 import { useChatStore } from '@/stores/chat'
-import { useContractsStore } from '@/stores/contracts'
+import { useContractsStore, type Contract } from '@/stores/contracts'
 import { useProfileStore } from '@/stores/profile'
+import { formatDate, formatTime, todayInAppTimeZone } from '@/utils/date'
+import { formatUsd } from '@/utils/money'
+import { dashboardSummary, contractTask } from '@/utils/dashboard'
 
-const router         = useRouter()
-const route          = useRoute()
-const authStore      = useAuthStore()
-const creditsStore   = useCreditsStore()
-const chatStore      = useChatStore()
-const contractsStore = useContractsStore()
-
-const profileStore = useProfileStore()
-
-const isEmpresa   = computed(() => authStore.isEmpresa)
-const balance     = computed(() => creditsStore.balance)
-
-// ─── Recarga: paquetes + monto personalizado ──────────────────────────────────
-const RECHARGE_PACKS = [25, 50, 100]
-const RECHARGE_MIN   = 5
-const RECHARGE_MAX   = 1000
-const suggestedAmt   = computed(() => balance.value ? Math.max(10, Math.ceil(balance.value.deficit + 5)) : 10)
-const selectedPack   = ref<number | 'custom'>(25)
-const customAmt      = ref<number | null>(null)
-const rechargeAmt    = computed(() => selectedPack.value === 'custom' ? Number(customAmt.value ?? 0) : selectedPack.value)
-const rechargeValid  = computed(() => rechargeAmt.value >= RECHARGE_MIN && rechargeAmt.value <= RECHARGE_MAX)
-const isDevelopment = import.meta.env.VITE_FORMA_PAGO !== 'produccion'
-const showDevCheckout = ref(false)
-const devCheckoutStep = ref<'review' | 'success'>('review')
-
-async function confirmDevelopmentRecharge() {
-  try {
-    await creditsStore.simulateRecharge(rechargeAmt.value)
-    devCheckoutStep.value = 'success'
-  } catch {
-    // El store muestra el error en la tarjeta.
-  }
-}
-
-function closeDevCheckout() {
-  showDevCheckout.value = false
-  devCheckoutStep.value = 'review'
-}
-
-// ─── Saludo ───────────────────────────────────────────────────────────────────
-const greetingName = computed(() =>
-  (isEmpresa.value ? profileStore.empresaProfile?.nombre_comercial : null)
-  ?? authStore.user?.email?.split('@')[0] ?? '',
-)
-
-// ─── Métricas ─────────────────────────────────────────────────────────────────
-const ESCROW_STATUSES = ['funded_in_escrow', 'under_review', 'changes_requested', 'pending_publication', 'publication_review']
-const REVIEW_STATUSES = ['under_review', 'publication_review']
-
-const activeChats = computed(() => chatStore.chats.filter(c => c.status === 'active').length)
-const sumMonto = (statuses: string[]) => contractsStore.contracts
-  .filter(c => statuses.includes(c.status))
-  .reduce((acc, c) => acc + Number(c.monto_total), 0)
-const totalInvertido   = computed(() => sumMonto(['completed']))
-const totalEnCustodia  = computed(() => sumMonto(ESCROW_STATUSES))
-const pendientesRevision = computed(() => contractsStore.contracts.filter(c => REVIEW_STATUSES.includes(c.status)).length)
-const pendientesPago   = computed(() => contractsStore.contracts.filter(c => c.status === 'pending_payment').length)
-
-function usd(n: number) {
-  return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-onMounted(async () => {
-  const role = authStore.user?.role
-  await Promise.all([
-    isEmpresa.value ? profileStore.loadEmpresaProfile() : Promise.resolve(),
-    (role === 'empresa' || role === 'influencer') ? chatStore.loadChats() : Promise.resolve(),
-    (role === 'empresa' || role === 'influencer') ? contractsStore.fetchContracts() : Promise.resolve(),
-    isEmpresa.value ? creditsStore.fetchBalance() : Promise.resolve(),
-  ])
-
-  // Gap 3: Wompi redirige aquí tras recarga de créditos exitosa
-  if (route.query.wompi === 'success' && route.query.tipo === 'creditos') {
-    await new Promise(r => setTimeout(r, 1500))
-    await creditsStore.fetchBalance()
-    router.replace({ path: '/dashboard' })
-  }
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const credits = useCreditsStore()
+const chats = useChatStore()
+const contracts = useContractsStore()
+const profile = useProfileStore()
+const loading = ref(true)
+const errors = ref<Record<string, boolean>>({})
+const refreshedAt = ref<string | null>(null)
+const isEmpresa = computed(() => auth.isEmpresa)
+const isParticipant = computed(() => auth.isEmpresa || auth.isInfluencer)
+const today = todayInAppTimeZone()
+const profilePath = computed(() => isEmpresa.value ? '/perfil/empresa' : '/perfil/influencer')
+const name = computed(() => {
+  if (loading.value || errors.value.profile) return auth.user?.email?.split('@')[0] ?? ''
+  return (isEmpresa.value ? profile.empresaProfile?.nombre_comercial : profile.influencerProfile?.nombre_artistico)
+    || auth.user?.email?.split('@')[0] || ''
 })
 
-const STATUS_LABEL: Record<string, string> = {
-  pending_payment:  'Pago pendiente',
-  funded_in_escrow: 'En custodia',
-  under_review:     'En revisión',
-  changes_requested:   'Cambios solicitados',
-  pending_publication: 'Por publicar',
-  publication_review:  'Revisión de publicación',
-  completed:        'Completado',
-  incumplimiento:   'Incumplimiento',
+async function loadDashboard() {
+  loading.value = true
+  errors.value = {}
+  const requests: [string, () => Promise<unknown>][] = isParticipant.value ? [
+    ['profile', () => isEmpresa.value ? profile.loadEmpresaProfile() : profile.loadInfluencerProfile()],
+    ['contracts', () => contracts.fetchContracts()],
+    ['chats', () => chats.loadChats()],
+    ...(isEmpresa.value ? [['balance', () => credits.fetchBalance()] as [string, () => Promise<unknown>]] : []),
+  ] : []
+  const results = await Promise.allSettled(requests.map(([, request]) => request()))
+  results.forEach((result, index) => { if (result.status === 'rejected') errors.value[requests[index]![0]] = true })
+  loading.value = false
+  refreshedAt.value = new Date().toISOString()
 }
-
-const STATUS_ICON: Record<string, string> = {
-  pending_payment:     'pi-clock',
-  funded_in_escrow:    'pi-lock',
-  under_review:        'pi-search',
-  changes_requested:   'pi-pencil',
-  pending_publication: 'pi-upload',
-  publication_review:  'pi-eye',
-  completed:           'pi-check-circle',
-  incumplimiento:      'pi-ban',
-}
-
-const CHAT_STATUS_LABEL: Record<string, string> = {
-  active: 'Activo', blocked: 'Bloqueado', completed: 'Finalizado',
-}
-
-// Si los chats están congelados, sugerir un monto que cubra el déficit
-watch(balance, (b) => {
-  if (b && !b.is_above_threshold && !RECHARGE_PACKS.some(p => p >= suggestedAmt.value)) {
-    selectedPack.value = 'custom'
-    customAmt.value = suggestedAmt.value
+onMounted(async () => {
+  if (auth.isEmpresa && route.query.wompi === 'success' && route.query.tipo === 'creditos') {
+    await router.replace({ name: 'credit-recharge', query: route.query })
+    return
   }
-}, { immediate: true })
+  await loadDashboard()
+})
+const summary = computed(() => dashboardSummary(contracts.contracts, isEmpresa.value))
+const metrics = computed(() => isEmpresa.value ? [
+  { label: 'Contratos en curso', value: summary.value.active, detail: 'Colaboraciones en producción o revisión', icon: 'pi-briefcase', money: false },
+  { label: 'En custodia', value: summary.value.inProgressAmount, detail: 'Fondos de contratos en curso', icon: 'pi-lock', money: true },
+  { label: 'Por revisar', value: summary.value.reviews, detail: 'Entregables y publicaciones', icon: 'pi-eye', money: false },
+  { label: 'Por fondear', value: summary.value.funding, detail: 'Acuerdos pendientes de pago', icon: 'pi-wallet', money: false },
+] : [
+  { label: 'Colaboraciones en curso', value: summary.value.active, detail: 'Contratos en producción o revisión', icon: 'pi-briefcase', money: false },
+  { label: 'Por entregar o publicar', value: summary.value.tasks, detail: 'Contratos que requieren tu acción', icon: 'pi-send', money: false },
+  { label: 'Ingresos en proceso', value: summary.value.inProgressAmount, detail: 'Neto estimado de contratos en curso', icon: 'pi-clock', money: true },
+  { label: 'Ingresos confirmados', value: summary.value.confirmedAmount, detail: 'Neto acumulado con pago confirmado', icon: 'pi-check-circle', money: true },
+])
+const tasks = computed(() => contracts.contracts.flatMap(contract => {
+  const task = contractTask(contract, isEmpresa.value)
+  return task ? [{ contract, ...task }] : []
+}).sort((a, b) => a.priority - b.priority || (a.contract.fecha_limite_entrega || '9999').localeCompare(b.contract.fecha_limite_entrega || '9999')))
+const recentContracts = computed(() => [...contracts.contracts].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5))
+const recentChats = computed(() => [...chats.chats].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 4))
+const activeChats = computed(() => chats.chats.filter(chat => chat.status === 'active').length)
+function counterpart(contract: Contract) {
+  return isEmpresa.value ? contract.influencer?.nombre_artistico ?? 'Influencer' : contract.empresa?.nombre_comercial ?? 'Empresa'
+}
+const statuses: Record<string, { label: string; cls: string }> = {
+  pending_payment: { label: 'Por fondear', cls: 'badge-warning' },
+  funded_in_escrow: { label: 'En producción', cls: 'badge-info' },
+  under_review: { label: 'En revisión', cls: 'badge-info' },
+  changes_requested: { label: 'Cambios solicitados', cls: 'badge-warning' },
+  pending_publication: { label: 'Por publicar', cls: 'badge-info' },
+  publication_review: { label: 'Publicación en revisión', cls: 'badge-info' },
+  completed: { label: 'Completado', cls: 'badge-success' },
+  incumplimiento: { label: 'Incumplimiento', cls: 'badge-warning' },
+}
+const readiness = computed(() => isEmpresa.value ? [
+  { label: 'Correo verificado', done: !!auth.user?.is_email_verified },
+  { label: 'Perfil de empresa verificado', done: !!profile.empresaProfile?.is_verified },
+] : [
+  { label: 'Correo verificado', done: !!auth.user?.is_email_verified },
+  { label: 'Perfil verificado', done: !!profile.influencerProfile?.is_verified },
+  { label: 'Cuenta bancaria registrada', done: !!(profile.influencerProfile?.banco_nombre && profile.influencerProfile?.banco_cuenta_numero && profile.influencerProfile?.banco_cuenta_tipo) },
+])
+const readyCount = computed(() => readiness.value.filter(item => item.done).length)
 </script>
 
 <template>
   <AppLayout>
-    <div class="space-y-6">
-      <!-- Header -->
-      <div>
-        <h1 class="text-2xl font-display font-bold text-navy">
-          Hola, {{ greetingName }}
-        </h1>
-        <p class="text-ink-muted text-sm mt-1">
-          {{ isEmpresa ? 'Panel de Marca / Empresa' : 'Panel de Influencer' }}
-        </p>
-      </div>
-
-      <!-- Créditos (empresa) -->
-      <template v-if="isEmpresa && balance">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="card flex flex-col gap-1">
-            <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Saldo disponible</p>
-            <p class="text-3xl font-display font-bold" :class="balance.is_above_threshold ? 'text-navy' : 'text-coral-text'">
-              ${{ balance.balance_creditos.toFixed(2) }}
-              <span class="text-base font-normal text-ink-muted">USD</span>
-            </p>
-            <p class="text-xs text-ink-muted">
-              Alerta de saldo bajo: <strong>${{ balance.umbral_creditos.toFixed(2) }} USD</strong>
-              — por debajo de este monto tus chats se congelan
-            </p>
-          </div>
-          <div class="card flex flex-col gap-1">
-            <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Estado del chat</p>
-            <span :class="balance.is_above_threshold ? 'badge-active' : 'badge-warning'" class="self-start mt-1 text-base inline-flex items-center gap-1.5">
-              <i class="pi pi-circle-fill text-[0.6em]" :class="balance.is_above_threshold ? 'text-success' : 'text-coral-text'" aria-hidden="true" />
-              {{ balance.is_above_threshold ? 'Activo' : 'Chats congelados' }}
-            </span>
-            <p class="text-xs text-ink-muted mt-1">
-              {{ balance.is_above_threshold
-                ? 'Puedes enviar mensajes y propuestas'
-                : `Recarga $${balance.deficit.toFixed(2)} USD o más para reactivar` }}
-            </p>
-          </div>
-          <div class="card flex flex-col gap-2">
-            <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Recargar saldo</p>
-            <div class="grid grid-cols-4 gap-1.5">
-              <button v-for="pack in RECHARGE_PACKS" :key="pack" type="button" @click="selectedPack = pack"
-                class="py-1.5 rounded-lg text-sm font-semibold border transition-colors"
-                :class="selectedPack === pack ? 'bg-violet text-white border-violet' : 'border-navy/15 text-navy hover:border-violet/40'">
-                ${{ pack }}
-              </button>
-              <button type="button" @click="selectedPack = 'custom'"
-                class="py-1.5 rounded-lg text-xs font-semibold border transition-colors"
-                :class="selectedPack === 'custom' ? 'bg-violet text-white border-violet' : 'border-navy/15 text-navy hover:border-violet/40'">
-                Otro
-              </button>
-            </div>
-            <input v-if="selectedPack === 'custom'" v-model.number="customAmt" type="number"
-              :min="RECHARGE_MIN" :max="RECHARGE_MAX" step="1" class="input text-sm" placeholder="Monto en USD" />
-            <button @click="isDevelopment ? (showDevCheckout = true) : creditsStore.recharge(rechargeAmt)"
-              :disabled="creditsStore.recharging || !rechargeValid"
-              class="btn-primary text-sm">
-              {{ creditsStore.recharging ? 'Procesando…' : `Recargar $${rechargeAmt || 0} USD` }}
-            </button>
-            <p v-if="selectedPack === 'custom' && customAmt != null && !rechargeValid" class="text-xs text-coral-text">
-              El monto debe estar entre ${{ RECHARGE_MIN }} y ${{ RECHARGE_MAX }} USD.
-            </p>
-            <p v-if="creditsStore.rechargeError" class="text-xs text-coral-text">
-              {{ creditsStore.rechargeError }}
-            </p>
-            <p v-else class="text-xs text-ink-muted">{{ isDevelopment ? 'Ambiente de desarrollo · Sin cargos reales' : '1 crédito = $1 USD · Pago seguro con Wompi' }}</p>
-          </div>
+    <div class="space-y-6" :aria-busy="loading">
+      <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-ink-muted">{{ isEmpresa ? 'Espacio de marca' : auth.isInfluencer ? 'Espacio de creador' : 'Administración' }}</p>
+          <h1 class="page-title font-display font-bold text-navy mt-1">Hola, {{ name || 'bienvenido' }}</h1>
+          <p class="text-sm text-ink-muted mt-2">{{ formatDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }} · Tu actividad, en un solo lugar.</p>
         </div>
-      </template>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="btn-secondary inline-flex items-center gap-2" :disabled="loading" @click="loadDashboard">
+            <i :class="['pi pi-refresh', { 'pi-spin': loading }]" aria-hidden="true" />Actualizar
+          </button>
+          <RouterLink v-if="isParticipant" :to="viewPath(isEmpresa ? '/influencers' : '/contratos')" class="btn-primary inline-flex items-center gap-2">
+            <i :class="['pi', isEmpresa ? 'pi-search' : 'pi-briefcase']" aria-hidden="true" />{{ isEmpresa ? 'Buscar influencers' : 'Mis contratos' }}
+          </RouterLink>
+        </div>
+      </header>
 
-      <div v-if="showDevCheckout" class="fixed inset-0 z-50 flex items-center justify-center bg-navy/70 px-4" @click.self="closeDevCheckout">
-        <section class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="dev-checkout-title">
-          <div class="bg-navy px-6 py-5 text-white">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"><i class="pi pi-wallet text-xl" aria-hidden="true" /></span>
-                <div><p class="text-xs uppercase tracking-wider text-white/60">InfluSmart</p><h2 id="dev-checkout-title" class="font-display text-xl font-bold">Checkout de desarrollo</h2></div>
-              </div>
-              <button type="button" class="text-white/70 hover:text-white" aria-label="Cerrar" @click="closeDevCheckout"><i class="pi pi-times" aria-hidden="true" /></button>
+      <div v-if="Object.keys(errors).length" role="alert" class="rounded-xl border border-amber-200 bg-warning-tint px-5 py-4 text-sm text-warning">
+        <i class="pi pi-exclamation-triangle mr-2" aria-hidden="true" />No pudimos cargar parte de tu información. Los datos no disponibles se indican abajo. Usa Actualizar para reintentar.
+      </div>
+      <section v-if="!isParticipant" class="card">
+        <h2 class="font-display font-semibold text-navy">Gestiona la plataforma</h2>
+        <RouterLink :to="viewPath('/admin')" class="btn-primary inline-flex mt-4">Abrir administración</RouterLink>
+      </section>
+      <template v-else>
+        <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" aria-label="Resumen de actividad">
+          <article v-for="metric in metrics" :key="metric.label" class="card flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-sm font-medium text-ink-muted">{{ metric.label }}</h2>
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-tint text-violet"><i :class="['pi', metric.icon]" aria-hidden="true" /></span>
             </div>
-          </div>
-          <div class="space-y-5 px-6 py-6">
-            <template v-if="devCheckoutStep === 'review'">
-              <div class="rounded-xl border border-navy/10 bg-slate p-4">
-                <div class="flex items-center justify-between"><span class="text-sm text-ink-muted">Recarga de créditos</span><i class="pi pi-shield text-navy" aria-hidden="true" /></div>
-                <p class="mt-2 text-3xl font-display font-bold text-navy">${{ Number(rechargeAmt).toFixed(2) }} <span class="text-sm font-normal text-ink-muted">USD</span></p>
-                <p class="mt-1 text-xs text-ink-muted">Se acreditará en tu saldo de pruebas.</p>
-              </div>
-              <div class="flex items-start gap-3 rounded-lg border border-navy/15 p-3 text-sm text-navy"><i class="pi pi-info-circle mt-0.5" aria-hidden="true" /><p>Esta operación es simulada. No solicita datos bancarios y no realiza cargos reales.</p></div>
-              <p v-if="creditsStore.rechargeError" class="text-sm text-coral-text">{{ creditsStore.rechargeError }}</p>
-              <div class="flex gap-3"><button type="button" class="btn-secondary flex-1" @click="closeDevCheckout">Cancelar</button><button type="button" class="btn-primary flex-1" :disabled="creditsStore.recharging" @click="confirmDevelopmentRecharge">{{ creditsStore.recharging ? 'Procesando…' : 'Confirmar recarga' }}</button></div>
-            </template>
-            <template v-else>
-              <div class="py-4 text-center"><span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-navy text-white"><i class="pi pi-check text-2xl" aria-hidden="true" /></span><h3 class="mt-4 text-xl font-display font-bold text-navy">Recarga simulada completada</h3><p class="mt-2 text-sm text-ink-muted">El saldo fue actualizado correctamente en el ambiente de desarrollo.</p><button type="button" class="btn-primary mt-6 w-full" @click="closeDevCheckout">Continuar</button></div>
-            </template>
-          </div>
+            <div v-if="loading" class="h-8 w-28 rounded bg-slate-dark/60 animate-pulse" aria-label="Cargando indicador" />
+            <p v-else class="text-3xl font-display font-bold text-navy tabular-nums break-words">{{ errors.contracts ? '—' : metric.money ? formatUsd(metric.value) : metric.value }}</p>
+            <p class="text-xs text-ink-muted">{{ errors.contracts ? 'Información no disponible' : metric.detail }}<span v-if="metric.money && !errors.contracts"> · USD</span></p>
+          </article>
         </section>
-      </div>
 
-      <!-- Estadísticas rápidas -->
-      <!-- Inversión (empresa) -->
-      <div v-if="isEmpresa" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="card">
-          <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Total invertido</p>
-          <p class="text-2xl font-display font-bold text-navy mt-1">{{ usd(totalInvertido) }}</p>
-          <p class="text-xs text-ink-muted mt-0.5">Contratos completados</p>
-        </div>
-        <div class="card">
-          <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">En custodia</p>
-          <p class="text-2xl font-display font-bold text-violet mt-1">{{ usd(totalEnCustodia) }}</p>
-          <p class="text-xs text-ink-muted mt-0.5">Retenido hasta aprobar entregas</p>
-        </div>
-        <RouterLink to="/contratos" class="card hover:border-coral/30 border border-transparent">
-          <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Esperan tu revisión</p>
-          <p class="text-2xl font-display font-bold mt-1" :class="pendientesRevision ? 'text-coral-text' : 'text-navy'">{{ pendientesRevision }}</p>
-          <p class="text-xs text-ink-muted mt-0.5">Entregables o publicaciones</p>
-        </RouterLink>
-        <RouterLink to="/contratos" class="card hover:border-coral/30 border border-transparent">
-          <p class="text-xs text-ink-muted uppercase tracking-wide font-semibold">Pendientes de pago</p>
-          <p class="text-2xl font-display font-bold mt-1" :class="pendientesPago ? 'text-coral-text' : 'text-navy'">{{ pendientesPago }}</p>
-          <p class="text-xs text-ink-muted mt-0.5">Contratos por fondear</p>
-        </RouterLink>
-      </div>
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,1fr)] items-start">
+          <div class="space-y-6 min-w-0">
+            <section class="card p-0 overflow-hidden" aria-labelledby="tasks-title">
+              <div class="px-5 sm:px-6 py-5 border-b border-border flex items-center justify-between gap-3">
+                <div><h2 id="tasks-title" class="font-display text-lg font-semibold text-navy">Tu siguiente paso</h2><p class="text-xs text-ink-muted mt-1">{{ isEmpresa ? 'Acuerdos que necesitan revisión o fondeo.' : 'Entregas, cambios y publicaciones por resolver.' }}</p></div>
+                <span v-if="!loading && !errors.contracts" class="badge-info">{{ tasks.length }} pendientes</span>
+              </div>
+              <p v-if="loading" class="p-8 text-center text-ink-muted" role="status">Preparando tus pendientes…</p>
+              <p v-else-if="errors.contracts" class="p-8 text-center text-ink-muted">No se pudieron consultar tus pendientes.</p>
+              <div v-else-if="!tasks.length" class="p-8 sm:p-10 text-center">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-success-tint text-success"><i class="pi pi-check text-xl" aria-hidden="true" /></span>
+                <h3 class="text-base font-semibold text-navy mt-3">{{ contracts.contracts.length ? 'Todo al día' : 'Tu próxima colaboración empieza aquí' }}</h3>
+                <p class="text-sm text-ink-muted mt-2">{{ contracts.contracts.length ? 'No tienes acciones pendientes en tus contratos.' : isEmpresa ? 'Prepara un brief y encuentra al creador ideal para tu marca.' : 'Completa tu perfil y verifica tus redes para recibir propuestas.' }}</p>
+                <RouterLink :to="viewPath(isEmpresa ? '/briefs' : profilePath)" class="text-sm text-violet font-semibold inline-flex items-center gap-2 mt-4">{{ isEmpresa ? 'Gestionar briefs' : 'Revisar mi perfil' }}<i class="pi pi-arrow-right" aria-hidden="true" /></RouterLink>
+              </div>
+              <ul v-else class="divide-y divide-border">
+                <li v-for="task in tasks.slice(0, 5)" :key="task.contract.id" class="px-5 sm:px-6 py-4 flex flex-wrap sm:flex-nowrap items-center gap-4">
+                  <span class="hidden sm:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning-tint text-warning"><i :class="['pi', task.icon]" aria-hidden="true" /></span>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-navy">{{ task.title }}</p>
+                    <p class="text-xs text-ink-muted mt-1 break-words">{{ counterpart(task.contract) }} · Contrato #{{ task.contract.id }}</p>
+                    <p v-if="task.contract.fecha_limite_entrega" class="text-xs mt-1" :class="task.contract.fecha_limite_entrega < today ? 'text-coral-text' : 'text-ink-muted'">{{ task.contract.fecha_limite_entrega < today ? 'Plazo vencido' : 'Fecha límite' }}: {{ formatDate(task.contract.fecha_limite_entrega) }}</p>
+                  </div>
+                  <RouterLink :to="viewPath(`/contratos/${task.contract.id}`)" class="btn-secondary text-sm whitespace-nowrap">{{ task.action }}</RouterLink>
+                </li>
+              </ul>
+              <RouterLink v-if="!errors.contracts && tasks.length > 5" :to="viewPath('/contratos')" class="block border-t border-border px-6 py-3 text-sm text-violet font-semibold">Ver todos los pendientes en contratos</RouterLink>
+            </section>
 
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="card text-center">
-          <p class="text-2xl font-bold text-violet">{{ activeChats }}</p>
-          <p class="text-xs text-ink-muted mt-1">Chats activos</p>
-        </div>
-        <div class="card text-center">
-          <p class="text-2xl font-bold text-violet">{{ contractsStore.contracts.length }}</p>
-          <p class="text-xs text-ink-muted mt-1">Contratos</p>
-        </div>
-        <div class="card text-center">
-          <p class="text-2xl font-bold text-navy">
-            {{ contractsStore.contracts.filter(c => c.status === 'completed').length }}
-          </p>
-          <p class="text-xs text-ink-muted mt-1">Completados</p>
-        </div>
-        <div class="card text-center">
-          <p class="text-2xl font-bold text-coral-text">
-            {{ contractsStore.contracts.filter(c => c.status === 'incumplimiento').length }}
-          </p>
-          <p class="text-xs text-ink-muted mt-1">En disputa</p>
-        </div>
-      </div>
-
-      <!-- Chats recientes -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="font-display font-semibold text-navy">Chats recientes</h2>
-          <RouterLink to="/chats" class="text-violet text-sm font-semibold">Ver todos →</RouterLink>
-        </div>
-        <div v-if="chatStore.chats.length === 0" class="text-ink-muted text-sm text-center py-4">
-          No tienes chats aún.
-        </div>
-        <div v-else class="divide-y divide-navy/5">
-          <div v-for="chat in chatStore.chats.slice(0,5)" :key="chat.id"
-            @click="router.push(`/chats/${chat.id}`)"
-            class="py-3 flex items-center justify-between cursor-pointer hover:bg-slate/50 -mx-5 px-5 rounded-lg transition-colors">
-            <div>
-              <p class="font-medium text-sm text-navy">
-                <span v-if="isEmpresa && chat.influencer">{{ chat.influencer.nombre_artistico }}</span>
-                <span v-else-if="chat.empresa">{{ chat.empresa.nombre_comercial }}</span>
-                <span v-else>Sin nombre</span>
-              </p>
-              <p class="text-xs text-ink-muted">{{ new Date(chat.created_at).toLocaleDateString() }}</p>
-            </div>
-            <span :class="chat.status === 'active' ? 'badge-active' : chat.status === 'completed' ? 'badge-muted' : 'badge-warning'">
-              {{ CHAT_STATUS_LABEL[chat.status] ?? chat.status }}
-            </span>
+            <section class="card p-0 overflow-hidden" aria-labelledby="contracts-title">
+              <div class="px-5 sm:px-6 py-5 border-b border-border flex items-center justify-between gap-3">
+                <h2 id="contracts-title" class="font-display text-lg font-semibold text-navy">Contratos recientes</h2>
+                <RouterLink :to="viewPath('/contratos')" class="text-sm text-violet font-semibold whitespace-nowrap">Ver todos</RouterLink>
+              </div>
+              <p v-if="loading || errors.contracts" class="p-8 text-center text-ink-muted">{{ loading ? 'Cargando contratos…' : 'Contratos no disponibles.' }}</p>
+              <p v-else-if="!recentContracts.length" class="p-8 text-center text-sm text-ink-muted">Cuando aceptes una propuesta, encontrarás aquí su contrato.</p>
+              <ul v-else class="divide-y divide-border">
+                <li v-for="contract in recentContracts" :key="contract.id">
+                  <RouterLink :to="viewPath(`/contratos/${contract.id}`)" class="flex flex-wrap sm:flex-nowrap items-center gap-3 px-5 sm:px-6 py-4 ui-hover focus-visible:outline-2 focus-visible:outline-violet">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate text-navy text-xs font-bold shrink-0">#{{ contract.id }}</span>
+                    <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-navy break-words">{{ counterpart(contract) }}</p><p class="text-xs text-ink-muted mt-1">{{ formatDate(contract.created_at) }}</p></div>
+                    <div class="text-right"><p class="text-sm font-semibold text-navy tabular-nums">{{ formatUsd(isEmpresa ? contract.monto_total : Number(contract.monto_total) - Number(contract.comision_plataforma)) }}</p><p v-if="!isEmpresa" class="text-xs text-ink-muted">Neto del contrato</p></div>
+                    <span :class="statuses[contract.status]?.cls ?? 'badge-muted'">{{ statuses[contract.status]?.label ?? contract.status }}</span>
+                    <i class="pi pi-angle-right text-ink-muted hidden sm:block" aria-hidden="true" />
+                  </RouterLink>
+                </li>
+              </ul>
+            </section>
           </div>
-        </div>
-      </div>
 
-      <!-- Contratos recientes -->
-      <div class="card" v-if="contractsStore.contracts.length > 0">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="font-display font-semibold text-navy">Contratos recientes</h2>
-          <RouterLink to="/contratos" class="text-violet text-sm font-semibold">Ver todos →</RouterLink>
+          <aside class="space-y-6 min-w-0" aria-label="Tu cuenta y conversaciones">
+            <section v-if="isEmpresa" class="rounded-2xl bg-navy p-6 text-white space-y-4">
+              <div class="flex items-center justify-between"><h2 class="font-display font-semibold !text-white">Saldo para conectar</h2><i class="pi pi-wallet text-white/70" aria-hidden="true" /></div>
+              <p class="text-3xl font-display font-bold tabular-nums">{{ loading || errors.balance || !credits.balance ? '—' : formatUsd(credits.balance.balance_creditos) }} <span class="text-sm font-normal text-white/70">USD</span></p>
+              <p class="text-sm text-white/80">{{ errors.balance ? 'No se pudo consultar el saldo.' : credits.balance ? credits.balance.is_above_threshold ? 'Tus chats están habilitados para seguir negociando.' : 'Recarga saldo para volver a escribir en tus chats.' : 'Consultando tu saldo disponible…' }}</p>
+              <RouterLink :to="viewPath('/saldo/recargar')" class="btn-primary inline-flex items-center justify-center gap-2 w-full"><i class="pi pi-plus" aria-hidden="true" />Recargar saldo</RouterLink>
+              <RouterLink :to="viewPath('/pagos/comprobantes')" class="block text-center text-sm text-white/80 underline underline-offset-4">Consultar pagos y facturas</RouterLink>
+            </section>
+
+            <section class="card space-y-4">
+              <div class="flex items-center justify-between gap-3"><h2 class="font-display text-lg font-semibold text-navy">Tu perfil profesional</h2><i class="pi pi-verified text-violet" aria-hidden="true" /></div>
+              <p v-if="loading || errors.profile" class="text-sm text-ink-muted">{{ loading ? 'Consultando tu perfil…' : 'No se pudo verificar tu perfil.' }}</p>
+              <template v-else>
+                <div class="flex justify-between text-xs text-ink-muted"><span>Requisitos de tu cuenta</span><span>{{ readyCount }} de {{ readiness.length }}</span></div>
+                <div class="h-1.5 rounded-full bg-slate-dark overflow-hidden" role="progressbar" :aria-valuenow="readyCount" :aria-valuemax="readiness.length" :aria-valuemin="0" aria-label="Requisitos de la cuenta"><div class="h-full bg-violet rounded-full" :style="{ width: `${readyCount / readiness.length * 100}%` }" /></div>
+                <ul class="space-y-3"><li v-for="item in readiness" :key="item.label" class="text-sm flex items-center gap-2"><i :class="['pi', item.done ? 'pi-check-circle text-success' : 'pi-circle text-ink-muted']" aria-hidden="true" /><span class="text-ink-muted">{{ item.label }}</span><span class="sr-only">{{ item.done ? 'Completo' : 'Pendiente' }}</span></li></ul>
+              </template>
+              <RouterLink :to="viewPath(profilePath)" class="inline-flex items-center gap-2 text-sm font-semibold text-violet">Gestionar mi perfil<i class="pi pi-arrow-right" aria-hidden="true" /></RouterLink>
+            </section>
+
+            <section class="card p-0 overflow-hidden" aria-labelledby="chats-title">
+              <div class="px-5 py-5 border-b border-border flex items-center justify-between gap-3"><div><h2 id="chats-title" class="font-display text-lg font-semibold text-navy">Conversaciones</h2><p v-if="!loading && !errors.chats" class="text-xs text-ink-muted mt-1">{{ activeChats }} chats activos</p></div><RouterLink :to="viewPath('/chats')" class="text-sm font-semibold text-violet">Ver todos</RouterLink></div>
+              <p v-if="loading || errors.chats" class="p-6 text-sm text-ink-muted">{{ loading ? 'Cargando conversaciones…' : 'No se pudieron cargar los chats.' }}</p>
+              <div v-else-if="!recentChats.length" class="p-6 space-y-3"><p class="text-sm text-ink-muted">{{ isEmpresa ? 'Encuentra un influencer y abre tu primera conversación.' : 'Aquí aparecerán tus conversaciones con las marcas.' }}</p><RouterLink v-if="isEmpresa" :to="viewPath('/influencers')" class="text-sm font-semibold text-violet">Explorar influencers</RouterLink></div>
+              <ul v-else class="divide-y divide-border"><li v-for="chat in recentChats" :key="chat.id"><RouterLink :to="viewPath(`/chats/${chat.id}`)" class="flex items-center gap-3 px-5 py-4 ui-hover focus-visible:outline-2 focus-visible:outline-violet"><span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-tint text-violet"><i class="pi pi-comments" aria-hidden="true" /></span><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-navy truncate">{{ isEmpresa ? chat.influencer?.nombre_artistico ?? 'Influencer' : chat.empresa?.nombre_comercial ?? 'Empresa' }}</p><p class="text-xs text-ink-muted mt-1">{{ chat.status === 'active' ? 'Conversación activa' : chat.status === 'blocked' ? 'Solo lectura' : 'Conversación finalizada' }}</p></div><i class="pi pi-angle-right text-ink-muted" aria-hidden="true" /></RouterLink></li></ul>
+            </section>
+          </aside>
         </div>
-        <div class="divide-y divide-navy/5">
-          <div v-for="c in contractsStore.contracts.slice(0,5)" :key="c.id"
-            @click="router.push(`/contratos/${c.id}`)"
-            class="py-3 flex items-center justify-between cursor-pointer hover:bg-slate/50 -mx-5 px-5 rounded-lg">
-            <div>
-              <p class="font-medium text-sm">
-                {{ c.influencer?.nombre_artistico ?? c.empresa?.nombre_comercial ?? 'Contrato' }}
-                — ${{ c.monto_total }}
-              </p>
-              <p class="text-xs text-ink-muted">Límite: {{ c.fecha_limite_entrega }}</p>
-            </div>
-            <span class="badge-info text-xs inline-flex items-center gap-1.5">
-              <i v-if="STATUS_ICON[c.status]" :class="['pi', STATUS_ICON[c.status]]" aria-hidden="true" />
-              {{ STATUS_LABEL[c.status] ?? c.status }}
-            </span>
-          </div>
-        </div>
-      </div>
+        <p v-if="refreshedAt && !loading" class="text-xs text-ink-muted text-center">{{ Object.keys(errors).length ? 'Último intento de actualización' : 'Información actualizada' }} a las {{ formatTime(refreshedAt) }} · El Salvador</p>
+      </template>
     </div>
   </AppLayout>
 </template>

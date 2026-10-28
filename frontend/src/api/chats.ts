@@ -12,6 +12,8 @@ export async function uploadContratoPdf(file: File): Promise<string> {
 }
 
 export const chatsApi = {
+  unreadCount: (): Promise<{ count: number }> => api.get('/chats/unread-count').then(r => r.data),
+  markRead: (id: number) => api.post(`/chats/${id}/read`).then(r => r.data),
   open: (influencer_id: number) =>
     api.post('/chats', { influencer_id }).then((r) => r.data),
   list: () => api.get('/chats').then((r) => r.data),

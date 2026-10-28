@@ -12,11 +12,10 @@ export interface AppUser {
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('hv_token'))
-  const user  = ref<AppUser | null>(
-    JSON.parse(localStorage.getItem('hv_user') ?? 'null'),
-  )
+  // Role and identity are always restored from the authenticated API, never localStorage.
+  const user = ref<AppUser | null>(null)
 
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isEmpresa       = computed(() => user.value?.role === 'empresa')
   const isInfluencer    = computed(() => user.value?.role === 'influencer')
 
@@ -45,15 +44,30 @@ export const useAuthStore = defineStore('auth', () => {
     return res
   }
 
-  async function refreshUser() {
-    if (!token.value) return
+  async function validateSession(): Promise<boolean> {
+    const sessionToken = token.value
+    if (!sessionToken) return false
     try {
       const fresh = await authApi.me()
-      user.value  = fresh
+      if (token.value !== sessionToken) return false
+      if (!fresh.is_active || !['empresa', 'influencer', 'admin'].includes(fresh.role)) {
+        logout()
+        return false
+      }
+      user.value = fresh
       localStorage.setItem('hv_user', JSON.stringify(fresh))
-    } catch {
-      // token expirado u otro error — no forzar logout aquí
+      return true
+    } catch (error: any) {
+      if (token.value !== sessionToken) return false
+      user.value = null
+      localStorage.removeItem('hv_user')
+      if (error.response?.status === 401 || error.response?.status === 403) logout()
+      return false
     }
+  }
+
+  async function refreshUser() {
+    await validateSession()
   }
 
   function logout() {
@@ -64,5 +78,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('hv_user')
   }
 
-  return { token, user, isAuthenticated, isEmpresa, isInfluencer, login, registerEmpresa, registerInfluencer, logout, refreshUser }
+  return { token, user, isAuthenticated, isEmpresa, isInfluencer, login, registerEmpresa, registerInfluencer, logout, refreshUser, validateSession }
 })

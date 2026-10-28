@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { viewPath } from '@/router/paths'
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import VerifiedBadge from '@/components/VerifiedBadge.vue'
 import BriefDetails from '@/components/BriefDetails.vue'
 import { useChatStore } from '@/stores/chat'
+import { formatTime as formatAppTime, todayInAppTimeZone } from '@/utils/date'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
 import { useContractsStore } from '@/stores/contracts'
@@ -105,6 +107,7 @@ const counterpart = computed(() => {
       initials:   (inf.nombre_artistico?.[0] ?? 'I').toUpperCase(),
       avatar_url: inf.user?.avatar_url ?? null,
       is_verified: inf.is_verified ?? false,
+      profile_url: viewPath(`/influencers/${chat.influencer_id}`),
     } : null
   } else {
     const emp = chat.empresa
@@ -114,7 +117,7 @@ const counterpart = computed(() => {
       initials:   (emp.nombre_comercial?.[0] ?? 'E').toUpperCase(),
       avatar_url: emp.user?.avatar_url ?? null,
       is_verified: emp.is_verified ?? false,
-      profile_url: `/empresas/${emp.id}`,
+      profile_url: viewPath(`/empresas/${emp.id}`),
     } : null
   }
 })
@@ -122,7 +125,7 @@ const counterpart = computed(() => {
 onMounted(async () => {
   await chatStore.loadChats()
   const chat = chatStore.chats.find(c => c.id === chatId)
-  if (!chat) { router.push('/chats'); return }
+  if (!chat) { router.push(viewPath('/chats')); return }
   await chatStore.enterChat(chat)
   if (isEmpresa.value) await profileStore.loadBriefs()
   scrollToBottom()
@@ -157,7 +160,7 @@ function onPdfChange(e: Event) {
 }
 
 // ─── Validación de la propuesta (mismo patrón que los formularios de perfil) ──
-const todayIso = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en hora local
+const todayIso = todayInAppTimeZone()
 const propForm = computed(() => ({ tarifa: propTarifa.value, entregables: propEntregables.value, plazo: propPlazo.value }))
 const propRules = {
   tarifa: {
@@ -202,7 +205,7 @@ async function acceptProposal(msg: ChatMessage) {
   acceptLoading.value = msg.id
   try {
     await contractsStore.acceptProposal(msg.id)
-    router.push('/contratos')
+    router.push(viewPath('/contratos'))
   } catch (e: any) {
     alert(e.response?.data?.message ?? 'Error al aceptar propuesta.')
   } finally {
@@ -250,7 +253,7 @@ async function resolveCounter(msg: ChatMessage, action: 'accept' | 'reject') {
   resolveLoading.value = msg.id
   try {
     await contractsStore.resolveCounter(msg.id, action)
-    if (action === 'accept') router.push('/contratos')
+    if (action === 'accept') router.push(viewPath('/contratos'))
   } catch (e: any) {
     alert(e.response?.data?.message ?? 'Error al resolver contraoferta.')
   } finally {
@@ -280,7 +283,7 @@ const STATUS_LABELS: Record<string, string> = {
 function statusLabel(s: string) { return STATUS_LABELS[s] ?? s }
 
 function formatTime(dt: string) {
-  return new Date(dt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+  return formatAppTime(dt)
 }
 </script>
 
@@ -290,7 +293,7 @@ function formatTime(dt: string) {
       <!-- Header del chat -->
       <div class="card mb-3 flex items-center justify-between py-3">
         <div class="flex items-center gap-3">
-          <button @click="router.push('/chats')" class="text-ink-muted hover:text-navy text-lg leading-none">←</button>
+          <button @click="router.push(viewPath('/chats'))" class="text-ink-muted ui-hover text-lg leading-none">←</button>
           <template v-if="counterpart">
             <img v-if="counterpart.avatar_url"
               :src="counterpart.avatar_url"
@@ -301,8 +304,8 @@ function formatTime(dt: string) {
             <div class="min-w-0">
               <div class="flex items-center gap-1.5">
                 <RouterLink v-if="counterpart.profile_url" :to="counterpart.profile_url"
-                  class="font-display font-semibold text-navy leading-tight hover:text-violet"
-                  title="Ver perfil de la marca">{{ counterpart.name }}</RouterLink>
+                  class="font-display font-semibold text-navy leading-tight ui-hover"
+                  :title="isEmpresa ? 'Ver perfil del influencer' : 'Ver perfil de la marca'">{{ counterpart.name }}</RouterLink>
                 <p v-else class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
                 <VerifiedBadge v-if="counterpart.is_verified" size="sm" />
               </div>
@@ -312,6 +315,12 @@ function formatTime(dt: string) {
           <p v-else class="font-display font-semibold text-navy">Chat</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <RouterLink v-if="counterpart?.profile_url" :to="counterpart.profile_url"
+            v-tooltip.top="isEmpresa ? 'Ver perfil del influencer' : 'Ver perfil de la marca'"
+            :aria-label="`Ver perfil público de ${counterpart.name}`"
+            class="btn-ghost inline-flex items-center justify-center w-9 h-9 rounded-full text-violet">
+            <i class="pi pi-eye" aria-hidden="true" />
+          </RouterLink>
           <span v-if="isBlocked" class="badge-warning">Solo lectura</span>
           <span v-else class="badge-active">Activo</span>
         </div>
@@ -326,9 +335,9 @@ function formatTime(dt: string) {
       <!-- Alerta saldo bajo -->
       <div v-if="isBlocked" class="bg-coral/10 border border-coral/20 rounded-lg p-3 mb-3 text-sm text-coral-text">
         <i class="pi pi-exclamation-triangle mr-1.5" aria-hidden="true" />{{ blockMsg }}
-        <button v-if="isEmpresa" @click="creditsStore.recharge(10)" :disabled="creditsStore.recharging"
+        <button v-if="isEmpresa" @click="router.push(viewPath('/saldo/recargar'))"
           class="ml-2 underline font-semibold disabled:opacity-50">
-          {{ creditsStore.recharging ? 'Procesando…' : 'Recargar $10' }}
+          Recargar saldo
         </button>
       </div>
 
@@ -376,7 +385,7 @@ function formatTime(dt: string) {
                   <p v-for="(e, i) in msg.proposal_data.entregables ?? []" :key="i" class="flex items-start gap-1.5"><i class="pi pi-box mt-0.5" aria-hidden="true" /><span><strong>{{ e.tipo }}:</strong> {{ e.descripcion }}</span></p>
                   <p class="flex items-center gap-1.5"><i class="pi pi-calendar" aria-hidden="true" />Plazo: {{ msg.proposal_data.plazo }}</p>
                   <a v-if="msg.proposal_data.contrato_pdf_url" :href="msg.proposal_data.contrato_pdf_url" target="_blank"
-                    class="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-lg bg-violet/10 text-violet text-xs font-medium hover:bg-violet/20 transition-colors">
+                    class="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-lg bg-violet/10 text-violet text-xs font-medium ui-hover transition-colors">
                     <i class="pi pi-file-pdf" aria-hidden="true" /> Ver contrato PDF
                   </a>
                 </template>
@@ -438,7 +447,7 @@ function formatTime(dt: string) {
 
               <!-- Link al contrato generado -->
               <p v-if="msg.contrato_id" class="text-xs text-violet text-center pt-1">
-                <RouterLink :to="`/contratos/${msg.contrato_id}`" class="underline">Ver contrato →</RouterLink>
+                <RouterLink :to="viewPath(`/contratos/${msg.contrato_id}`)" class="underline">Ver contrato →</RouterLink>
               </p>
             </div>
           </div>
@@ -482,7 +491,7 @@ function formatTime(dt: string) {
         class="mb-3 flex items-start gap-2 bg-coral/10 border border-coral/20 rounded-lg px-3 py-2 text-sm text-coral-text">
         <i class="pi pi-exclamation-triangle mt-0.5" aria-hidden="true" />
         <span class="flex-1">{{ chatStore.socketError }}</span>
-        <button @click="chatStore.socketError = null" class="text-coral-text hover:text-coral-text" title="Cerrar">✕</button>
+        <button @click="chatStore.socketError = null" class="text-coral-text ui-hover-danger" title="Cerrar">✕</button>
       </div>
 
       <!-- Formulario de propuesta -->
@@ -519,20 +528,20 @@ function formatTime(dt: string) {
               </p>
             </div>
             <button v-if="propEntregables.length > 1" type="button" @click="removeEntregable(i)"
-              class="text-ink-muted hover:text-coral-text text-sm mt-2" title="Quitar entregable">✕</button>
+              class="text-ink-muted ui-hover-danger text-sm mt-2" title="Quitar entregable">✕</button>
           </div>
           <button type="button" @click="addEntregable"
-            class="text-sm font-semibold text-violet hover:text-violet/80">+ Agregar otro entregable</button>
+            class="text-sm font-semibold text-violet ui-hover">+ Agregar otro entregable</button>
         </div>
         <div>
           <label class="label">Contrato PDF <span class="text-ink-muted font-normal">(opcional, máx. 10 MB)</span></label>
           <label class="flex items-center gap-3 cursor-pointer group">
             <div :class="['flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all',
-              propPdfFile ? 'border-violet/50 bg-violet/5 text-violet' : 'border-navy/20 bg-white text-ink-muted group-hover:border-violet/40']">
+              propPdfFile ? 'border-violet/50 bg-violet/5 text-violet' : 'border-navy/20 bg-white text-ink-muted group-hover:border-violet']">
               <i class="pi pi-paperclip" aria-hidden="true" />
               <span class="truncate max-w-[200px]">{{ propPdfFile ? propPdfFile.name : 'Adjuntar PDF…' }}</span>
               <button v-if="propPdfFile" type="button" @click.prevent="propPdfFile = null"
-                class="ml-1 text-ink-muted hover:text-coral-text text-xs">✕</button>
+                class="ml-1 text-ink-muted ui-hover-danger text-xs">✕</button>
             </div>
             <input type="file" accept="application/pdf" class="hidden" @change="onPdfChange" />
           </label>
@@ -551,17 +560,17 @@ function formatTime(dt: string) {
       <div v-if="showBriefPicker && isEmpresa" class="card mb-2 space-y-2">
         <p class="font-semibold text-navy text-sm flex items-center gap-2">
           <i class="pi pi-clipboard" aria-hidden="true" /> Enviar brief de campaña
-          <button @click="showBriefPicker = false" class="ml-auto text-ink-muted hover:text-navy text-xs">✕</button>
+          <button @click="showBriefPicker = false" class="ml-auto text-ink-muted ui-hover text-xs">✕</button>
         </p>
         <div v-if="!profileStore.briefs.length" class="text-ink-muted text-sm text-center py-3">
           No tienes briefs creados.
-          <RouterLink to="/perfil/empresa" class="text-violet underline ml-1">Crear uno →</RouterLink>
+          <RouterLink :to="viewPath('/perfil/empresa')" class="text-violet underline ml-1">Crear uno →</RouterLink>
         </div>
         <div v-else class="divide-y divide-navy/5 max-h-48 overflow-y-auto">
           <button v-for="b in profileStore.briefs" :key="b.id"
             @click="pickBrief(b.id)"
             :disabled="sendingBrief || sentBriefIds.has(b.id) || !counterpart?.is_verified"
-            class="w-full text-left px-2 py-2.5 hover:bg-violet/5 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none">
+            class="w-full text-left px-2 py-2.5 ui-hover rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none">
             <p class="text-sm font-medium text-navy">{{ b.titulo_campana }}</p>
             <p v-if="b.objetivo_principal" class="text-xs text-ink-muted truncate mt-0.5">
               {{ b.objetivo_principal }}

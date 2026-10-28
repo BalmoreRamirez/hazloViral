@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatDate } from '@/utils/date'
 import { derechosUsoLabel, formatPresupuesto } from '@/constants/brief'
 
 /**
@@ -16,7 +17,7 @@ const b = computed(() => props.brief)
 const presupuesto = computed(() => formatPresupuesto(b.value.presupuesto_min, b.value.presupuesto_max))
 
 const fechas = computed(() => {
-  const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })
+  const fmt = (d: string) => formatDate(d, { day: 'numeric', month: 'short', year: 'numeric' })
   const { fecha_inicio: i, fecha_fin: f } = b.value
   if (i && f) return `${fmt(i)} → ${fmt(f)}`
   if (i) return `Desde ${fmt(i)}`
@@ -62,7 +63,7 @@ function sizeLabel(bytes: number) {
 
       <div v-if="b.archivos?.length" class="flex flex-wrap gap-2 pt-1">
         <a v-for="f in b.archivos" :key="f.url" :href="f.url" target="_blank" rel="noopener"
-          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-border bg-white hover:border-violet/40 transition-colors">
+          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-border bg-white ui-hover transition-colors">
           <i :class="f.tipo_archivo === 'documento' ? 'pi pi-file' : 'pi pi-image'" class="text-violet" />
           <span class="max-w-[160px] truncate text-navy">{{ f.nombre }}</span>
           <span class="text-ink-muted">{{ sizeLabel(f.size_bytes) }}</span>

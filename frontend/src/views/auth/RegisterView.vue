@@ -1,6 +1,11 @@
 <script setup lang="ts">
+import Dialog from 'primevue/dialog'
+import { authApi, type RegistrationLegalDocuments, type RegistrationLegalDocument } from '@/api/auth'
+import RequiredMark from '@/components/RequiredMark.vue'
+import { calculateAge } from '@/utils/date'
+import { viewPath } from '@/router/paths'
 import BrandName from '@/components/BrandName.vue'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
@@ -8,12 +13,60 @@ import { required, email, helpers } from '@vuelidate/validators'
 import { DEPARTAMENTOS_SV } from '@/constants/ubicaciones'
 import { RUBROS } from '@/constants/rubros'
 
+const legalDocuments = ref<RegistrationLegalDocuments | null>(null)
+const legalError = ref('')
+const acceptedTerms = ref(false)
+const acceptedPrivacy = ref(false)
+const legalTouched = ref(false)
+const legalOpen = ref(false)
+const selectedLegalDocument = ref<RegistrationLegalDocument | null>(null)
+async function loadLegalDocuments() {
+  legalError.value = ''
+  acceptedTerms.value = false
+  acceptedPrivacy.value = false
+  try { legalDocuments.value = await authApi.legalDocuments() }
+  catch { legalDocuments.value = null; legalError.value = 'No se pudieron cargar los términos y el aviso de privacidad. Reintenta antes de crear tu cuenta.' }
+}
+function openLegalDocument(type: 'terms' | 'privacy') {
+  selectedLegalDocument.value = legalDocuments.value?.[type] ?? null
+  legalOpen.value = !!selectedLegalDocument.value
+}
+onMounted(loadLegalDocuments)
+
 const router    = useRouter()
 const authStore = useAuthStore()
 const role      = ref<'empresa' | 'influencer'>('empresa')
 const error        = ref('')
 const loading      = ref(false)
 const registered   = ref(false)
+const step = ref(1)
+const advancing = ref(false)
+const showPassword = ref(false)
+const stepHeading = ref<HTMLElement | null>(null)
+const steps = computed(() => ['Tu cuenta', role.value === 'empresa' ? 'Tu empresa' : 'Tu perfil', 'Verificación'])
+async function focusStep() {
+  await nextTick()
+  stepHeading.value?.focus()
+}
+async function nextStep() {
+  if (loading.value || advancing.value || step.value >= 3) return
+  advancing.value = true
+  try {
+    const keys = step.value === 1 ? ['email_', 'password'] : role.value === 'empresa'
+      ? ['nombre_comercial', 'sitio_web', 'telefono'] : ['username', 'nombre_artistico']
+    const results = await Promise.all(keys.map(key => v$.value[key]?.$validate()))
+    if (results.some(result => result === false)) return
+    error.value = ''
+    step.value++
+    await focusStep()
+  } finally { advancing.value = false }
+}
+
+async function handleSubmit() {
+  if (loading.value) return
+  if (step.value < 3) await nextStep()
+  else await submit()
+}
 
 // Campos comunes
 const email_       = ref(''); const password    = ref('')
@@ -74,9 +127,7 @@ function onRepNumeroIdInput(e: Event) {
 
 const esMenor = computed(() => {
   if (!fecha_nacimiento.value) return false
-  const birth  = new Date(fecha_nacimiento.value)
-  const age18  = new Date(); age18.setFullYear(age18.getFullYear() - 18)
-  return birth > age18
+  return calculateAge(fecha_nacimiento.value) < 18
 })
 
 // ── Seguridad de contraseña ───────────────────────────────────────────────────
@@ -168,17 +219,38 @@ const v$ = useVuelidate(rules, {
 })
 
 // Resetear validación al cambiar de rol
-watch(role, () => v$.value.$reset())
+watch(role, () => { acceptedTerms.value = false; acceptedPrivacy.value = false; legalTouched.value = false; v$.value.$reset(); step.value = 1; error.value = '' })
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 async function submit() {
+  if (loading.value) return
+  loading.value = true
+  await nextTick() // Apply role/age-dependent rules before validating the submission.
   const valid = await v$.value.$validate()
-  if (!valid) return
+  if (!valid) {
+    const accountError = v$.value.email_.$error || v$.value.password.$error
+    if (accountError) step.value = 1
+    else if (role.value === 'empresa' ? v$.value.nombre_comercial?.$error || v$.value.sitio_web?.$error || v$.value.telefono?.$error : v$.value.username?.$error || v$.value.nombre_artistico?.$error) step.value = 2
+    await focusStep()
+    loading.value = false
+    return
+  }
 
+  legalTouched.value = true
+  if (!legalDocuments.value || !acceptedTerms.value || !acceptedPrivacy.value) {
+    error.value = 'Lee y acepta los términos y el aviso de privacidad para crear tu cuenta.'
+    loading.value = false
+    return
+  }
+  const consent = {
+    accepted_terms: acceptedTerms.value, accepted_privacy: acceptedPrivacy.value,
+    terms_version: legalDocuments.value.terms.version, privacy_version: legalDocuments.value.privacy.version,
+  }
   error.value = ''; loading.value = true
   try {
     if (role.value === 'empresa') {
       await authStore.registerEmpresa({
+        ...consent,
         email: email_.value, password: password.value,
         nombre_comercial: nombre_comercial.value,
         sitio_web:  sitio_web.value  || undefined,
@@ -195,6 +267,7 @@ async function submit() {
       })
     } else {
       await authStore.registerInfluencer({
+        ...consent,
         email: email_.value, password: password.value,
         username: username.value,
         nombre_artistico: nombre_artistico.value,
@@ -217,54 +290,54 @@ async function submit() {
     registered.value = true
   } catch (e: any) {
     const msg = e.response?.data?.message
+    if (typeof msg === 'string' && msg.includes('documentos legales han cambiado')) await loadLegalDocuments()
     error.value = Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Error al registrarse.')
   } finally { loading.value = false }
 }
 </script>
 
 <template>
-  <div class="min-h-screen bg-navy flex items-center justify-center p-4">
-    <div class="w-full max-w-lg">
-      <div class="text-center mb-8">
-        <h1 class="text-4xl mb-1"><BrandName /></h1>
-        <p class="text-slate/60">Crea tu cuenta</p>
+  <div class="min-h-screen bg-slate">
+    <header class="bg-navy border-b border-white/10">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 min-h-20 py-4 flex items-center justify-between gap-4">
+        <RouterLink to="/login" class="text-2xl shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-4" aria-label="InfluSmart — Iniciar sesión"><BrandName /></RouterLink>
+        <nav aria-label="Acceso a tu cuenta" class="flex items-center gap-4">
+          <span class="hidden sm:block text-sm text-white/75">¿Ya tienes una cuenta?</span>
+          <RouterLink to="/login" class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white whitespace-nowrap transition-colors ui-hover-inverse focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2">
+            Iniciar sesión<i class="pi pi-arrow-right text-xs" aria-hidden="true" />
+          </RouterLink>
+        </nav>
       </div>
-
-      <!-- Estado: registro exitoso -->
-      <div v-if="registered" class="card text-center py-6">
-        <i class="pi pi-envelope block text-5xl mb-4 text-violet" aria-hidden="true" />
-        <h2 class="text-xl font-display font-semibold text-navy mb-2">¡Cuenta creada!</h2>
-        <p class="text-ink-muted text-sm mb-1">
-          Enviamos un correo de verificación a <strong>{{ email_ }}</strong>.
-        </p>
-        <p class="text-ink-muted text-xs mb-5">Haz clic en el enlace del correo para activar tu cuenta. Expira en 24 h.</p>
-
-        <button class="btn-primary w-full" @click="router.push('/dashboard')">
-          Ir al dashboard
-        </button>
-      </div>
-
-      <div v-else class="card">
-        <!-- Selector de rol -->
-        <div class="flex rounded-lg border border-navy/15 p-1 mb-6 gap-1">
-          <button v-for="r in ['empresa','influencer']" :key="r"
-            type="button"
-            @click="role = r as any"
-            :class="['flex-1 py-2 rounded-md text-sm font-semibold transition-all inline-flex items-center justify-center gap-2',
-              role === r ? 'bg-violet text-white shadow' : 'text-ink-muted hover:text-navy']">
-            <i :class="['pi', r === 'empresa' ? 'pi-building' : 'pi-star']" aria-hidden="true" />
-            {{ r === 'empresa' ? 'Soy una Marca' : 'Soy Influencer' }}
-          </button>
-        </div>
-
-        <form @submit.prevent="submit" novalidate class="space-y-4">
-
+    </header>
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
+      <section v-if="registered" class="card max-w-lg mx-auto text-center p-8 space-y-4">
+        <span class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-tint text-success"><i class="pi pi-check text-2xl" aria-hidden="true" /></span>
+        <h1 class="page-title font-display font-bold text-navy">Tu cuenta está creada</h1>
+        <p class="text-sm text-ink-muted">Revisa el correo de verificación en <strong class="text-navy break-all">{{ email_ }}</strong>. Si no lo encuentras, revisa spam o solicita otro desde tu cuenta.</p>
+        <p class="text-xs text-ink-muted">El enlace de verificación expira en 24 horas.</p>
+        <button type="button" class="btn-primary w-full" @click="router.push(viewPath('/dashboard'))">Ir a mi inicio</button>
+      </section>
+      <div v-else class="grid lg:grid-cols-[minmax(240px,1fr)_minmax(0,1.8fr)] gap-8 lg:gap-12 items-start">
+        <aside class="lg:sticky lg:top-8 space-y-6">
+          <div><p class="text-xs text-violet font-semibold uppercase tracking-wider">Empieza en InfluSmart</p><h1 class="page-title font-display font-bold text-navy mt-3 leading-tight">{{ role === 'empresa' ? 'Tu próxima colaboración empieza aquí.' : 'Conecta tu talento con nuevas marcas.' }}</h1><p class="text-sm text-ink-muted mt-4 leading-relaxed">{{ role === 'empresa' ? 'Prepara campañas, encuentra creadores y gestiona tus acuerdos en un solo lugar.' : 'Presenta tu perfil, negocia propuestas y sigue tus colaboraciones desde un solo lugar.' }}</p></div>
+          <ul class="space-y-4 text-sm text-ink-muted hidden lg:block"><li class="flex items-start gap-3"><i class="pi pi-user text-violet mt-1" aria-hidden="true" />Elige el perfil que corresponde a tu actividad.</li><li class="flex items-start gap-3"><i class="pi pi-lock text-violet mt-1" aria-hidden="true" />Tus datos de identidad se usan para los procesos de verificación.</li><li class="flex items-start gap-3"><i class="pi pi-envelope text-violet mt-1" aria-hidden="true" />Verifica tu correo para activar las funciones de tu cuenta.</li></ul>
+          <div v-if="role === 'empresa'" class="rounded-xl border border-violet/20 bg-violet-tint p-4 text-sm text-navy inline-flex gap-3"><i class="pi pi-gift text-violet mt-1" aria-hidden="true" /><p>Recibe <strong>$10.00 en créditos</strong> al completar el registro de tu empresa.</p></div>
+        </aside>
+        <section class="card p-5 sm:p-8 min-w-0">
+          <fieldset :disabled="loading || advancing" class="mb-6"><legend class="font-semibold text-navy text-sm mb-3">¿Cómo usarás InfluSmart?</legend><div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><label v-for="option in [{ value: 'empresa', title: 'Empresa / marca', description: 'Quiero contratar creadores', icon: 'pi-building' }, { value: 'influencer', title: 'Influencer', description: 'Quiero colaborar con marcas', icon: 'pi-star' }]" :key="option.value" class="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors" :class="role === option.value ? 'border-violet bg-violet-tint' : 'border-border ui-hover'"><input v-model="role" type="radio" name="register-role" :value="option.value" class="accent-violet" /><span class="flex-1"><span class="block text-sm font-semibold text-navy">{{ option.title }}</span><span class="block text-xs text-ink-muted mt-1">{{ option.description }}</span></span><i :class="['pi text-violet', option.icon]" aria-hidden="true" /></label></div></fieldset>
+          <ol class="grid grid-cols-3 gap-2 border-y border-border py-4 mb-6" aria-label="Pasos del registro"><li v-for="(label, index) in steps" :key="label" :aria-current="step === index + 1 ? 'step' : undefined" class="flex items-center gap-2 text-xs sm:text-sm" :class="step === index + 1 ? 'text-violet font-semibold' : 'text-ink-muted'"><span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs" :class="step >= index + 1 ? 'bg-violet text-white' : 'bg-slate-dark text-navy'">{{ index + 1 }}</span>{{ label }}</li></ol>
+          <h2 ref="stepHeading" tabindex="-1" class="font-display text-xl font-semibold text-navy outline-none">{{ steps[step - 1] }}</h2>
+          <p class="text-xs text-ink-muted mt-2 mb-5">{{ step === 1 ? 'Usa un correo al que tengas acceso y una contraseña segura.' : step === 2 ? 'Cuéntanos cómo quieres presentarte en la plataforma.' : 'Completa tus datos de identidad. Los campos opcionales están indicados.' }}</p>
+          <p class="text-xs text-ink-muted mb-4"><span class="text-coral-text font-semibold">*</span> Campo obligatorio. Los campos opcionales se indican en su etiqueta.</p>
+          <form @submit.prevent="handleSubmit" novalidate class="space-y-5">
+            <fieldset :disabled="loading || advancing" class="space-y-4"><legend class="sr-only">Datos del registro</legend>
+              <div v-show="step === 1" class="space-y-4">
           <!-- ── Campos comunes ─────────────────────────────────────────────── -->
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="label">Email</label>
-              <input
-                v-model="email_" type="email" required
+              <label class="label" for="register-email-">Email<RequiredMark /></label>
+              <input id="register-email-"
+                v-model="email_" type="email" autocomplete="email" inputmode="email" autocapitalize="none" required
                 :class="['input', { '!border-coral': v$.email_.$error }]"
                 @blur="v$.email_.$touch()" />
               <p v-if="v$.email_.$error" class="text-coral-text text-xs mt-1">
@@ -272,16 +345,17 @@ async function submit() {
               </p>
             </div>
             <div>
-              <label class="label">Contraseña</label>
-              <input
-                v-model="password" type="password" required maxlength="128"
+              <label class="label" for="register-password">Contraseña<RequiredMark /></label>
+              <input id="register-password"
+                v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" required maxlength="128"
                 :class="['input', { '!border-coral': v$.password.$error }]"
                 @blur="v$.password.$touch()" />
+              <button type="button" class="text-xs text-violet font-semibold mt-2 inline-flex items-center gap-2" :aria-pressed="showPassword" @click="showPassword = !showPassword"><i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true" />{{ showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña' }}</button>
               <!-- Checklist de seguridad -->
               <div v-if="password" class="mt-2 space-y-1">
                 <p v-for="r in pwdStrength" :key="r.key"
                   :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-success' : 'text-ink-muted']">
-                  <span class="font-bold">{{ r.ok ? '✓' : '○' }}</span> {{ r.label }}
+                  <i :class="r.ok ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true" /> {{ r.label }}
                 </p>
               </div>
               <p v-if="v$.password.$error" class="text-coral-text text-xs mt-1">
@@ -290,11 +364,13 @@ async function submit() {
             </div>
           </div>
 
-          <!-- ── Empresa ────────────────────────────────────────────────────── -->
-          <template v-if="role === 'empresa'">
+
+              </div>
+              <div v-show="step === 2" class="space-y-4">
+                <template v-if="role === 'empresa'">
             <div>
-              <label class="label">Nombre comercial</label>
-              <input
+              <label class="label" for="register-nombre-comercial">Nombre comercial<RequiredMark /></label>
+              <input id="register-nombre-comercial"
                 v-model="nombre_comercial" required
                 :class="['input', { '!border-coral': v$.nombre_comercial?.$error }]"
                 @blur="v$.nombre_comercial?.$touch()" />
@@ -303,8 +379,8 @@ async function submit() {
               </p>
             </div>
             <div>
-              <label class="label">Sitio web (opcional)</label>
-              <input
+              <label class="label" for="register-sitio-web">Sitio web (opcional)</label>
+              <input id="register-sitio-web"
                 v-model="sitio_web" type="url" placeholder="https://"
                 :class="['input', { '!border-coral': v$.sitio_web?.$error }]"
                 @blur="v$.sitio_web?.$touch()" />
@@ -313,13 +389,13 @@ async function submit() {
               </p>
             </div>
             <div>
-              <label class="label">Rubro / industria (opcional)</label>
-              <select v-model="rubro" class="input">
+              <label class="label" for="register-rubro">Rubro / industria (opcional)</label>
+              <select id="register-rubro" v-model="rubro" class="input">
                 <option value="">— Selecciona tu rubro —</option>
                 <option v-for="r in RUBROS_LIST" :key="r.value" :value="r.value">{{ r.label }}</option>
               </select>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="label">País</label>
                 <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-ink-muted">
@@ -327,20 +403,20 @@ async function submit() {
                 </div>
               </div>
               <div>
-                <label class="label">Departamento</label>
-                <select v-model="departamento" class="input">
+                <label class="label" for="register-departamento">Departamento</label>
+                <select id="register-departamento" v-model="departamento" class="input">
                   <option value="">— Selecciona —</option>
                   <option v-for="d in DEPARTAMENTOS_SV" :key="d">{{ d }}</option>
                 </select>
               </div>
             </div>
             <div>
-              <label class="label">Dirección (opcional)</label>
-              <input v-model="direccion" class="input" placeholder="Colonia, calle, municipio…" />
+              <label class="label" for="register-direccion">Dirección (opcional)</label>
+              <input id="register-direccion" v-model="direccion" class="input" placeholder="Colonia, calle, municipio…" />
             </div>
             <div>
-              <label class="label">Teléfono / WhatsApp de contacto</label>
-              <input
+              <label class="label" for="register-telefono">Teléfono / WhatsApp de contacto<RequiredMark /></label>
+              <input id="register-telefono"
                 v-model="telefono" type="tel" required placeholder="+503 7000-0000"
                 :class="['input', { '!border-coral': v$.telefono?.$error }]"
                 @blur="v$.telefono?.$touch()" />
@@ -348,10 +424,78 @@ async function submit() {
                 {{ v$.telefono.$errors[0]?.$message }}
               </p>
             </div>
+
+                </template>
+                <template v-else>
+            <div>
+              <label class="label" for="register-username">Username <span class="text-ink-muted font-normal text-xs">— así te encontrarán las empresas</span><RequiredMark /></label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted font-medium select-none">@</span>
+                <input
+                  id="register-username" v-model="username" required autocomplete="username" autocapitalize="none" placeholder="mario_blue"
+                  :class="['input pl-7 w-full', { '!border-coral': v$.username?.$error }]"
+                  @blur="v$.username?.$touch()" />
+              </div>
+              <p v-if="v$.username?.$error" class="text-coral-text text-xs mt-1">
+                {{ v$.username.$errors[0]?.$message }}
+              </p>
+            </div>
+            <div>
+              <label class="label" for="register-nombre-artistico">Nombre artístico<RequiredMark /></label>
+              <input id="register-nombre-artistico"
+                v-model="nombre_artistico" required
+                :class="['input', { '!border-coral': v$.nombre_artistico?.$error }]"
+                @blur="v$.nombre_artistico?.$touch()" />
+              <p v-if="v$.nombre_artistico?.$error" class="text-coral-text text-xs mt-1">
+                {{ v$.nombre_artistico.$errors[0]?.$message }}
+              </p>
+            </div>
+            <div>
+              <label class="label" for="register-rubro">Rubro / nicho (opcional)</label>
+              <select id="register-rubro" v-model="rubro" class="input">
+                <option value="">— Selecciona tu rubro —</option>
+                <option v-for="r in RUBROS_LIST" :key="r.value" :value="r.value">{{ r.label }}</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="label">País</label>
+                <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-ink-muted">
+                  <i class="pi pi-map-marker" aria-hidden="true" /> <span class="font-medium text-navy/80">El Salvador</span>
+                </div>
+              </div>
+              <div>
+                <label class="label" for="register-departamento">Departamento</label>
+                <select id="register-departamento" v-model="departamento" class="input">
+                  <option value="">— Selecciona —</option>
+                  <option v-for="d in DEPARTAMENTOS_SV" :key="d">{{ d }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="label" for="register-tarifa-base">Tarifa base (USD)</label>
+                <input id="register-tarifa-base" v-model.number="tarifa_base" type="number" min="0" class="input" />
+              </div>
+              <div>
+                <label class="label" for="register-direccion">Dirección (opcional)</label>
+                <input id="register-direccion" v-model="direccion" class="input" placeholder="Colonia, calle…" />
+              </div>
+            </div>
+            <div>
+              <label class="label" for="register-bio">Bio (opcional)</label>
+              <textarea id="register-bio" v-model="bio" class="input" rows="2" />
+            </div>
+
+
+                </template>
+              </div>
+              <div v-show="step === 3" class="space-y-4">
+                <template v-if="role === 'empresa'">
             <!-- Representante legal -->
             <div>
-              <label class="label">Nombre del representante legal</label>
-              <input
+              <label class="label" for="register-rep-nombre">Nombre del representante legal<RequiredMark /></label>
+              <input id="register-rep-nombre"
                 v-model="rep_nombre" required placeholder="Nombre Apellido"
                 :class="['input', { '!border-coral': v$.rep_nombre?.$error }]"
                 @blur="v$.rep_nombre?.$touch()" />
@@ -360,19 +504,19 @@ async function submit() {
               </p>
             </div>
             <div>
-              <label class="label">Documento de identidad del representante</label>
-              <div class="grid grid-cols-2 gap-3">
+              <label class="label">Documento de identidad del representante<RequiredMark /></label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="flex rounded-lg border border-navy/15 p-1 gap-1">
-                  <button v-for="t in TIPOS_ID" :key="t" type="button"
+                  <button v-for="t in TIPOS_ID" :key="t" type="button" :aria-pressed="rep_tipo_id === t"
                     @click="rep_tipo_id = t; rep_numero_id = ''; v$.rep_numero_id?.$reset()"
                     :class="['flex-1 py-1.5 rounded-md text-xs font-semibold transition-all',
-                      rep_tipo_id === t ? 'bg-violet text-white shadow' : 'text-ink-muted hover:text-navy']">
+                      rep_tipo_id === t ? 'bg-violet text-white shadow' : 'text-ink-muted ui-hover']">
                     {{ t }}
                   </button>
                 </div>
                 <div>
                   <input
-                    :value="rep_numero_id"
+                    aria-label="Número de documento del representante" :value="rep_numero_id"
                     :placeholder="rep_tipo_id === 'DUI' ? '00000000-0' : 'A00000000'"
                     :maxlength="rep_tipo_id === 'DUI' ? 10 : 20"
                     :class="['input', { '!border-coral': v$.rep_numero_id?.$error }]"
@@ -385,96 +529,38 @@ async function submit() {
               </div>
             </div>
             <!-- Datos fiscales (opcionales en el registro, necesarios para la insignia de marca verificada) -->
-            <details class="rounded-lg border border-border p-3">
+            <details :open="!!(v$.nit?.$error || v$.nrc?.$error)" class="rounded-lg border border-border p-4">
               <summary class="text-sm font-medium text-navy cursor-pointer">
                 Datos fiscales <span class="text-ink-muted font-normal">— opcional ahora, necesario para facturar y verificar tu marca</span>
               </summary>
               <div class="space-y-3 mt-3">
                 <div>
-                  <label class="label">Razón social</label>
-                  <input v-model="razon_social" class="input" placeholder="Mi Marca S.A. de C.V." />
+                  <label class="label" for="register-razon-social">Razón social</label>
+                  <input id="register-razon-social" v-model="razon_social" class="input" placeholder="Mi Marca S.A. de C.V." />
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label class="label">NIT</label>
-                    <input v-model="nit" placeholder="0614-010190-101-1"
+                    <label class="label" for="register-nit">NIT</label>
+                    <input id="register-nit" v-model="nit" placeholder="0614-010190-101-1"
                       :class="['input', { '!border-coral': v$.nit?.$error }]" @blur="v$.nit?.$touch()" />
                     <p v-if="v$.nit?.$error" class="text-coral-text text-xs mt-1">{{ v$.nit.$errors[0]?.$message }}</p>
                   </div>
                   <div>
-                    <label class="label">NRC</label>
-                    <input v-model="nrc" placeholder="123456-7"
+                    <label class="label" for="register-nrc">NRC</label>
+                    <input id="register-nrc" v-model="nrc" placeholder="123456-7"
                       :class="['input', { '!border-coral': v$.nrc?.$error }]" @blur="v$.nrc?.$touch()" />
                     <p v-if="v$.nrc?.$error" class="text-coral-text text-xs mt-1">{{ v$.nrc.$errors[0]?.$message }}</p>
                   </div>
                 </div>
               </div>
             </details>
-            <div class="bg-violet/10 rounded-lg p-3 text-sm text-violet">
-              <i class="pi pi-gift mr-1.5" aria-hidden="true" />Recibirás <strong>$10.00 en créditos</strong> al completar el registro.
-            </div>
-          </template>
 
-          <!-- ── Influencer ─────────────────────────────────────────────────── -->
-          <template v-else>
+
+                </template>
+                <template v-else>
             <div>
-              <label class="label">Username <span class="text-ink-muted font-normal text-xs">— así te encontrarán las empresas</span></label>
-              <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted font-medium select-none">@</span>
-                <input
-                  v-model="username" required placeholder="mario_blue"
-                  :class="['input pl-7 w-full', { '!border-coral': v$.username?.$error }]"
-                  @blur="v$.username?.$touch()" />
-              </div>
-              <p v-if="v$.username?.$error" class="text-coral-text text-xs mt-1">
-                {{ v$.username.$errors[0]?.$message }}
-              </p>
-            </div>
-            <div>
-              <label class="label">Nombre artístico</label>
-              <input
-                v-model="nombre_artistico" required
-                :class="['input', { '!border-coral': v$.nombre_artistico?.$error }]"
-                @blur="v$.nombre_artistico?.$touch()" />
-              <p v-if="v$.nombre_artistico?.$error" class="text-coral-text text-xs mt-1">
-                {{ v$.nombre_artistico.$errors[0]?.$message }}
-              </p>
-            </div>
-            <div>
-              <label class="label">Rubro / nicho (opcional)</label>
-              <select v-model="rubro" class="input">
-                <option value="">— Selecciona tu rubro —</option>
-                <option v-for="r in RUBROS_LIST" :key="r.value" :value="r.value">{{ r.label }}</option>
-              </select>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="label">País</label>
-                <div class="input flex items-center gap-2 bg-slate/60 cursor-default select-none text-ink-muted">
-                  <i class="pi pi-map-marker" aria-hidden="true" /> <span class="font-medium text-navy/80">El Salvador</span>
-                </div>
-              </div>
-              <div>
-                <label class="label">Departamento</label>
-                <select v-model="departamento" class="input">
-                  <option value="">— Selecciona —</option>
-                  <option v-for="d in DEPARTAMENTOS_SV" :key="d">{{ d }}</option>
-                </select>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="label">Tarifa base (USD)</label>
-                <input v-model.number="tarifa_base" type="number" min="0" class="input" />
-              </div>
-              <div>
-                <label class="label">Dirección (opcional)</label>
-                <input v-model="direccion" class="input" placeholder="Colonia, calle…" />
-              </div>
-            </div>
-            <div>
-              <label class="label">Fecha de nacimiento</label>
-              <input
+              <label class="label" for="register-fecha-nacimiento">Fecha de nacimiento<RequiredMark /></label>
+              <input id="register-fecha-nacimiento"
                 v-model="fecha_nacimiento" type="date" required
                 :class="['input', { '!border-coral': v$.fecha_nacimiento?.$error }]"
                 @blur="v$.fecha_nacimiento?.$touch()" />
@@ -484,19 +570,19 @@ async function submit() {
             </div>
             <!-- Documento de identidad -->
             <div>
-              <label class="label">Documento de identidad</label>
-              <div class="grid grid-cols-2 gap-3">
+              <label class="label">Documento de identidad<RequiredMark /></label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="flex rounded-lg border border-navy/15 p-1 gap-1">
-                  <button v-for="t in TIPOS_ID" :key="t" type="button"
+                  <button v-for="t in TIPOS_ID" :key="t" type="button" :aria-pressed="tipo_identificacion === t"
                     @click="tipo_identificacion = t; numero_identificacion = ''; v$.numero_identificacion?.$reset()"
                     :class="['flex-1 py-1.5 rounded-md text-xs font-semibold transition-all',
-                      tipo_identificacion === t ? 'bg-violet text-white shadow' : 'text-ink-muted hover:text-navy']">
+                      tipo_identificacion === t ? 'bg-violet text-white shadow' : 'text-ink-muted ui-hover']">
                     {{ t }}
                   </button>
                 </div>
                 <div>
                   <input
-                    :value="numero_identificacion"
+                    aria-label="Número de documento de identidad" :value="numero_identificacion"
                     :placeholder="tipo_identificacion === 'DUI' ? '00000000-0' : 'A00000000'"
                     :maxlength="tipo_identificacion === 'DUI' ? 10 : 20"
                     :class="['input', { '!border-coral': v$.numero_identificacion?.$error }]"
@@ -508,20 +594,15 @@ async function submit() {
                 </div>
               </div>
             </div>
-            <div>
-              <label class="label">Bio (opcional)</label>
-              <textarea v-model="bio" class="input" rows="2" />
-            </div>
-
             <!-- Tutor si es menor -->
             <template v-if="esMenor">
               <div class="bg-coral/10 border border-coral/30 rounded-lg p-3 text-sm text-coral-text">
                 <i class="pi pi-exclamation-triangle mr-1.5" aria-hidden="true" />Eres menor de 18 años. Se requieren los datos de tu tutor legal.
               </div>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="label">Nombre del tutor</label>
-                  <input
+                  <label class="label" for="register-tutor-nombre">Nombre del tutor<RequiredMark /></label>
+                  <input id="register-tutor-nombre"
                     v-model="tutor_nombre" required
                     :class="['input', { '!border-coral': v$.tutor_nombre?.$error }]"
                     @blur="v$.tutor_nombre?.$touch()" />
@@ -530,8 +611,8 @@ async function submit() {
                   </p>
                 </div>
                 <div>
-                  <label class="label">Documento ID del tutor</label>
-                  <input
+                  <label class="label" for="register-tutor-documento-id">Documento ID del tutor<RequiredMark /></label>
+                  <input id="register-tutor-documento-id"
                     v-model="tutor_documento_id" required
                     :class="['input', { '!border-coral': v$.tutor_documento_id?.$error }]"
                     @blur="v$.tutor_documento_id?.$touch()" />
@@ -541,8 +622,8 @@ async function submit() {
                 </div>
               </div>
               <div>
-                <label class="label">Email del tutor</label>
-                <input
+                <label class="label" for="register-tutor-email">Email del tutor<RequiredMark /></label>
+                <input id="register-tutor-email"
                   v-model="tutor_email" type="email" required
                   :class="['input', { '!border-coral': v$.tutor_email?.$error }]"
                   @blur="v$.tutor_email?.$touch()" />
@@ -557,28 +638,53 @@ async function submit() {
                     v-model="tutor_autorizacion" type="checkbox" required
                     class="mt-0.5 rounded"
                     @change="v$.tutor_autorizacion?.$touch()" />
-                  <span>El tutor legal autoriza la cuenta y co-titularidad financiera.</span>
+                  <span>El tutor legal autoriza la cuenta y co-titularidad financiera.<RequiredMark /></span>
                 </label>
                 <p v-if="v$.tutor_autorizacion?.$error" class="text-coral-text text-xs mt-1">
                   {{ v$.tutor_autorizacion.$errors[0]?.$message }}
                 </p>
               </div>
             </template>
-          </template>
 
-          <!-- Error de servidor -->
-          <div v-if="error" class="bg-coral/10 text-coral-text text-sm p-3 rounded-lg">{{ error }}</div>
-
-          <button type="submit" class="btn-primary w-full" :disabled="loading">
-            {{ loading ? 'Creando cuenta…' : 'Crear cuenta' }}
-          </button>
-        </form>
-
-        <p class="text-center text-sm text-ink-muted mt-4">
-          ¿Ya tienes cuenta?
-          <RouterLink to="/login" class="text-violet font-semibold">Iniciar sesión</RouterLink>
-        </p>
-      </div><!-- fin v-else -->
-    </div>
+                </template>
+              </div>
+            </fieldset>
+            <section v-if="step === 3" class="rounded-xl border border-border bg-slate p-4 space-y-3" aria-labelledby="registration-consent-title">
+              <h3 id="registration-consent-title" class="font-semibold text-navy">Términos y privacidad</h3>
+              <p class="text-sm text-ink-muted">Lee los documentos antes de aceptar. Esta autorización no incluye publicidad por correo.</p>
+              <div v-if="legalError" role="alert" class="text-sm text-coral-text">{{ legalError }} <button type="button" class="ui-hover-link underline" @click="loadLegalDocuments">Reintentar</button></div>
+              <p v-else-if="!legalDocuments" role="status" class="text-sm text-ink-muted">Cargando documentos…</p>
+              <template v-else>
+                <label class="flex items-start gap-3 text-sm">
+                  <input v-model="acceptedTerms" type="checkbox" required :disabled="loading" class="mt-1 shrink-0 accent-violet" />
+                  <span>He leído y acepto los <button type="button" class="text-violet ui-hover-link underline" @click.stop="openLegalDocument('terms')">Términos y condiciones</button>.<RequiredMark /></span>
+                </label>
+                <label class="flex items-start gap-3 text-sm">
+                  <input v-model="acceptedPrivacy" type="checkbox" required :disabled="loading" class="mt-1 shrink-0 accent-violet" />
+                  <span>He leído el <button type="button" class="text-violet ui-hover-link underline" @click.stop="openLegalDocument('privacy')">Aviso de privacidad</button> y autorizo el tratamiento de mis datos para las finalidades descritas.<RequiredMark /></span>
+                </label>
+                <p v-if="role === 'influencer'" class="text-xs text-ink-muted">Si eres menor, esta aceptación no sustituye los datos y la autorización de tu tutor legal.</p>
+                <p v-if="legalTouched && (!acceptedTerms || !acceptedPrivacy)" role="alert" class="text-sm text-coral-text">Debes confirmar ambas casillas para crear tu cuenta.</p>
+              </template>
+            </section>
+            <div v-if="error" role="alert" class="rounded-xl bg-coral-tint text-coral-text text-sm p-4">{{ error }}</div>
+            <div class="flex flex-col-reverse sm:flex-row gap-3 border-t border-border pt-5">
+              <button v-if="step > 1" type="button" :disabled="loading || advancing" class="btn-secondary" @click="step--; focusStep()">Atrás</button>
+              <button type="submit" :disabled="loading || advancing || (step === 3 && !legalDocuments)" class="btn-primary sm:ml-auto inline-flex items-center justify-center gap-2"><i v-if="loading" class="pi pi-spin pi-spinner" aria-hidden="true" />{{ loading ? 'Creando cuenta…' : step < 3 ? 'Continuar' : 'Crear mi cuenta' }}<i v-if="!loading && step < 3" class="pi pi-arrow-right" aria-hidden="true" /></button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </main>
   </div>
+  <Dialog v-model:visible="legalOpen" modal :header="selectedLegalDocument?.title" :style="{ width: '48rem', maxWidth: 'calc(100vw - 2rem)' }" :contentStyle="{ maxHeight: '70vh', overflowY: 'auto' }">
+    <article v-if="selectedLegalDocument" class="space-y-5 text-sm leading-relaxed text-navy">
+      <p class="text-xs text-ink-muted">Versión: {{ selectedLegalDocument.version }}</p>
+      <section v-for="section in selectedLegalDocument.sections" :key="section.title">
+        <h3 class="font-semibold mb-2">{{ section.title }}</h3><p>{{ section.text }}</p>
+      </section>
+    </article>
+    <template #footer><button type="button" class="btn-primary" @click="legalOpen = false">Volver al registro</button></template>
+  </Dialog>
+
 </template>

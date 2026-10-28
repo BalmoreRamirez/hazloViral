@@ -2,9 +2,9 @@ FROM node:22-slim
 
 WORKDIR /app
 
-# Herramientas nativas para bcrypt y sharp
+# Herramientas nativas y ps para que Nest cierre su proceso anterior al recompilar.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ \
+    python3 make g++ procps \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./

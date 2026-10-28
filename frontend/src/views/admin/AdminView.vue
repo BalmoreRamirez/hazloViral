@@ -56,7 +56,7 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
     <div class="space-y-8">
       <!-- Header -->
       <div>
-        <h1 class="text-2xl font-display font-bold text-navy">Panel de Administración</h1>
+        <h1 class="page-title font-display font-bold text-navy">Panel de Administración</h1>
         <p class="text-ink-muted text-sm mt-1">Control global de la plataforma InfluSmart</p>
       </div>
 
@@ -95,7 +95,7 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
               <template v-else>
                 <span class="font-semibold text-navy">{{ s.value }}</span>
                 <button @click="startEdit(s.key, s.value)"
-                  class="text-violet text-xs hover:underline">Editar</button>
+                  class="text-violet text-xs ui-hover-link">Editar</button>
               </template>
             </div>
           </div>
@@ -184,7 +184,7 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
               <button v-if="u.role !== 'admin'"
                 @click="toggleUser(u.id, u.is_active)"
                 :disabled="togglingId === u.id"
-                :class="['text-xs font-semibold transition-colors', u.is_active ? 'text-coral-text hover:text-coral-text' : 'text-violet hover:text-violet/70']">
+                :class="['text-xs font-semibold transition-colors', u.is_active ? 'text-coral-text ui-hover-danger' : 'text-violet ui-hover']">
                 {{ togglingId === u.id ? '…' : u.is_active ? 'Desactivar' : 'Activar' }}
               </button>
             </div>

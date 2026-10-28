@@ -33,6 +33,8 @@ export const influencerApi = {
   getPublic: (id: number) => api.get(`/influencers/${id}`).then(r => r.data),
   getByUsername: (username: string) =>
     api.get(`/influencers/by-username/${username.replace(/^@/, '')}`).then(r => r.data),
+  suggestForChat: (query: string): Promise<InfluencerChatSuggestion[]> =>
+    api.get('/influencers/suggestions', { params: { q: query } }).then(r => r.data),
 
   // Buscador (§4.1)
   search: (params: { red_social?: string; ubicacion?: string; rubro?: string; min_seguidores?: number; max_tarifa?: number; page?: number; limit?: number; disponible?: boolean; orden?: 'tarifa' | 'seguidores' | 'calificacion' | 'recientes' }) =>
@@ -46,4 +48,12 @@ export const influencerApi = {
     api.patch(`/influencers/metrics/${id}`, data).then(r => r.data),
   deleteMetric:   (id: number) => api.delete(`/influencers/metrics/${id}`),
   verifyMetric:   (id: number) => api.post(`/influencers/metrics/${id}/verify`).then(r => r.data),
+}
+
+export interface InfluencerChatSuggestion {
+  id: number
+  username: string
+  nombre_artistico: string
+  avatar_url: string | null
+  ubicacion: string | null
 }

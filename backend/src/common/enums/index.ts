@@ -10,7 +10,7 @@ export enum ChatStatus {
   COMPLETED = 'completed',
 }
 
-export enum ContratoStatus {
+export enum ContractStatus {
   PENDING_PAYMENT      = 'pending_payment',
   FUNDED_IN_ESCROW     = 'funded_in_escrow',
   UNDER_REVIEW         = 'under_review',

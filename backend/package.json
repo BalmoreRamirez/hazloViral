@@ -17,7 +17,10 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "maintenance:timezone": "node scripts/timezone/normalize-historical-timezone.cjs",
+    "maintenance:recharge": "node scripts/credits/recover-recharge.cjs",
+    "maintenance:vat": "node scripts/electronic-invoicing/backfill-development-vat.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
