@@ -210,7 +210,7 @@ Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026
 - Aplicado en BD: 15 lecturas de mensajes, 1 verificación social, 5 vencimientos de correo y fecha/hora del JSON de 1 DTE de desarrollo. Total: 22 registros.
 - Conservado: fechas de creación ya locales, timestamptz e ISO con offset y campos de calendario. Sin cambios de saldo, importes ni estados de correo.
 - Respaldo: `/app/uploads/maintenance/historical-timezone-24fa043c-4a0f-498e-9b39-c5542f480d6c/before.json`.
-- Migración: `backend/src/common/scripts/normalize-historical-timezone.cjs`, transaccional, con registro en `app_maintenance_runs` para evitar doble desplazamiento.
+- Migración: `backend/scripts/timezone/normalize-historical-timezone.cjs`, transaccional, con registro en `app_maintenance_runs` para evitar doble desplazamiento.
 - Validación: comparación de los 22 registros contra el respaldo y valores calculados; ninguna lectura anterior a creación. Reejecución protegida devuelve alreadyApplied sin modificar datos. Ver [política de fechas](../docs/FECHAS.md).
 
 ## 2026-10-27 — Unificación de fechas en UTC−6
@@ -242,7 +242,7 @@ Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026
 - Reintento: POST /receipts/:id/send-invoice, restringido a empresa y comprobantes propios. Historial muestra correo Enviado/Pendiente y acción de icono para enviar pendientes. No reenvía automáticamente comprobantes ya marcados como enviados.
 - Recuperación: usuario confirmó $100 alrededor de las 12 p. m.; se creó comprobante id 3 con marca recovered y timestamp_approximate, a las 12:00 de El Salvador (18:00 UTC), sin nuevo abono. Base 88.50, IVA 11.50, total 100.00. Saldo verificado antes/después: 109.00.
 - Correo: SMTP aceptó el mensaje con PDF adjunto al correo registrado de empresa; esto no confirma lectura ni llegada a bandeja principal.
-- Herramienta: src/credits/scripts/recover-recharge.cjs; evalúa por defecto, requiere --apply para recuperar y enviar. Usa referencia estable para evitar duplicar la recuperación.
+- Herramienta: scripts/credits/recover-recharge.cjs; evalúa por defecto, requiere --apply para recuperar y enviar. Usa referencia estable para evitar duplicar la recuperación.
 - Operación: reiniciados frontend/backend. API autenticada confirmó comprobante, DTE y estado de envío; descarga PDF correcta. Vite sirve el historial y controles de correo actualizados.
 - Validación: compilaciones frontend/backend y 19 pruebas satisfactorias, incluidas aceptación de correo, fallo SMTP y no reenvío automático de documentos ya enviados.
 

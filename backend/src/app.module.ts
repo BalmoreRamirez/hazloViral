@@ -1,26 +1,27 @@
+import { databaseConfig } from './config/database.config';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { InfluencerPrivacyInterceptor } from './common/privacy/influencer-privacy.interceptor';
+import { InfluencerPrivacyInterceptor } from './common/interceptors/influencer-privacy.interceptor';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './users/users.module';
-import { EmpresasModule } from './empresas/empresas.module';
-import { InfluencersModule } from './influencers/influencers.module';
-import { CampaignsModule } from './campaigns/campaigns.module';
-import { ChatsModule } from './chats/chats.module';
-import { ContratosModule } from './contratos/contratos.module';
-import { AdminModule } from './admin/admin.module';
-import { AuthModule } from './auth/auth.module';
-import { CreditsModule } from './credits/credits.module';
-import { WompiModule } from './wompi/wompi.module';
-import { UploadsModule } from './uploads/uploads.module';
-import { NotificationsModule } from './notifications/notifications.module';
-import { RatingsModule } from './ratings/ratings.module';
-import { ReceiptsModule } from './receipts/receipts.module';
-import { DteModule } from './dte/dte.module';
+import { UsersModule } from './modules/users/users.module';
+import { CompaniesModule } from './modules/companies/companies.module';
+import { InfluencersModule } from './modules/influencers/influencers.module';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { ChatsModule } from './modules/chats/chats.module';
+import { ContractsModule } from './modules/contracts/contracts.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CreditsModule } from './modules/credits/credits.module';
+import { WompiModule } from './modules/wompi/wompi.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { RatingsModule } from './modules/ratings/ratings.module';
+import { ReceiptsModule } from './modules/receipts/receipts.module';
+import { ElectronicInvoicingModule } from './modules/electronic-invoicing/electronic-invoicing.module';
 
 @Module({
   imports: [
@@ -29,25 +30,14 @@ import { DteModule } from './dte/dte.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        extra: { options: '-c timezone=America/El_Salvador' },
-        host: config.get<string>('DB_HOST'),
-        port: config.get<number>('DB_PORT'),
-        database: config.get<string>('DB_DATABASE'),
-        username: config.get<string>('DB_USERNAME'),
-        password: config.get<string>('DB_PASSWORD'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: config.get<string>('NODE_ENV') === 'development',
-        logging: config.get<string>('NODE_ENV') === 'development',
-      }),
+      useFactory: databaseConfig,
     }),
     UsersModule,
-    EmpresasModule,
+    CompaniesModule,
     InfluencersModule,
     CampaignsModule,
     ChatsModule,
-    ContratosModule,
+    ContractsModule,
     AdminModule,
     AuthModule,
     CreditsModule,
@@ -56,7 +46,7 @@ import { DteModule } from './dte/dte.module';
     NotificationsModule,
     RatingsModule,
     ReceiptsModule,
-    DteModule,
+    ElectronicInvoicingModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_INTERCEPTOR, useClass: InfluencerPrivacyInterceptor }],

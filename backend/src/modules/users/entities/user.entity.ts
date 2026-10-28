@@ -1,0 +1,49 @@
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { UserRole } from '../../../common/enums';
+import { CompanyProfile } from '../../companies/entities/company-profile.entity';
+import { InfluencerProfile } from '../../influencers/entities/influencer-profile.entity';
+
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ unique: true, length: 255 })
+  email: string;
+
+  @Column({ length: 255, select: false })
+  password: string;
+
+  @Column({ type: 'enum', enum: UserRole })
+  role: UserRole;
+
+  @Column({ nullable: true, length: 500 })
+  avatar_url: string;
+
+  @Column({ nullable: true, length: 255 })
+  stripe_customer_id: string;
+
+  @Column({ nullable: true, length: 255 })
+  stripe_connect_id: string;
+
+  @Column({ default: true })
+  is_active: boolean;
+
+  @Column({ default: false })
+  is_email_verified: boolean;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @OneToOne(() => CompanyProfile, (profile) => profile.user)
+  empresaProfile: CompanyProfile;
+
+  @OneToOne(() => InfluencerProfile, (profile) => profile.user)
+  influencerProfile: InfluencerProfile;
+}

@@ -43,7 +43,7 @@ Las lecturas anteriores al cambio de configuración provenían de Date escritos 
 
 Se conservaron las fechas generadas por `now()` de PostgreSQL, instantes `timestamptz`, campos de calendario y fechas ISO con offset: ya eran correctos y restarles seis horas cambiaría su significado.
 
-Herramienta: `backend/src/common/scripts/normalize-historical-timezone.cjs`. Por defecto evalúa; `--apply` aplica mediante transacción. El corte corresponde al despliegue de TZ local: `2026-10-27T19:16:20.834Z`. La tabla `app_maintenance_runs` registra la migración e impide aplicarla dos veces.
+Herramienta: `backend/scripts/timezone/normalize-historical-timezone.cjs`. Por defecto evalúa; `--apply` aplica mediante transacción. El corte corresponde al despliegue de TZ local: `2026-10-27T19:16:20.834Z`. La tabla `app_maintenance_runs` registra la migración e impide aplicarla dos veces.
 
 Respaldo previo con permisos restringidos: `/app/uploads/maintenance/historical-timezone-24fa043c-4a0f-498e-9b39-c5542f480d6c/before.json`.
 

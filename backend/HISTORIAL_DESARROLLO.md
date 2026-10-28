@@ -4,6 +4,22 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Nombres internos de módulos en inglés
+
+- Requerimiento: BE-012.
+- Cambio: empresas → companies, contratos → contracts y dte → electronic-invoicing. Módulos, controladores, servicios, entidades y DTO relacionados utilizan nombres ingleses; utilitario IVA → vat y comando maintenance:vat.
+- Referencias: importaciones, scripts de mantenimiento y documentación actualizados. Nombres de proveedores externos se mantienen.
+- Compatibilidad: rutas HTTP, campos JSON, valores de roles y tablas/columnas SQL conservan los identificadores existentes; se renombraron clases internas sin migrar datos.
+- Validación: compilación, 58 pruebas unitarias aprobadas y sintaxis de scripts comprobada. Backend reconstruido en Docker; perfil de empresa, contratos, contador de mensajes, recargas y pagos devuelven HTTP 200 con sesión autenticada.
+
+## 2026-10-28 — Organización modular del backend
+
+- Requerimiento: BE-012.
+- Cambio: 15 funcionalidades agrupadas en src/modules con controladores, servicios, gateways, DTO, entidades y pruebas en su módulo. Utilidades y sus pruebas en common/utils; interceptor compartido en common/interceptors; configuración PostgreSQL y zona horaria en config.
+- Mantenimiento: scripts de créditos, IVA y fechas fuera de src, en scripts por área, con comandos npm y rutas actualizadas. No se ejecutaron scripts de mantenimiento ni se modificó su política de simulación/escritura.
+- Compatibilidad: importaciones relativas, descubrimiento de entidades y referencias documentales actualizadas. Conserva rutas API, nombres de tablas y lógica de negocio. README documenta estructura y convenciones del proyecto basadas en módulos de NestJS.
+- Validación: compilación y 58 pruebas unitarias aprobadas; sintaxis de los tres scripts comprobada. Imagen Docker reconstruida y backend iniciado; consultas autenticadas a /chats/unread-count, /receipts/top-ups y /receipts devuelven 200 y conservan recargas/pagos separados.
+
 ## 2026-10-28 — Corregir backend antiguo tras recompilación en Docker
 
 - Problema: proceso anterior mantenía ocupado el puerto 3009; la nueva instancia fallaba con EADDRINUSE y se servían rutas antiguas (404 en unread-count y 400 al interpretar top-ups como ID numérico).
@@ -52,7 +68,7 @@ Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026
 - Aplicado en BD: 15 lecturas de mensajes, 1 verificación social, 5 vencimientos de correo y fecha/hora del JSON de 1 DTE de desarrollo. Total: 22 registros.
 - Conservado: fechas de creación ya locales, timestamptz e ISO con offset y campos de calendario. Sin cambios de saldo, importes ni estados de correo.
 - Respaldo: `/app/uploads/maintenance/historical-timezone-24fa043c-4a0f-498e-9b39-c5542f480d6c/before.json`.
-- Migración: `backend/src/common/scripts/normalize-historical-timezone.cjs`, transaccional, con registro en `app_maintenance_runs` para evitar doble desplazamiento.
+- Migración: `backend/scripts/timezone/normalize-historical-timezone.cjs`, transaccional, con registro en `app_maintenance_runs` para evitar doble desplazamiento.
 - Validación: comparación de los 22 registros contra el respaldo y valores calculados; ninguna lectura anterior a creación. Reejecución protegida devuelve alreadyApplied sin modificar datos. Ver [política de fechas](../docs/FECHAS.md).
 
 ## 2026-10-27 — Unificación de fechas en UTC−6
@@ -70,7 +86,7 @@ Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026
 - Reintento: POST /receipts/:id/send-invoice, restringido a empresa y comprobantes propios. Historial muestra correo Enviado/Pendiente y acción de icono para enviar pendientes. No reenvía automáticamente comprobantes ya marcados como enviados.
 - Recuperación: usuario confirmó $100 alrededor de las 12 p. m.; se creó comprobante id 3 con marca recovered y timestamp_approximate, a las 12:00 de El Salvador (18:00 UTC), sin nuevo abono. Base 88.50, IVA 11.50, total 100.00. Saldo verificado antes/después: 109.00.
 - Correo: SMTP aceptó el mensaje con PDF adjunto al correo registrado de empresa; esto no confirma lectura ni llegada a bandeja principal.
-- Herramienta: src/credits/scripts/recover-recharge.cjs; evalúa por defecto, requiere --apply para recuperar y enviar. Usa referencia estable para evitar duplicar la recuperación.
+- Herramienta: scripts/credits/recover-recharge.cjs; evalúa por defecto, requiere --apply para recuperar y enviar. Usa referencia estable para evitar duplicar la recuperación.
 - Operación: reiniciados frontend/backend. API autenticada confirmó comprobante, DTE y estado de envío; descarga PDF correcta. Vite sirve el historial y controles de correo actualizados.
 - Validación: compilaciones frontend/backend y 19 pruebas satisfactorias, incluidas aceptación de correo, fallo SMTP y no reenvío automático de documentos ya enviados.
 
@@ -120,7 +136,7 @@ Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026
 - Aplicado: DTE id 2, base 278.76, IVA 36.24, total 315.00 sin cambio del monto pagado. Se actualizaron cabecera, detalle, JSON y PDF en una transacción para los registros de base de datos.
 - Excluido: DTE id 1 tiene total 720000.00 pero su comprobante registra 180.00; requiere resolver esa discrepancia antes de regularizar el IVA.
 - Respaldo previo: `/app/uploads/maintenance/iva-f06cc022-7b3b-46ba-8cc5-052253234c73` en el volumen persistente de uploads; contiene registros y PDF anterior, con permisos restringidos.
-- Herramienta: `src/dte/scripts/backfill-development-iva.cjs`; por defecto solo evalúa, `--apply` aplica cambios a borradores simulados consistentes. Nunca modifica DTE firmados, transmitidos, exentos o ajenos al formato legado esperado.
+- Herramienta: `scripts/electronic-invoicing/backfill-development-vat.cjs`; por defecto solo evalúa, `--apply` aplica cambios a borradores simulados consistentes. Nunca modifica DTE firmados, transmitidos, exentos o ajenos al formato legado esperado.
 - Validación: API autenticada y PDF devuelven base 278.76, IVA 36.24 y total 315.00; segunda evaluación no propone cambios, lo que comprueba que no aplica el IVA dos veces.
 
 ## 2026-10-27 — Reinicio y validación de Docker

@@ -30,7 +30,7 @@ A solicitud del usuario se evaluaron los dos documentos existentes. Se regulariz
 Para volver a evaluar dentro de Docker:
 
 ```sh
-docker compose exec -T backend node src/dte/scripts/backfill-development-iva.cjs
+docker compose exec -T backend node scripts/electronic-invoicing/backfill-development-vat.cjs
 ```
 
 El modo de aplicación usa `--apply`; solo corrige borradores simulados sin IVA cuyo detalle y comprobante coinciden. Las copias de respaldo se guardan en `uploads/maintenance` del contenedor, fuera de las rutas de descarga de DTE. No hay actualización automática al iniciar la aplicación.
