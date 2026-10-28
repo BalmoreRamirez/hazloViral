@@ -4,6 +4,22 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Sugerencias de influencers al iniciar chat
+
+- Requerimiento: FE-020.
+- Cambio: al escribir dos o más caracteres se buscan hasta cinco influencers disponibles y verificados por nombre artístico o username; una espera de 250 ms evita solicitudes por cada tecla. La lista muestra foto, nombre, username y ubicación, con estados de búsqueda y sin resultados.
+- Seguridad: el resultado de sugerencias contiene únicamente campos públicos; la apertura del chat conserva la autorización, validación de perfil y cobro existentes.
+- Validación: compilaciones de frontend y backend; no se ejecutaron pruebas automatizadas.
+
+## 2026-10-28 — Aceptación de términos y privacidad al registrar
+
+- Requerimientos: FE-001, BE-001.
+- Cambio: dos casillas explícitas sin preselección, documentos versionados consultables, responsable InfluSmart y contacto admin@yopmail.com indicados por el usuario. Sin consentimiento publicitario incluido.
+- Backend: booleanos y versiones vigentes obligatorios; evidencia con fecha del servidor, contenido y SHA-256 guardada junto al alta. Columna nullable sin aceptación retroactiva y script SQL para despliegues sin synchronize.
+- Frontend: lectura en modal con scroll y retorno al formulario, bloqueo sin documentos/aceptación, reseteo por rol y recarga si cambió una versión.
+- Validación: compilaciones de ambos proyectos, 68 pruebas del backend aprobadas y pruebas de registro del frontend; endpoint público 200 y registros sin aceptación 400 en ambos roles, sin crear cuentas.
+- Alcance jurídico y puntos pendientes de definición operativa: docs/REGISTRO_Y_PRIVACIDAD.md. El flujo no certifica cumplimiento legal integral ni verificación de firma/tutor.
+
 ## 2026-10-28 — Guía limitada a campos pendientes
 
 - Requerimiento: FE-019.

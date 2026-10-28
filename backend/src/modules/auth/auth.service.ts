@@ -1,3 +1,5 @@
+import { registrationDocuments } from './legal/registration-documents';
+import { RegistrationConsentDto } from './dto/registration-consent.dto';
 import { calculateAge } from '../../common/utils/date.util';
 import {
   BadRequestException,
@@ -43,14 +45,34 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
+  getRegistrationDocuments() {
+    return registrationDocuments(
+      this.config.get<string>('LEGAL_CONTROLLER_NAME') || 'InfluSmart',
+      this.config.get<string>('LEGAL_PRIVACY_EMAIL') || 'admin@yopmail.com',
+    );
+  }
+
+  private registrationConsent(dto: RegistrationConsentDto) {
+    const documents = this.getRegistrationDocuments();
+    if (dto.accepted_terms !== true || dto.accepted_privacy !== true) {
+      throw new BadRequestException('Debes aceptar los términos y el aviso de privacidad antes de crear la cuenta.');
+    }
+    if (dto.terms_version !== documents.terms.version || dto.privacy_version !== documents.privacy.version) {
+      throw new BadRequestException('Los documentos legales han cambiado. Vuelve a leerlos y confirma su aceptación.');
+    }
+    return { accepted_terms: true, accepted_privacy: true, accepted_at: new Date().toISOString(), documents, source: 'registration' };
+  }
+
   // ─── Registro Empresa ────────────────────────────────────────────────────────
   async registerEmpresa(dto: RegisterCompanyDto) {
+    const consent = this.registrationConsent(dto);
     await this.assertEmailFree(dto.email);
 
     return this.dataSource.transaction(async (manager) => {
       const hashed = await bcrypt.hash(dto.password, SALT_ROUNDS);
 
       const user = new User();
+      user.registration_consent = consent;
       user.email = dto.email;
       user.password = hashed;
       user.role = UserRole.EMPRESA;
@@ -82,6 +104,7 @@ export class AuthService {
 
   // ─── Registro Influencer ─────────────────────────────────────────────────────
   async registerInfluencer(dto: RegisterInfluencerDto) {
+    const consent = this.registrationConsent(dto);
     await this.assertEmailFree(dto.email);
 
     const esMenor = this.calcularEsMenor(dto.fecha_nacimiento);
@@ -104,6 +127,7 @@ export class AuthService {
       const hashed = await bcrypt.hash(dto.password, SALT_ROUNDS);
 
       const user = new User();
+      user.registration_consent = consent;
       user.email = dto.email;
       user.password = hashed;
       user.role = UserRole.INFLUENCER;
@@ -306,8 +330,8 @@ export class AuthService {
     return this.jwtService.sign(payload);
   }
 
-  private sanitize(user: User): Omit<User, 'password'> {
-    const { password: _p, ...safe } = user as User & { password: string };
+  private sanitize(user: User): Omit<User, 'password' | 'registration_consent'> {
+    const { password: _p, registration_consent: _consent, ...safe } = user as User & { password: string };
     return safe;
   }
 }

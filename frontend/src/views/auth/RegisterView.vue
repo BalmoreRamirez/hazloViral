@@ -1,15 +1,37 @@
 <script setup lang="ts">
+import Dialog from 'primevue/dialog'
+import { authApi, type RegistrationLegalDocuments, type RegistrationLegalDocument } from '@/api/auth'
 import RequiredMark from '@/components/RequiredMark.vue'
 import { calculateAge } from '@/utils/date'
 import { viewPath } from '@/router/paths'
 import BrandName from '@/components/BrandName.vue'
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email, helpers } from '@vuelidate/validators'
 import { DEPARTAMENTOS_SV } from '@/constants/ubicaciones'
 import { RUBROS } from '@/constants/rubros'
+
+const legalDocuments = ref<RegistrationLegalDocuments | null>(null)
+const legalError = ref('')
+const acceptedTerms = ref(false)
+const acceptedPrivacy = ref(false)
+const legalTouched = ref(false)
+const legalOpen = ref(false)
+const selectedLegalDocument = ref<RegistrationLegalDocument | null>(null)
+async function loadLegalDocuments() {
+  legalError.value = ''
+  acceptedTerms.value = false
+  acceptedPrivacy.value = false
+  try { legalDocuments.value = await authApi.legalDocuments() }
+  catch { legalDocuments.value = null; legalError.value = 'No se pudieron cargar los términos y el aviso de privacidad. Reintenta antes de crear tu cuenta.' }
+}
+function openLegalDocument(type: 'terms' | 'privacy') {
+  selectedLegalDocument.value = legalDocuments.value?.[type] ?? null
+  legalOpen.value = !!selectedLegalDocument.value
+}
+onMounted(loadLegalDocuments)
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -197,7 +219,7 @@ const v$ = useVuelidate(rules, {
 })
 
 // Resetear validación al cambiar de rol
-watch(role, () => { v$.value.$reset(); step.value = 1; error.value = '' })
+watch(role, () => { acceptedTerms.value = false; acceptedPrivacy.value = false; legalTouched.value = false; v$.value.$reset(); step.value = 1; error.value = '' })
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 async function submit() {
@@ -214,10 +236,21 @@ async function submit() {
     return
   }
 
+  legalTouched.value = true
+  if (!legalDocuments.value || !acceptedTerms.value || !acceptedPrivacy.value) {
+    error.value = 'Lee y acepta los términos y el aviso de privacidad para crear tu cuenta.'
+    loading.value = false
+    return
+  }
+  const consent = {
+    accepted_terms: acceptedTerms.value, accepted_privacy: acceptedPrivacy.value,
+    terms_version: legalDocuments.value.terms.version, privacy_version: legalDocuments.value.privacy.version,
+  }
   error.value = ''; loading.value = true
   try {
     if (role.value === 'empresa') {
       await authStore.registerEmpresa({
+        ...consent,
         email: email_.value, password: password.value,
         nombre_comercial: nombre_comercial.value,
         sitio_web:  sitio_web.value  || undefined,
@@ -234,6 +267,7 @@ async function submit() {
       })
     } else {
       await authStore.registerInfluencer({
+        ...consent,
         email: email_.value, password: password.value,
         username: username.value,
         nombre_artistico: nombre_artistico.value,
@@ -256,6 +290,7 @@ async function submit() {
     registered.value = true
   } catch (e: any) {
     const msg = e.response?.data?.message
+    if (typeof msg === 'string' && msg.includes('documentos legales han cambiado')) await loadLegalDocuments()
     error.value = Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Error al registrarse.')
   } finally { loading.value = false }
 }
@@ -614,14 +649,42 @@ async function submit() {
                 </template>
               </div>
             </fieldset>
+            <section v-if="step === 3" class="rounded-xl border border-border bg-slate p-4 space-y-3" aria-labelledby="registration-consent-title">
+              <h3 id="registration-consent-title" class="font-semibold text-navy">Términos y privacidad</h3>
+              <p class="text-sm text-ink-muted">Lee los documentos antes de aceptar. Esta autorización no incluye publicidad por correo.</p>
+              <div v-if="legalError" role="alert" class="text-sm text-coral-text">{{ legalError }} <button type="button" class="ui-hover-link underline" @click="loadLegalDocuments">Reintentar</button></div>
+              <p v-else-if="!legalDocuments" role="status" class="text-sm text-ink-muted">Cargando documentos…</p>
+              <template v-else>
+                <label class="flex items-start gap-3 text-sm">
+                  <input v-model="acceptedTerms" type="checkbox" required :disabled="loading" class="mt-1 shrink-0 accent-violet" />
+                  <span>He leído y acepto los <button type="button" class="text-violet ui-hover-link underline" @click.stop="openLegalDocument('terms')">Términos y condiciones</button>.<RequiredMark /></span>
+                </label>
+                <label class="flex items-start gap-3 text-sm">
+                  <input v-model="acceptedPrivacy" type="checkbox" required :disabled="loading" class="mt-1 shrink-0 accent-violet" />
+                  <span>He leído el <button type="button" class="text-violet ui-hover-link underline" @click.stop="openLegalDocument('privacy')">Aviso de privacidad</button> y autorizo el tratamiento de mis datos para las finalidades descritas.<RequiredMark /></span>
+                </label>
+                <p v-if="role === 'influencer'" class="text-xs text-ink-muted">Si eres menor, esta aceptación no sustituye los datos y la autorización de tu tutor legal.</p>
+                <p v-if="legalTouched && (!acceptedTerms || !acceptedPrivacy)" role="alert" class="text-sm text-coral-text">Debes confirmar ambas casillas para crear tu cuenta.</p>
+              </template>
+            </section>
             <div v-if="error" role="alert" class="rounded-xl bg-coral-tint text-coral-text text-sm p-4">{{ error }}</div>
             <div class="flex flex-col-reverse sm:flex-row gap-3 border-t border-border pt-5">
               <button v-if="step > 1" type="button" :disabled="loading || advancing" class="btn-secondary" @click="step--; focusStep()">Atrás</button>
-              <button type="submit" :disabled="loading || advancing" class="btn-primary sm:ml-auto inline-flex items-center justify-center gap-2"><i v-if="loading" class="pi pi-spin pi-spinner" aria-hidden="true" />{{ loading ? 'Creando cuenta…' : step < 3 ? 'Continuar' : 'Crear mi cuenta' }}<i v-if="!loading && step < 3" class="pi pi-arrow-right" aria-hidden="true" /></button>
+              <button type="submit" :disabled="loading || advancing || (step === 3 && !legalDocuments)" class="btn-primary sm:ml-auto inline-flex items-center justify-center gap-2"><i v-if="loading" class="pi pi-spin pi-spinner" aria-hidden="true" />{{ loading ? 'Creando cuenta…' : step < 3 ? 'Continuar' : 'Crear mi cuenta' }}<i v-if="!loading && step < 3" class="pi pi-arrow-right" aria-hidden="true" /></button>
             </div>
           </form>
         </section>
       </div>
     </main>
   </div>
+  <Dialog v-model:visible="legalOpen" modal :header="selectedLegalDocument?.title" :style="{ width: '48rem', maxWidth: 'calc(100vw - 2rem)' }" :contentStyle="{ maxHeight: '70vh', overflowY: 'auto' }">
+    <article v-if="selectedLegalDocument" class="space-y-5 text-sm leading-relaxed text-navy">
+      <p class="text-xs text-ink-muted">Versión: {{ selectedLegalDocument.version }}</p>
+      <section v-for="section in selectedLegalDocument.sections" :key="section.title">
+        <h3 class="font-semibold mb-2">{{ section.title }}</h3><p>{{ section.text }}</p>
+      </section>
+    </article>
+    <template #footer><button type="button" class="btn-primary" @click="legalOpen = false">Volver al registro</button></template>
+  </Dialog>
+
 </template>

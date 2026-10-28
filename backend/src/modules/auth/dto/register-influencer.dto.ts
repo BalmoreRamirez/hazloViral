@@ -1,3 +1,4 @@
+import { RegistrationConsentDto } from './registration-consent.dto';
 import { calculateAge } from '../../../common/utils/date.util';
 import {
   IsArray,
@@ -21,7 +22,7 @@ const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,128}$/;
 const PASSWORD_MSG   = 'La contraseña debe tener entre 8 y 128 caracteres, al menos una mayúscula, una minúscula, un número y un carácter especial.';
 
-export class RegisterInfluencerDto {
+export class RegisterInfluencerDto extends RegistrationConsentDto {
   @IsEmail()
   email: string;
 

@@ -14,6 +14,11 @@ import { User } from '../users/entities/user.entity';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('legal-documents')
+  legalDocuments() {
+    return this.authService.getRegistrationDocuments();
+  }
+
   @Post('register/empresa')
   registerEmpresa(@Body() dto: RegisterCompanyDto) {
     return this.authService.registerEmpresa(dto);

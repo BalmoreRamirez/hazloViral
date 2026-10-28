@@ -38,6 +38,9 @@ export class User {
   @Column({ default: false })
   is_email_verified: boolean;
 
+  @Column({ type: 'jsonb', nullable: true, select: false })
+  registration_consent: Record<string, unknown> | null;
+
   @CreateDateColumn()
   created_at: Date;
 

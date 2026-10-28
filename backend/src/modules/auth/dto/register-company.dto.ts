@@ -1,3 +1,4 @@
+import { RegistrationConsentDto } from './registration-consent.dto';
 import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, Matches, MaxLength, ValidateIf } from 'class-validator';
 import { NIT_REGEX, NRC_REGEX, TELEFONO_REGEX } from '../../companies/dto/update-company.dto';
 
@@ -6,7 +7,7 @@ const PASSWORD_MSG   = 'La contraseña debe tener entre 8 y 128 caracteres, al m
 
 const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
 
-export class RegisterCompanyDto {
+export class RegisterCompanyDto extends RegistrationConsentDto {
   @IsEmail()
   email: string;
 

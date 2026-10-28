@@ -33,6 +33,14 @@ export type SearchOrden = (typeof SEARCH_ORDENES)[number];
 /** Perfil del buscador con su resumen de calificaciones (evita un request por tarjeta). */
 export type SearchResultItem = InfluencerProfile & { rating: { promedio: number | null; total: number } };
 
+export interface InfluencerSuggestion {
+  id: number;
+  username: string;
+  nombre_artistico: string;
+  avatar_url: string | null;
+  ubicacion: string | null;
+}
+
 @Injectable()
 export class InfluencersService {
   private readonly logger = new Logger(InfluencersService.name);
@@ -79,6 +87,37 @@ export class InfluencersService {
     });
     if (!profile) throw new NotFoundException(`No se encontró un influencer con el username @${username}.`);
     return profile;
+  }
+
+  /** Sugerencias mínimas para iniciar chat; nunca incluye correo, métricas ni datos privados. */
+  async suggestForChat(term: string): Promise<InfluencerSuggestion[]> {
+    const query = term.trim().replace(/^@/, '');
+    if (query.length < 2) return [];
+
+    const profiles = await this.profilesRepo
+      .createQueryBuilder('p')
+      .innerJoin('p.user', 'u')
+      .select('p.id', 'id')
+      .addSelect('p.username', 'username')
+      .addSelect('p.nombre_artistico', 'nombre_artistico')
+      .addSelect('p.ubicacion', 'ubicacion')
+      .addSelect('u.avatar_url', 'avatar_url')
+      .where('p.disponibilidad = true')
+      .andWhere('p.username IS NOT NULL')
+      .andWhere('u.is_email_verified = true')
+      .andWhere('u.avatar_url IS NOT NULL')
+      .andWhere('p.tipo_identificacion IS NOT NULL')
+      .andWhere('p.numero_identificacion IS NOT NULL')
+      .andWhere('EXISTS (SELECT 1 FROM influencer_metrics vm WHERE vm.influencer_id = p.id AND vm.is_verified = true)')
+      .andWhere("DATE_PART('year', AGE(CAST(p.fecha_nacimiento AS DATE))) >= 16")
+      .andWhere('(p.username ILIKE :term OR p.nombre_artistico ILIKE :term)', { term: `%${query}%` })
+      .orderBy('CASE WHEN LOWER(p.username) = LOWER(:exact) THEN 0 WHEN LOWER(p.username) LIKE LOWER(:prefix) THEN 1 ELSE 2 END', 'ASC')
+      .addOrderBy('p.nombre_artistico', 'ASC')
+      .setParameters({ exact: query, prefix: `${query}%` })
+      .take(5)
+      .getRawMany<InfluencerSuggestion>();
+
+    return profiles.map((profile) => ({ ...profile, id: Number(profile.id) }));
   }
 
   // ─── Buscador público ─────────────────────────────────────────────────────────

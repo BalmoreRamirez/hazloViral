@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { viewPath } from '@/router/paths'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { formatDate } from '@/utils/date'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
-import { influencerApi } from '@/api/profiles'
+import { influencerApi, type InfluencerChatSuggestion } from '@/api/profiles'
 
 const router    = useRouter()
 const chatStore = useChatStore()
@@ -15,6 +15,54 @@ const authStore = useAuthStore()
 const usernameInput = ref('')
 const openError     = ref('')
 const opening       = ref(false)
+const suggestions   = ref<InfluencerChatSuggestion[]>([])
+const suggestionsLoading = ref(false)
+const selectedInfluencer = ref<InfluencerChatSuggestion | null>(null)
+let suggestionTimer: ReturnType<typeof setTimeout> | undefined
+let suggestionRequest = 0
+
+watch(usernameInput, (value) => {
+  suggestionRequest++
+  const normalized = value.trim().replace(/^@/, '').toLowerCase()
+  if (selectedInfluencer.value?.username.toLowerCase() === normalized) {
+    suggestions.value = []
+    return
+  }
+  selectedInfluencer.value = null
+  openError.value = ''
+  if (suggestionTimer) clearTimeout(suggestionTimer)
+  const query = value.trim().replace(/^@/, '')
+  if (query.length < 2) {
+    suggestions.value = []
+    suggestionsLoading.value = false
+    return
+  }
+  suggestionTimer = setTimeout(async () => {
+    const request = suggestionRequest
+    suggestionsLoading.value = true
+    try {
+      const results = await influencerApi.suggestForChat(query)
+      if (request === suggestionRequest) suggestions.value = results
+    } catch {
+      if (request === suggestionRequest) suggestions.value = []
+    } finally {
+      if (request === suggestionRequest) suggestionsLoading.value = false
+    }
+  }, 250)
+})
+
+function selectInfluencer(suggestion: InfluencerChatSuggestion) {
+  if (suggestionTimer) clearTimeout(suggestionTimer)
+  suggestionRequest++
+  selectedInfluencer.value = suggestion
+  usernameInput.value = suggestion.username
+  suggestions.value = []
+}
+
+onUnmounted(() => {
+  if (suggestionTimer) clearTimeout(suggestionTimer)
+  suggestionRequest++
+})
 
 onMounted(() => chatStore.loadChats())
 
@@ -24,8 +72,9 @@ async function openChat() {
   openError.value = ''
   opening.value   = true
   try {
-    const profile = await influencerApi.getByUsername(raw)
-    const chat    = await chatStore.openChat(profile.id)
+    const influencerId = selectedInfluencer.value?.id
+      ?? (await influencerApi.getByUsername(raw)).id
+    const chat    = await chatStore.openChat(influencerId)
     router.push(viewPath(`/chats/${chat.id}`))
   } catch (e: any) {
     openError.value = e.response?.data?.message ?? 'No se encontró ese influencer.'
@@ -49,7 +98,29 @@ async function openChat() {
           <div class="relative flex-1">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted font-medium select-none">@</span>
             <input v-model="usernameInput" type="text" placeholder="username_del_influencer"
-              class="input pl-7 w-full" @keyup.enter="openChat" />
+              class="input pl-7 w-full" role="combobox" aria-autocomplete="list"
+              :aria-expanded="suggestions.length > 0" aria-controls="influencer-suggestions"
+              autocomplete="off" @keyup.enter="openChat" @keydown.esc="suggestions = []" />
+            <div v-if="usernameInput.trim().replace(/^@/, '').length >= 2"
+              id="influencer-suggestions" role="listbox"
+              class="absolute z-30 top-full mt-1 w-full overflow-hidden rounded-xl border border-navy/10 bg-white shadow-lg">
+              <p v-if="suggestionsLoading" class="px-4 py-3 text-sm text-ink-muted">Buscando influencers…</p>
+              <p v-else-if="suggestions.length === 0" class="px-4 py-3 text-sm text-ink-muted">No hay coincidencias disponibles.</p>
+              <button v-for="suggestion in suggestions" :key="suggestion.id" type="button"
+                role="option" :aria-selected="selectedInfluencer?.id === suggestion.id"
+                class="flex w-full items-center gap-3 px-4 py-3 text-left ui-hover"
+                @click="selectInfluencer(suggestion)">
+                <img v-if="suggestion.avatar_url" :src="suggestion.avatar_url" alt=""
+                  class="h-9 w-9 shrink-0 rounded-full object-cover" />
+                <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet/10 font-semibold text-violet">
+                  {{ suggestion.nombre_artistico.charAt(0).toUpperCase() }}
+                </span>
+                <span class="min-w-0">
+                  <span class="block truncate text-sm font-semibold text-navy">{{ suggestion.nombre_artistico }}</span>
+                  <span class="block truncate text-xs text-ink-muted">@{{ suggestion.username }}<template v-if="suggestion.ubicacion"> · {{ suggestion.ubicacion }}</template></span>
+                </span>
+              </button>
+            </div>
           </div>
           <button @click="openChat" :disabled="opening || !usernameInput.trim()" class="btn-primary whitespace-nowrap">
             {{ opening ? 'Buscando…' : 'Iniciar chat' }}

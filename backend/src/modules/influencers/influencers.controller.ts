@@ -51,6 +51,12 @@ export class InfluencersController {
     return this.service.search({ red_social, ubicacion, rubro, min_seguidores, max_tarifa: maxTarifa, page, limit, disponible: soloDisponibles, orden: ordenValido });
   }
 
+  @Get('suggestions')
+  @Roles(UserRole.EMPRESA)
+  suggestForChat(@Query('q') query = '') {
+    return this.service.suggestForChat(query);
+  }
+
   // ─── Perfil propio (influencer) ───────────────────────────────────────────────
   @Get('profile')
   @Roles(UserRole.INFLUENCER)

@@ -26,6 +26,7 @@ Inventario inicial basado en la especificación y la estructura del código. Tod
 | BE-012 | Persistencia y configuración | Nombrar carpetas, archivos y clases de módulos en inglés (kebab-case y PascalCase según corresponda). Organizar funcionalidades en src/modules con DTO, entidades y pruebas junto al módulo; separar src/config, componentes compartidos en src/common y mantenimiento en scripts; conservar importaciones, rutas HTTP y arranque. Mantener integridad en PostgreSQL con TypeORM, validar DTOs y gestionar configuración sin exponer secretos; documentar cambios de esquema para despliegue. | Por validar | `src/app.module.ts; src/main.ts; src/config/; src/common/; src/modules/; scripts/` | Transversal |
 
 | BE-013 | Registrar IVA en nuevos borradores DTE de desarrollo | Mostrar y conservar base, IVA y total coherentes; simulación al 13% incluido sin cambiar el pago ni documentos anteriores. Ver [alcance fiscal](../docs/IVA.md). | Por validar | `src/modules/electronic-invoicing/; src/modules/receipts/` | FE-011 |
+| BE-014 | Sugerencias seguras para iniciar chat | Exponer a empresas autenticadas una búsqueda de influencers por nombre artístico o username, limitada a perfiles disponibles, completos y verificables; mínimo de dos caracteres, máximo cinco resultados y solo campos públicos necesarios. | Por validar | `src/modules/influencers/influencers.controller.ts; src/modules/influencers/influencers.service.ts` | FE-020 |
 
 ## Historial de cambios de requerimientos
 
@@ -47,3 +48,13 @@ Inventario inicial basado en la especificación y la estructura del código. Tod
 ## Separación de historiales para empresa (2026-10-28)
 
 GET /receipts restringe el listado de empresa a influencer_payout; GET /receipts/top-ups admite solo empresa y restringe a credits_top_up. Ambas consultas filtran por la empresa del usuario autenticado, sin aceptar un ID de propietario enviado por el cliente. Las recargas conservan su detalle y reenvío de factura con validación de propiedad.
+
+## Aceptación al registrar (2026-10-28, BE-001)
+
+Ambos registros exigen accepted_terms y accepted_privacy booleanos true y versiones
+vigentes de los documentos. La evidencia (hora del servidor, textos, versiones y
+SHA-256) se guarda atómicamente con la cuenta, no se expone en sesión y no se presume
+para cuentas históricas. Consultar documentos es público y no requiere registro.
+La política identifica a InfluSmart y admin@yopmail.com conforme a los datos del
+usuario. La revisión legal y operativa pendiente se documenta en
+[REGISTRO_Y_PRIVACIDAD.md](../docs/REGISTRO_Y_PRIVACIDAD.md).

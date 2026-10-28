@@ -1,10 +1,19 @@
 import { api } from './index'
 
+export interface RegistrationConsentPayload {
+  accepted_terms: boolean; accepted_privacy: boolean; terms_version: string; privacy_version: string
+}
+export interface RegistrationLegalDocument {
+  title: string; version: string; sha256: string; sections: { title: string; text: string }[]
+}
+export interface RegistrationLegalDocuments { terms: RegistrationLegalDocument; privacy: RegistrationLegalDocument }
+
 export const authApi = {
+  legalDocuments: () => api.get<RegistrationLegalDocuments>('/auth/legal-documents').then(r => r.data),
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }).then((r) => r.data),
 
-  registerEmpresa: (data: {
+  registerEmpresa: (data: RegistrationConsentPayload & {
     email: string; password: string; nombre_comercial: string; sitio_web?: string
     pais?: string; direccion?: string; rubro?: string
     razon_social?: string; nit?: string; nrc?: string
@@ -14,7 +23,7 @@ export const authApi = {
     representante_numero_identificacion: string
   }) => api.post('/auth/register/empresa', data).then((r) => r.data),
 
-  registerInfluencer: (data: {
+  registerInfluencer: (data: RegistrationConsentPayload & {
     email: string; password: string; username: string; nombre_artistico: string
     bio?: string; ubicacion?: string; direccion?: string; rubro?: string; tarifa_base?: number; fecha_nacimiento: string
     tipo_identificacion: 'DUI' | 'PASAPORTE'; numero_identificacion: string
