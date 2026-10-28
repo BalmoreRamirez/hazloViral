@@ -1,3 +1,4 @@
+import { containsContact } from '../common/privacy/influencer-privacy';
 import {
   BadRequestException,
   ForbiddenException,
@@ -151,6 +152,9 @@ export class ChatsService {
 
   // ─── Guardar y retornar mensaje (llamado por Gateway) ────────────────────────
   async saveMessage(user: User, dto: SendMessageDto): Promise<Message | null> {
+    if (dto.message_text && containsContact(dto.message_text)) {
+      throw new BadRequestException('Para tu seguridad, mantén la comunicación y contratación dentro de la aplicación. No compartas correos, teléfonos ni usuarios o enlaces de contacto.');
+    }
     const chat = await this.chatsRepo.findOne({ where: { id: dto.chat_id } });
     if (!chat) throw new NotFoundException('Chat no encontrado.');
 

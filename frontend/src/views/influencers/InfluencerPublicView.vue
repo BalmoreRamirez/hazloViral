@@ -156,7 +156,7 @@ async function submitRating() {
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <h1 class="text-2xl font-display font-bold text-navy">{{ profile.nombre_artistico }}</h1>
+                <h1 class="page-title font-display font-bold text-navy">{{ profile.nombre_artistico }}</h1>
                 <VerifiedBadge v-if="profile.is_verified" size="lg" />
               </div>
               <p v-if="profile.username" class="text-violet text-sm font-medium">@{{ profile.username }}</p>
@@ -224,10 +224,10 @@ async function submitRating() {
                 <div class="flex items-center gap-1.5">
                   <p class="font-semibold text-navy text-sm">{{ m.red_social }}</p>
                   <span v-if="m.is_verified"
-                    class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-violet text-white text-[9px] font-bold"
+                    class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-violet text-white text-xs font-bold"
                     title="Seguidores verificados automáticamente">✓</span>
                 </div>
-                <p class="text-xs text-ink-muted">@{{ m.username }}</p>
+                <p v-if="m.username" class="text-xs text-ink-muted">@{{ m.username }}</p>
               </div>
               <div class="text-right">
                 <p class="font-bold text-navy">{{ formatFollowers(m.seguidores) }}</p>

@@ -48,7 +48,7 @@ async function loadHistory() {
   historyLoading.value = true
   historyError.value = ''
   try {
-    history.value = (await receiptsApi.list())
+    history.value = (await receiptsApi.listTopUps())
       .filter((receipt) => receipt.operation_type === 'credits_top_up')
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   } catch { historyError.value = 'No se pudo cargar el historial de recargas.' }
@@ -122,7 +122,7 @@ watch(balance, (b) => {
   <AppLayout>
     <div class="space-y-6">
       <header>
-        <h1 class="text-2xl font-display font-bold text-navy">Recargar saldo</h1>
+        <h1 class="page-title font-display font-bold text-navy">Recargar saldo</h1>
         <p class="text-sm text-ink-muted mt-1">Agrega créditos para conversar y negociar con influencers.</p>
       </header>
       <p v-if="route.query.wompi === 'success'" role="status" class="card text-sm text-ink-muted">
@@ -213,7 +213,7 @@ watch(balance, (b) => {
         </div>
         <p v-else-if="!history.length" class="p-8 text-center text-ink-muted">Aún no tienes recargas registradas.</p>
         <div v-else class="overflow-x-auto">
-          <table class="w-full min-w-[760px] text-sm text-left">
+          <table class="data-table w-full min-w-[760px] text-sm text-left">
             <caption class="sr-only">Historial de recargas de saldo de la empresa</caption>
             <thead class="bg-slate text-xs uppercase tracking-wide text-ink-muted border-b border-border-strong">
               <tr>

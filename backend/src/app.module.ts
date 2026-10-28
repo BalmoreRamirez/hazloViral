@@ -1,3 +1,5 @@
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { InfluencerPrivacyInterceptor } from './common/privacy/influencer-privacy.interceptor';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -57,6 +59,6 @@ import { DteModule } from './dte/dte.module';
     DteModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_INTERCEPTOR, useClass: InfluencerPrivacyInterceptor }],
 })
 export class AppModule {}

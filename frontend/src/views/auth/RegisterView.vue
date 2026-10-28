@@ -277,14 +277,14 @@ async function submit() {
     <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
       <section v-if="registered" class="card max-w-lg mx-auto text-center p-8 space-y-4">
         <span class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-tint text-success"><i class="pi pi-check text-2xl" aria-hidden="true" /></span>
-        <h1 class="font-display text-2xl font-bold text-navy">Tu cuenta está creada</h1>
+        <h1 class="page-title font-display font-bold text-navy">Tu cuenta está creada</h1>
         <p class="text-sm text-ink-muted">Revisa el correo de verificación en <strong class="text-navy break-all">{{ email_ }}</strong>. Si no lo encuentras, revisa spam o solicita otro desde tu cuenta.</p>
         <p class="text-xs text-ink-muted">El enlace de verificación expira en 24 horas.</p>
         <button type="button" class="btn-primary w-full" @click="router.push(viewPath('/dashboard'))">Ir a mi inicio</button>
       </section>
       <div v-else class="grid lg:grid-cols-[minmax(240px,1fr)_minmax(0,1.8fr)] gap-8 lg:gap-12 items-start">
         <aside class="lg:sticky lg:top-8 space-y-6">
-          <div><p class="text-xs text-violet font-semibold uppercase tracking-wider">Empieza en InfluSmart</p><h1 class="font-display text-3xl sm:text-4xl font-bold text-navy mt-3 leading-tight">{{ role === 'empresa' ? 'Tu próxima colaboración empieza aquí.' : 'Conecta tu talento con nuevas marcas.' }}</h1><p class="text-sm text-ink-muted mt-4 leading-relaxed">{{ role === 'empresa' ? 'Prepara campañas, encuentra creadores y gestiona tus acuerdos en un solo lugar.' : 'Presenta tu perfil, negocia propuestas y sigue tus colaboraciones desde un solo lugar.' }}</p></div>
+          <div><p class="text-xs text-violet font-semibold uppercase tracking-wider">Empieza en InfluSmart</p><h1 class="page-title font-display font-bold text-navy mt-3 leading-tight">{{ role === 'empresa' ? 'Tu próxima colaboración empieza aquí.' : 'Conecta tu talento con nuevas marcas.' }}</h1><p class="text-sm text-ink-muted mt-4 leading-relaxed">{{ role === 'empresa' ? 'Prepara campañas, encuentra creadores y gestiona tus acuerdos en un solo lugar.' : 'Presenta tu perfil, negocia propuestas y sigue tus colaboraciones desde un solo lugar.' }}</p></div>
           <ul class="space-y-4 text-sm text-ink-muted hidden lg:block"><li class="flex items-start gap-3"><i class="pi pi-user text-violet mt-1" aria-hidden="true" />Elige el perfil que corresponde a tu actividad.</li><li class="flex items-start gap-3"><i class="pi pi-lock text-violet mt-1" aria-hidden="true" />Tus datos de identidad se usan para los procesos de verificación.</li><li class="flex items-start gap-3"><i class="pi pi-envelope text-violet mt-1" aria-hidden="true" />Verifica tu correo para activar las funciones de tu cuenta.</li></ul>
           <div v-if="role === 'empresa'" class="rounded-xl border border-violet/20 bg-violet-tint p-4 text-sm text-navy inline-flex gap-3"><i class="pi pi-gift text-violet mt-1" aria-hidden="true" /><p>Recibe <strong>$10.00 en créditos</strong> al completar el registro de tu empresa.</p></div>
         </aside>

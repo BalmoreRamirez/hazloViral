@@ -171,7 +171,7 @@ const { start: startProfileGuide, active: guideActive, error: guideError } = use
       <!-- Header -->
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-display font-bold text-navy">Mi perfil</h1>
+          <h1 class="page-title font-display font-bold text-navy">Mi perfil</h1>
           <p class="text-sm mt-1 text-navy-lighter">Presenta tu marca y mantén actualizados tus datos de contacto y facturación.</p>
         </div>
         <RouterLink v-if="p" :to="viewPath(`/empresas/${p.id}`)"

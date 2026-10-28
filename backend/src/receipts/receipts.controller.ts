@@ -18,6 +18,12 @@ export class ReceiptsController {
     return this.receiptsService.listForUser(user);
   }
 
+  @Get('top-ups')
+  @Roles(UserRole.EMPRESA)
+  listTopUps(@GetUser() user: User) {
+    return this.receiptsService.listForUser(user, 'top-ups');
+  }
+
   @Post(':id/send-invoice')
   @Roles(UserRole.EMPRESA)
   sendInvoice(@GetUser() user: User, @Param('id', ParseIntPipe) id: number) {

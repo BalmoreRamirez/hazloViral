@@ -8,8 +8,8 @@
  * Surface   Slate       #F8FAFC  — fondos de tarjetas, contenedores internos
  *
  * Tipografía §3.2:
- *   body/data  → Inter / Plus Jakarta Sans
- *   títulos/UI → Lexend / Clash Display
+ *   body/data  → Helvetica Neue / Helvetica / Arial
+ *   títulos/UI → Helvetica Neue / Helvetica / Arial
  *
  * @type {import('tailwindcss').Config}
  */
@@ -56,8 +56,8 @@ export default {
 
       // ── Tipografía (claude.md §3.2) ─────────────────────────────────────────
       fontFamily: {
-        body:    ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['Bricolage Grotesque', 'Lexend', 'system-ui', 'sans-serif'],
+        body:    ['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+        display: ['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
       },
 
       // ── Sombras personalizadas ───────────────────────────────────────────────

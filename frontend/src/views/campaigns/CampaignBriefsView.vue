@@ -214,7 +214,7 @@ function confirmDelete(id: number, titulo: string) {
       <div class="card">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
           <div>
-            <h1 class="font-display font-semibold text-navy text-2xl inline-flex items-center gap-2"><i class="pi pi-clipboard" aria-hidden="true" /> Briefs de campaña</h1>
+            <h1 class="page-title font-display font-semibold text-navy inline-flex items-center gap-2"><i class="pi pi-clipboard" aria-hidden="true" /> Briefs de campaña</h1>
             <p class="text-xs mt-0.5 text-ink-muted">Reutilizables para adjuntar en chats con influencers</p>
           </div>
           <Button @click="openNewBrief" label="Nuevo brief" icon="pi pi-plus" size="small" :disabled="loadingBriefs || !!loadError" />
@@ -236,7 +236,7 @@ function confirmDelete(id: number, titulo: string) {
 
         <!-- Tabla de briefs -->
         <div v-if="!loadingBriefs && !loadError && store.briefs.length" class="overflow-x-auto mt-4">
-          <table class="w-full min-w-[800px] text-sm text-left">
+          <table class="data-table w-full min-w-[800px] text-sm text-left">
             <caption class="sr-only">Briefs de campaña de tu empresa</caption>
             <thead class="bg-slate border-b border-border-strong text-xs uppercase tracking-wide text-ink-muted">
               <tr>

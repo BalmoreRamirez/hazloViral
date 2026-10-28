@@ -124,7 +124,7 @@ async function submitRating() {
     </div>
     <section v-else-if="notFound || loadError || !profile" class="card max-w-xl mx-auto py-12 text-center space-y-4" role="alert">
       <i class="pi pi-building text-3xl text-ink-muted" aria-hidden="true" />
-      <h1 class="font-display text-2xl font-bold text-navy">{{ notFound ? 'Marca no encontrada' : 'Perfil no disponible' }}</h1>
+      <h1 class="page-title font-display font-bold text-navy">{{ notFound ? 'Marca no encontrada' : 'Perfil no disponible' }}</h1>
       <p class="text-sm text-ink-muted">{{ notFound ? 'El enlace puede ser incorrecto o la empresa ya no está disponible.' : loadError }}</p>
       <button v-if="!notFound" type="button" @click="loadProfile" class="btn-primary">Reintentar</button>
       <RouterLink :to="viewPath('/dashboard')" class="btn-secondary inline-flex">Volver al inicio</RouterLink>
@@ -149,7 +149,7 @@ async function submitRating() {
               <div v-else class="w-full h-full rounded-xl bg-violet-tint flex items-center justify-center text-3xl font-display font-bold text-violet">{{ profile.nombre_comercial[0]?.toUpperCase() }}</div>
             </div>
             <div class="flex-1 min-w-0 sm:pb-1">
-              <div class="flex flex-wrap items-center gap-3"><h1 class="font-display text-2xl sm:text-3xl font-bold text-navy break-words">{{ profile.nombre_comercial }}</h1><VerifiedBadge v-if="profile.is_verified" size="lg" /></div>
+              <div class="flex flex-wrap items-center gap-3"><h1 class="page-title font-display font-bold text-navy break-words">{{ profile.nombre_comercial }}</h1><VerifiedBadge v-if="profile.is_verified" size="lg" /></div>
               <div class="flex flex-wrap items-center gap-3 mt-2 text-sm text-ink-muted"><span v-if="profile.rubro" class="badge-info">{{ rubroLabel(profile.rubro) }}</span><span v-if="profile.pais" class="inline-flex items-center gap-1.5"><i class="pi pi-map-marker" aria-hidden="true" />{{ profile.pais }}</span></div>
             </div>
             <a href="#brand-reviews" class="sm:pb-1 flex items-center gap-3 rounded-xl bg-slate px-4 py-3 ui-hover focus-visible:outline-2 focus-visible:outline-violet">

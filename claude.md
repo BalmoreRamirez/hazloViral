@@ -25,8 +25,8 @@ Plataforma web responsive que conecta marcas con influencers en Latinoamérica. 
 *   **Fondo de Superficies (Light Slate - `#F8FAFC`):** Fondo para tarjetas de perfiles, contenedores de chat y secciones internas para un contraste limpio.
 
 ### 3.2 Tipografía
-*   **Cuerpo y Datos (Plus Jakarta Sans):** Alta legibilidad en pantallas móviles para mensajería, métricas y contratos. Cifras tabulares en montos.
-*   **Títulos y Encabezados (Bricolage Grotesque):** Personalidad editorial para nombres de influencers, marcas y títulos de dashboards, sin perder seriedad en contratos.
+*   **Cuerpo y Datos (Helvetica Neue):** Alta legibilidad en pantallas móviles para mensajería, métricas y contratos. Cifras tabulares en montos.
+*   **Títulos y Encabezados (Helvetica Neue):** Una sola familia para toda la interfaz, con jerarquía de tamaños y pesos. Respaldo local: Helvetica, Arial, sans-serif. Cuerpo 16 px, datos y controles 14 px, metadatos 12 px y títulos de página adaptables de 24 a 30 px.
 
 ### 3.3 Reglas de uso (sistema de diseño)
 *   **Contraste AA:** el texto secundario usa `text-ink-muted` (no `text-navy/40`–`/70`). El coral solo marca (iconos, bordes, puntos); el texto de error usa `text-coral-text`. Los botones destructivos usan `bg-danger`. Los bordes de controles usan `border-border-strong`.

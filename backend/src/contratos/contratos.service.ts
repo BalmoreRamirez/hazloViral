@@ -1,3 +1,4 @@
+import { protectInfluencerContact } from '../common/privacy/influencer-privacy';
 import {
   BadRequestException,
   ForbiddenException,
@@ -118,7 +119,7 @@ export class ContratosService {
 
       this.chatGateway.server
         .to(`chat-${message.chat_id}`)
-        .emit('contract_created', { contrato: saved });
+        .emit('contract_created', { contrato: protectInfluencerContact(saved) });
 
       return saved;
     });
@@ -188,7 +189,7 @@ export class ContratosService {
       this.chatGateway.server
         .to(`chat-${original.chat_id}`)
         .emit('proposal_countered', {
-          message: saved,
+          message: protectInfluencerContact(saved),
           original_message_id: original.id,
         });
 

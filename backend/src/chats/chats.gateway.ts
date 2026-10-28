@@ -1,3 +1,4 @@
+import { protectInfluencerContact } from '../common/privacy/influencer-privacy';
 import {
   ConnectedSocket,
   MessageBody,
@@ -134,7 +135,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!message) return;
 
       // Emitir a todos en la sala, incluido el remitente
-      this.server.to(`chat-${dto.chat_id}`).emit('new_message', message);
+      this.server.to(`chat-${dto.chat_id}`).emit('new_message', protectInfluencerContact(message));
       for (const userId of await this.chatsService.participantUserIds(dto.chat_id)) {
         this.server.to(`user-${userId}`).emit('unread_changed');
       }

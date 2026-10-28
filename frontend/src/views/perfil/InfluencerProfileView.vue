@@ -218,7 +218,7 @@ const { start: startProfileGuide, active: guideActive, error: guideError } = use
     <div class="space-y-5 pb-8">
 
       <header class="flex flex-wrap items-center justify-between gap-4">
-        <div><h1 class="font-display text-2xl sm:text-3xl font-bold text-navy">Mi perfil</h1><p class="text-sm text-ink-muted mt-2">Presenta tu talento, verifica tus redes y prepara tu cuenta para recibir pagos.</p></div>
+        <div><h1 class="page-title font-display font-bold text-navy">Mi perfil</h1><p class="text-sm text-ink-muted mt-2">Presenta tu talento, verifica tus redes y prepara tu cuenta para recibir pagos.</p></div>
         <div class="flex flex-wrap gap-2">
           <RouterLink v-if="esData && !loadError" :to="viewPath(`/influencers/${esData.id}`)" class="btn-secondary inline-flex items-center gap-2"><i class="pi pi-eye" aria-hidden="true" />Ver perfil público</RouterLink>
           <button v-if="!editing" type="button" @click="startEdit" :disabled="store.loading || !!loadError" class="btn-primary inline-flex items-center gap-2"><i class="pi pi-pencil" aria-hidden="true" />Editar perfil</button>
@@ -512,9 +512,9 @@ const { start: startProfileGuide, active: guideActive, error: guideError } = use
               <div class="flex items-center gap-1.5 mb-0.5">
                 <p class="font-bold text-navy text-sm">{{ m.red_social }}</p>
                 <span v-if="m.is_verified"
-                  class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-violet text-white text-[9px] font-bold"
+                  class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-violet text-white text-xs font-bold"
                   title="Verificado">✓</span>
-                <span v-else class="text-[10px] text-ink-muted bg-navy/5 px-1.5 py-0.5 rounded">sin verificar</span>
+                <span v-else class="text-xs text-ink-muted bg-navy/5 px-1.5 py-0.5 rounded">sin verificar</span>
               </div>
 
               <p class="text-xs text-ink-muted mb-1.5">@{{ m.username }}</p>
@@ -529,7 +529,7 @@ const { start: startProfileGuide, active: guideActive, error: guideError } = use
                 </span>
               </div>
 
-              <p v-if="m.verified_at" class="text-[10px] text-ink-muted mt-1">
+              <p v-if="m.verified_at" class="text-xs text-ink-muted mt-1">
                 Verificado {{ formatDate(m.verified_at) }}
               </p>
             </div>

@@ -102,7 +102,7 @@ const readyCount = computed(() => readiness.value.filter(item => item.done).leng
       <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p class="text-xs font-semibold uppercase tracking-wider text-ink-muted">{{ isEmpresa ? 'Espacio de marca' : auth.isInfluencer ? 'Espacio de creador' : 'Administración' }}</p>
-          <h1 class="text-2xl sm:text-3xl font-display font-bold text-navy mt-1">Hola, {{ name || 'bienvenido' }}</h1>
+          <h1 class="page-title font-display font-bold text-navy mt-1">Hola, {{ name || 'bienvenido' }}</h1>
           <p class="text-sm text-ink-muted mt-2">{{ formatDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }} · Tu actividad, en un solo lugar.</p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -176,7 +176,7 @@ const readyCount = computed(() => readiness.value.filter(item => item.done).leng
                   <RouterLink :to="viewPath(`/contratos/${contract.id}`)" class="flex flex-wrap sm:flex-nowrap items-center gap-3 px-5 sm:px-6 py-4 ui-hover focus-visible:outline-2 focus-visible:outline-violet">
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate text-navy text-xs font-bold shrink-0">#{{ contract.id }}</span>
                     <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-navy break-words">{{ counterpart(contract) }}</p><p class="text-xs text-ink-muted mt-1">{{ formatDate(contract.created_at) }}</p></div>
-                    <div class="text-right"><p class="text-sm font-semibold text-navy tabular-nums">{{ formatUsd(isEmpresa ? contract.monto_total : Number(contract.monto_total) - Number(contract.comision_plataforma)) }}</p><p v-if="!isEmpresa" class="text-[11px] text-ink-muted">Neto del contrato</p></div>
+                    <div class="text-right"><p class="text-sm font-semibold text-navy tabular-nums">{{ formatUsd(isEmpresa ? contract.monto_total : Number(contract.monto_total) - Number(contract.comision_plataforma)) }}</p><p v-if="!isEmpresa" class="text-xs text-ink-muted">Neto del contrato</p></div>
                     <span :class="statuses[contract.status]?.cls ?? 'badge-muted'">{{ statuses[contract.status]?.label ?? contract.status }}</span>
                     <i class="pi pi-angle-right text-ink-muted hidden sm:block" aria-hidden="true" />
                   </RouterLink>

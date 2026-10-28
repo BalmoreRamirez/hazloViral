@@ -193,7 +193,7 @@ export class UploadsController {
       .where('receipt.id = :id', { id: dte.payment_receipt_id })
       .andWhere('(empresa.user_id = :userId OR influencer.user_id = :userId)', { userId: user.id })
       .getOne();
-    if (!ownedReceipt) throw new NotFoundException('DTE no encontrado');
+    if (!ownedReceipt || (user.role === 'empresa' && ownedReceipt.operation_type === 'influencer_payout')) throw new NotFoundException('DTE no encontrado');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');

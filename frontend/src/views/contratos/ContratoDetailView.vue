@@ -339,7 +339,7 @@ const TIPO_ICON: Record<string, string> = {
           <button @click="router.push(viewPath('/contratos'))" class="text-ink-muted ui-hover text-lg mt-0.5">←</button>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <h1 class="text-2xl font-display font-bold text-navy">Contrato</h1>
+              <h1 class="page-title font-display font-bold text-navy">Contrato</h1>
               <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold" :class="{
                 'bg-warning-tint text-warning':  ['pending_payment','incumplimiento'].includes(contrato.status),
                 'bg-blue-100 text-blue-700':    ['funded_in_escrow','under_review','changes_requested','pending_publication','publication_review'].includes(contrato.status),

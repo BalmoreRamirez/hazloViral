@@ -54,8 +54,16 @@
   --color-warning-tint:   #FEF3C7;
 
   /* Tipografía — ver sistema de diseño ("Decisiones de marca") */
-  --font-body:    'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  --font-display: 'Bricolage Grotesque', 'Lexend', system-ui, sans-serif;
+  --font-body:    'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-display: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  /* Escala compartida: datos compactos, cuerpo legible y títulos moderados. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
 
   /* Sombras */
   --shadow-card:       0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06);
@@ -70,6 +78,8 @@
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     scroll-behavior: smooth;
+    font-size: 100%;
+    line-height: 1.5;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -87,6 +97,10 @@
 
   body { @apply bg-slate text-navy; margin: 0; }
   #app { min-height: 100vh; }
+  body, button, input, textarea, select { font-family: var(--font-body); }
+  h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
+  p { overflow-wrap: break-word; }
+
 
   ::-webkit-scrollbar       { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -95,6 +109,20 @@
 
 /* ─── Componentes ────────────────────────────────────────────────────────── */
 @layer components {
+
+  .page-title {
+    font-family: var(--font-body);
+    font-size: clamp(1.5rem, 1.15rem + 1vw, 1.875rem);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+  }
+  .data-table { font-size: 0.875rem; line-height: 1.5; }
+  .data-table thead { font-size: 0.75rem; line-height: 1.4; letter-spacing: 0.025em; }
+  .data-table th, .data-table td { vertical-align: middle; }
+  .data-table td { overflow-wrap: anywhere; }
+  .btn-primary, .btn-secondary, .btn-ghost, .btn-danger { min-height: 2.5rem; }
+  .input { min-height: 2.75rem; }
 
   /* Foco visible y sólido en todo control (2px violeta, separado 2px) */
   .btn-primary, .btn-secondary, .btn-danger, .btn-ghost {
@@ -225,5 +253,15 @@
   .btn-danger:disabled:hover { background-color: var(--color-danger); }
   @media (prefers-reduced-motion: reduce) {
     .ui-hover, .ui-hover-card, .ui-hover-inverse, .ui-hover-danger, .ui-hover-link { transition: none; }
+  }
+}
+
+/* Después de las utilidades: campos legibles incluso con text-sm explícito. */
+@layer utilities {
+  @media (max-width: 639px) {
+    :is(input.input, textarea.input, select.input, input.p-inputtext, textarea.p-textarea, .p-select) {
+      font-size: 1rem;
+      line-height: 1.5;
+    }
   }
 }

@@ -56,7 +56,7 @@ const ROLE_BADGE: Record<string, string> = { admin: 'bg-violet/20 text-violet', 
     <div class="space-y-8">
       <!-- Header -->
       <div>
-        <h1 class="text-2xl font-display font-bold text-navy">Panel de Administración</h1>
+        <h1 class="page-title font-display font-bold text-navy">Panel de Administración</h1>
         <p class="text-ink-muted text-sm mt-1">Control global de la plataforma InfluSmart</p>
       </div>
 

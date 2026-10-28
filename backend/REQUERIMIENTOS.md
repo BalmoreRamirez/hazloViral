@@ -13,9 +13,9 @@ Inventario inicial basado en la especificación y la estructura del código. Tod
 | ID | Requerimiento | Criterios de aceptación | Estado | Código de referencia | Dependencias |
 | --- | --- | --- | --- | --- | --- |
 | BE-001 | Autenticación y autorización | Registrar empresas e influencers, autenticar con JWT, verificar correo y recuperar contraseña; rechazar acciones sin permisos y exigir tutor a menores según especificación. | Por validar | `src/auth/; src/users/; src/common/guards/` | FE-001 |
-| BE-002 | Perfiles y verificación social | Persistir perfiles y datos bancarios, permitir búsqueda y verificar redes sociales; restringir contratación según reglas de verificación. | Por validar | `src/empresas/; src/influencers/` | FE-002, FE-009 |
+| BE-002 | Perfiles y verificación social | Restringir respuestas a empresa a campos públicos del influencer mediante listas permitidas, sin correo, usuarios de redes, dirección, identificación, banco ni tutor; preservar datos propios y acceso administrativo. Persistir perfiles y datos bancarios, permitir búsqueda y verificar redes sociales; restringir contratación según reglas de verificación. | Por validar | `src/empresas/; src/influencers/` | FE-002, FE-009 |
 | BE-003 | Créditos | Otorgar bono de bienvenida de $10 al finalizar onboarding, cobrar apertura configurable y aplicar umbral mínimo de $5; evitar cargos duplicados o saldos inconsistentes. | Por validar | `src/credits/; src/chats/` | FE-003 |
-| BE-004 | Mensajería y notificaciones | Autorizar acceso a conversaciones y eventos WebSocket; contar mensajes recibidos sin leer solo en conversaciones propias, validar participación al marcar lectura y avisar por sala privada al recibir mensajes; rechazar escritura con saldo insuficiente y notificar cambios de estado a participantes. | Por validar | `src/chats/; src/notifications/` | FE-003 |
+| BE-004 | Mensajería y notificaciones | Evitar exposición de contacto del influencer en HTTP y WebSocket, bloquear contacto reconocible en mensajes nuevos y ocultarlo en históricos; denegar a empresa el DTE del pago al influencer, sin modificar el documento original. Autorizar acceso a conversaciones y eventos WebSocket; contar mensajes recibidos sin leer solo en conversaciones propias, validar participación al marcar lectura y avisar por sala privada al recibir mensajes; rechazar escritura con saldo insuficiente y notificar cambios de estado a participantes. | Por validar | `src/chats/; src/notifications/` | FE-003 |
 | BE-005 | Propuestas y briefs | Persistir propuestas, rechazos y contraofertas; crear contrato una sola vez al aceptar y conservar términos y PDF acordados. | Por validar | `src/campaigns/; src/chats/; src/contratos/` | FE-004 |
 | BE-006 | Ciclo de contratos | Validar actores y transiciones desde pending_payment hasta completed o incumplimiento; limitar cambios a tres rondas y auditar entregables, publicaciones y pagos. | Por validar | `src/contratos/` | FE-005 |
 | BE-007 | Integración Wompi | Procesar recargas, fondeo y dispersiones; verificar firma SHA256 de webhooks, manejar reintentos sin duplicar movimientos y separar configuración sandbox/producción. | Por validar | `src/wompi/; src/credits/; src/contratos/` | FE-006 |
@@ -43,3 +43,7 @@ Inventario inicial basado en la especificación y la estructura del código. Tod
 - Dependencias e impacto en la otra área:
 - Responsable:
 - Evidencia de validación / commit / PR:
+
+## Separación de historiales para empresa (2026-10-28)
+
+GET /receipts restringe el listado de empresa a influencer_payout; GET /receipts/top-ups admite solo empresa y restringe a credits_top_up. Ambas consultas filtran por la empresa del usuario autenticado, sin aceptar un ID de propietario enviado por el cliente. Las recargas conservan su detalle y reenvío de factura con validación de propiedad.

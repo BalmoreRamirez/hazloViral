@@ -39,7 +39,7 @@ async function openChat() {
   <AppLayout>
     <div class="space-y-5">
       <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-display font-bold text-navy">Mis Chats</h1>
+        <h1 class="page-title font-display font-bold text-navy">Mis Chats</h1>
       </div>
 
       <!-- Abrir nuevo chat (empresa) -->

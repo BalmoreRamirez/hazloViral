@@ -34,3 +34,28 @@ describe('Correo de factura de recarga', () => {
     expect(notifications.sendCreditsTopUpReceipt).not.toHaveBeenCalled();
   });
 });
+
+describe('Historiales separados para empresa', () => {
+  function setup(company: any = { id: 42 }) {
+    const receipts = { find: jest.fn().mockResolvedValue([]) };
+    const companies = { findOne: jest.fn().mockResolvedValue(company) };
+    const service = new ReceiptsService(receipts as any, companies as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    return { service, receipts, companies };
+  }
+  it('limita el historial de pagos a pagos al influencer de la empresa autenticada', async () => {
+    const { service, receipts, companies } = setup();
+    await service.listForUser({ id: 7, role: 'empresa' } as any);
+    expect(companies.findOne).toHaveBeenCalledWith({ where: { user_id: 7 } });
+    expect(receipts.find).toHaveBeenCalledWith({ where: { empresa_id: 42, operation_type: 'influencer_payout' }, order: { created_at: 'DESC' } });
+  });
+  it('limita el historial de recargas a recargas propias', async () => {
+    const { service, receipts } = setup();
+    await service.listForUser({ id: 7, role: 'empresa' } as any, 'top-ups');
+    expect(receipts.find).toHaveBeenCalledWith({ where: { empresa_id: 42, operation_type: 'credits_top_up' }, order: { created_at: 'DESC' } });
+  });
+  it('rechaza consultas sin perfil de empresa', async () => {
+    const { service, receipts } = setup(null);
+    await expect(service.listForUser({ id: 7, role: 'empresa' } as any)).rejects.toThrow('Perfil de empresa no encontrado.');
+    expect(receipts.find).not.toHaveBeenCalled();
+  });
+});

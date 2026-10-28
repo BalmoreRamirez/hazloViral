@@ -87,7 +87,7 @@ function neto(c: any) {
   <AppLayout>
     <div class="space-y-5">
       <div>
-        <h1 class="text-2xl font-display font-bold text-navy">Mis Contratos</h1>
+        <h1 class="page-title font-display font-bold text-navy">Mis Contratos</h1>
         <p class="text-ink-muted text-sm mt-1">{{ contractsStore.contracts.length }} contrato{{ contractsStore.contracts.length !== 1 ? 's' : '' }}</p>
       </div>
 
@@ -121,7 +121,7 @@ function neto(c: any) {
 
       <div v-else class="card p-0 overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[1200px] table-fixed text-sm text-left">
+          <table class="data-table w-full min-w-[1200px] table-fixed text-sm text-left">
             <caption class="sr-only">Listado de contratos</caption>
             <colgroup>
               <col style="width: 8%" />
@@ -142,8 +142,8 @@ function neto(c: any) {
                 <th scope="col" class="px-3 xl:px-4 py-3">{{ isEmpresa ? 'Influencer' : 'Empresa' }}</th>
                 <th scope="col" class="px-3 xl:px-4 py-3">Plataformas</th>
                 <th scope="col" class="px-3 xl:px-4 py-3">Estado</th>
-                <th scope="col" class="px-3 xl:px-4 py-3 text-right whitespace-nowrap">Monto total <span class="block text-[10px] font-normal mt-1">USD</span></th>
-                <th scope="col" class="px-3 xl:px-4 py-3 text-right">{{ isEmpresa ? 'Comisión' : 'Recibes (neto)' }} <span class="block text-[10px] font-normal mt-1">USD</span></th>
+                <th scope="col" class="px-3 xl:px-4 py-3 text-right whitespace-nowrap">Monto total <span class="block text-xs font-normal mt-1">USD</span></th>
+                <th scope="col" class="px-3 xl:px-4 py-3 text-right">{{ isEmpresa ? 'Comisión' : 'Recibes (neto)' }} <span class="block text-xs font-normal mt-1">USD</span></th>
                 <th scope="col" class="px-3 xl:px-4 py-3">Fecha límite</th>
                 <th v-if="isEmpresa" scope="col" class="px-3 xl:px-4 py-3">Pago</th>
                 <th scope="col" class="px-3 xl:px-4 py-3 text-center"><span class="sr-only">Acciones</span></th>
@@ -151,12 +151,12 @@ function neto(c: any) {
             </thead>
             <tbody class="divide-y divide-border">
               <tr v-for="c in contractsStore.contracts" :key="c.id" class="align-middle ui-hover">
-                <th scope="row" class="px-3 xl:px-4 py-5 font-semibold text-navy">
+                <th scope="row" class="px-3 xl:px-4 py-4 font-semibold text-navy">
                   <p>Contrato #{{ c.id }}</p>
                 </th>
-                <td class="px-3 xl:px-4 py-5 text-ink-muted whitespace-nowrap">{{ c.created_at ? formatDate(c.created_at) : 'Sin definir' }}</td>
-                <td class="px-3 xl:px-4 py-5 text-navy"><span class="block break-words">{{ counterpartName(c) }}</span></td>
-                <td class="px-3 xl:px-4 py-5">
+                <td class="px-3 xl:px-4 py-4 text-ink-muted whitespace-nowrap">{{ c.created_at ? formatDate(c.created_at) : 'Sin definir' }}</td>
+                <td class="px-3 xl:px-4 py-4 text-navy"><span class="block break-words">{{ counterpartName(c) }}</span></td>
+                <td class="px-3 xl:px-4 py-4">
                   <div v-if="c.entregables?.length" class="flex flex-col gap-2">
                     <span v-for="(e, i) in c.entregables" :key="i" class="inline-flex items-center gap-1 text-xs font-normal text-ink-muted">
                       <i :class="['pi', REDES_ICON[e.tipo] ?? 'pi-box']" aria-hidden="true" />{{ e.tipo }}
@@ -164,7 +164,7 @@ function neto(c: any) {
                   </div>
                   <span v-else class="text-ink-muted">—</span>
                 </td>
-                <td class="px-3 xl:px-4 py-5">
+                <td class="px-3 xl:px-4 py-4">
                   <span :class="[STATUS_LABEL[c.status]?.cls ?? 'badge-muted', 'inline-flex items-center gap-1.5']">
                     <i v-if="STATUS_LABEL[c.status]" :class="['pi', STATUS_LABEL[c.status]?.icon]" aria-hidden="true" />
                     {{ STATUS_LABEL[c.status]?.label ?? c.status }}
@@ -173,12 +173,12 @@ function neto(c: any) {
                   <p v-else-if="c.status === 'funded_in_escrow' && !isEmpresa" class="text-xs text-violet mt-2">Entrega tus archivos</p>
                   <p v-else-if="c.status === 'under_review' && isEmpresa" class="text-xs text-violet mt-2">Revisa los entregables</p>
                 </td>
-                <td class="px-3 xl:px-4 py-5 font-semibold text-navy whitespace-nowrap text-right tabular-nums">{{ formatUsd(c.monto_total) }}</td>
-                <td class="px-3 xl:px-4 py-5 font-semibold whitespace-nowrap text-right tabular-nums" :class="isEmpresa ? 'text-navy' : 'text-success'">
+                <td class="px-3 xl:px-4 py-4 font-semibold text-navy whitespace-nowrap text-right tabular-nums">{{ formatUsd(c.monto_total) }}</td>
+                <td class="px-3 xl:px-4 py-4 font-semibold whitespace-nowrap text-right tabular-nums" :class="isEmpresa ? 'text-navy' : 'text-success'">
                   {{ formatUsd(isEmpresa ? c.comision_plataforma : neto(c)) }}
                 </td>
-                <td class="px-3 xl:px-4 py-5 text-ink-muted whitespace-nowrap">{{ c.fecha_limite_entrega ? formatDate(c.fecha_limite_entrega) : 'Sin definir' }}</td>
-                <td v-if="isEmpresa" class="px-3 xl:px-4 py-5">
+                <td class="px-3 xl:px-4 py-4 text-ink-muted whitespace-nowrap">{{ c.fecha_limite_entrega ? formatDate(c.fecha_limite_entrega) : 'Sin definir' }}</td>
+                <td v-if="isEmpresa" class="px-3 xl:px-4 py-4">
                   <span :class="[paymentStatus(c).cls, 'inline-flex items-center gap-1.5']">
                     <i :class="['pi', paymentStatus(c).icon]" aria-hidden="true" />{{ paymentStatus(c).label }}
                   </span>
@@ -187,7 +187,7 @@ function neto(c: any) {
                   </p>
                   <p v-else-if="paymentState(c) === 'paid' && c.stripe_transfer_id" class="text-xs text-success mt-2 break-words [overflow-wrap:anywhere]">{{ c.stripe_transfer_id }}</p>
                 </td>
-                <td class="px-3 xl:px-4 py-5 text-center">
+                <td class="px-3 xl:px-4 py-4 text-center">
                   <RouterLink :to="viewPath(`/contratos/${c.id}`)" v-tooltip.top="'Ver detalle'"
                     :aria-label="`Ver detalle del contrato #${c.id}`"
                     class="btn-ghost inline-flex items-center justify-center w-9 h-9 rounded-full text-violet">

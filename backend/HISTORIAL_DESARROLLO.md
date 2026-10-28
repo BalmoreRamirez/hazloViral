@@ -4,6 +4,26 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Corregir backend antiguo tras recompilación en Docker
+
+- Problema: proceso anterior mantenía ocupado el puerto 3009; la nueva instancia fallaba con EADDRINUSE y se servían rutas antiguas (404 en unread-count y 400 al interpretar top-ups como ID numérico).
+- Causa: Nest CLI requiere ps para cerrar los procesos hijos en Linux; node:22-slim no incluye esa herramienta.
+- Cambio: instalar procps en Dockerfile y reconstruir/recrear el servicio backend.
+- Validación: consultas autenticadas como empresa a unread-count, top-ups y receipts devuelven HTTP 200; recargas y pagos siguen separados por tipo y propietario. Recompilación automática verificada con cambio temporal y restauración: reemplaza el proceso anterior sin dejar el puerto ocupado.
+
+## 2026-10-28 — Separar pagos a influencers y recargas de empresa
+
+- Requerimientos: FE-010, FE-016, BE-009.
+- Cambio: GET /receipts para empresa devuelve únicamente influencer_payout de su propia cuenta. GET /receipts/top-ups, exclusivo de empresa, devuelve solo credits_top_up de esa empresa. El detalle individual y el reenvío de factura conservan la validación de propiedad.
+- Validación: compilaciones de backend y frontend y seis pruebas del servicio de comprobantes aprobadas, incluidas consultas por operación y propietario y rechazo sin perfil.
+
+## 2026-10-28 — Privacidad del contacto del influencer frente a empresa
+
+- Requerimientos: FE-002, FE-003, BE-002, BE-004.
+- Cambio: Interceptor HTTP para respuestas a empresa con listas explícitas de campos públicos en perfiles y métricas; elimina correo, identificadores de redes, domicilio, identificación, banco y tutor, incluidas relaciones anidadas de chats y contratos. WebSocket entrega remitentes sin correo ni identificadores de pagos. Bloquea contacto reconocible en nuevos mensajes de texto y oculta patrones en textos históricos. Oculta snapshot y enlace DTE del pago al influencer y deniega su descarga a empresa; no altera documentos originales ni datos guardados.
+- Validación: compilación de backend y frontend y 55 pruebas de backend aprobadas, incluidas 14 de privacidad (anidación, campos futuros, roles, mensajes, snapshots y patrones de contacto).
+- Alcance: no inspecciona contenido de imágenes/PDF, ni garantiza detectar contactos disimulados o impedir búsquedas externas por nombre artístico. Ver docs/PRIVACIDAD_INFLUENCER.md.
+
 ## 2026-10-28 — Contador seguro de mensajes sin leer
 
 - Requerimientos: FE-003, BE-004.

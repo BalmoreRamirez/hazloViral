@@ -4,6 +4,27 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Separar pagos a influencers y recargas de empresa
+
+- Requerimientos: FE-010, FE-016, BE-009.
+- Cambio: Historial de pagos de empresa muestra solo pagos al influencer y calcula el total sobre esos pagos; no ofrece el filtro de operaciones ajenas a esa vista. Recargar saldo consulta el endpoint exclusivo de recargas, conservando historial, PDF y reenvío de factura.
+- Validación: compilaciones de backend y frontend y seis pruebas del servicio de comprobantes aprobadas, incluidas consultas por operación y propietario y rechazo sin perfil.
+
+## 2026-10-28 — Privacidad del contacto del influencer frente a empresa
+
+- Requerimientos: FE-002, FE-003, BE-002, BE-004.
+- Cambio: Buscador y perfil público muestran plataformas, seguidores y engagement sin usuarios de redes cuando el servidor restringe esos datos; no quedan separadores ni arrobas vacías. La protección principal se aplica en backend, no solo en presentación.
+- Validación: compilación de backend y frontend y 55 pruebas de backend aprobadas, incluidas 14 de privacidad (anidación, campos futuros, roles, mensajes, snapshots y patrones de contacto).
+- Alcance: no inspecciona contenido de imágenes/PDF, ni garantiza detectar contactos disimulados o impedir búsquedas externas por nombre artístico. Ver docs/PRIVACIDAD_INFLUENCER.md.
+
+## 2026-10-28 — Tipografía y densidad unificadas
+
+- Requerimiento: FE-008.
+- Cambio: Helvetica Neue para cuerpo, títulos, controles y guía; respaldos Helvetica y Arial sin descargas de fuentes externas. Configuración Tailwind y especificación sincronizadas.
+- Vistas: títulos compartidos en inicio, perfiles propios y públicos, buscador, chats, briefs, contratos, pagos, recargas, administración y registro. Autenticación conserva su marca y hereda la misma familia.
+- Densidad: cuerpo 16 px / 1.5, datos 14 px / 1.5, metadatos desde 12 px, títulos adaptables 24–30 px. Tablas con estilo común y contratos con separación vertical reducida a 16 px. Botones compartidos de al menos 40 px y campos de 44 px; texto de campos móviles a 16 px.
+- Validación: compilación y tipos de frontend, pruebas existentes y revisión estática de referencias tipográficas. Pendiente revisión visual en navegador en distintos sistemas: Helvetica Neue depende de su disponibilidad local.
+
 ## 2026-10-28 — Rol visible junto a Mi cuenta
 
 - Requerimiento: FE-017.

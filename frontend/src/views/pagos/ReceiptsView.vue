@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import { computed, onMounted, ref } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import { useReceiptsStore } from '@/stores/receipts'
@@ -8,6 +9,8 @@ import { receiptsApi } from '@/api/receipts'
 import { formatUsd, parseMoney } from '@/utils/money'
 
 const store = useReceiptsStore()
+const auth = useAuthStore()
+const isEmpresa = computed(() => auth.isEmpresa)
 
 const labels: Record<string, string> = {
   credits_top_up: 'Recarga de créditos',
@@ -26,6 +29,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-CA', {
 const sortedReceipts = computed(() => {
   if (invalidDateRange.value) return []
   return store.receipts.filter((receipt) => {
+    if (isEmpresa.value && receipt.operation_type !== 'influencer_payout') return false
     if (operationType.value && receipt.operation_type !== operationType.value) return false
     const parts = dateFormatter.formatToParts(new Date(receipt.created_at))
     const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]))
@@ -76,12 +80,12 @@ onMounted(() => store.fetchReceipts())
   <AppLayout>
     <div class="space-y-5">
       <div>
-        <h1 class="text-2xl font-display font-bold text-navy">Historial de pagos</h1>
-        <p class="text-ink-muted text-sm mt-1">Comprobantes internos de operaciones. No son DTE fiscales.</p>
+        <h1 class="page-title font-display font-bold text-navy">Historial de pagos</h1>
+        <p class="text-ink-muted text-sm mt-1">{{ isEmpresa ? 'Pagos realizados a influencers. Consulta tus recargas en Recargar saldo.' : 'Comprobantes internos de operaciones. No son DTE fiscales.' }}</p>
       </div>
 
       <section class="card space-y-4" aria-label="Filtros del historial de pagos">
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+        <div class="grid gap-4 sm:grid-cols-2 items-end" :class="isEmpresa ? 'lg:grid-cols-3' : 'lg:grid-cols-4'">
           <div>
             <label for="payment-start-date" class="label">Desde</label>
             <input id="payment-start-date" v-model="startDate" type="date" class="input" :max="endDate || undefined"
@@ -92,7 +96,7 @@ onMounted(() => store.fetchReceipts())
             <input id="payment-end-date" v-model="endDate" type="date" class="input" :min="startDate || undefined"
               :aria-invalid="invalidDateRange" :aria-describedby="invalidDateRange ? 'payment-date-error' : undefined" />
           </div>
-          <div>
+          <div v-if="!isEmpresa">
             <label for="payment-operation" class="label">Tipo de operación</label>
             <select id="payment-operation" v-model="operationType" class="input">
               <option value="">Todas las operaciones</option>
@@ -122,7 +126,7 @@ onMounted(() => store.fetchReceipts())
       </div>
       <div v-else class="card p-0 overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[760px] text-sm">
+          <table class="data-table w-full min-w-[760px] text-sm">
             <thead class="bg-slate border-b border-border-strong">
               <tr class="text-left text-xs uppercase tracking-wide text-ink-muted">
                 <th class="px-4 py-3 font-semibold">Operación</th>

@@ -46,6 +46,7 @@ function normalizeReceipt(receipt: PaymentReceipt): PaymentReceipt {
 
 export const receiptsApi = {
   sendInvoice: (id: number) => api.post<{ sent: boolean }>(`/receipts/${id}/send-invoice`).then(r => r.data),
+  listTopUps: () => api.get<PaymentReceipt[]>('/receipts/top-ups').then(r => r.data.map(normalizeReceipt)),
   list: () => api.get<PaymentReceipt[]>('/receipts').then((r) => r.data.map(normalizeReceipt)),
   get: (id: number) => api.get<PaymentReceipt>(`/receipts/${id}`).then((r) => normalizeReceipt(r.data)),
   downloadDte: async (url: string): Promise<Blob> => {

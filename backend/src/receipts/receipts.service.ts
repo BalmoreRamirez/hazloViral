@@ -199,11 +199,11 @@ export class ReceiptsService {
     return receipt;
   }
 
-  async listForUser(user: User): Promise<PaymentReceipt[]> {
+  async listForUser(user: User, scope: 'payments' | 'top-ups' = 'payments'): Promise<PaymentReceipt[]> {
     if (user.role === 'empresa') {
       const empresa = await this.empresasRepo.findOne({ where: { user_id: user.id } });
       if (!empresa) throw new NotFoundException('Perfil de empresa no encontrado.');
-      return this.withDteData(await this.receiptsRepo.find({ where: { empresa_id: empresa.id }, order: { created_at: 'DESC' } }));
+      return this.withDteData(await this.receiptsRepo.find({ where: { empresa_id: empresa.id, operation_type: scope === 'top-ups' ? 'credits_top_up' : 'influencer_payout' }, order: { created_at: 'DESC' } }));
     }
     if (user.role === 'influencer') {
       const influencer = await this.influencersRepo.findOne({ where: { user_id: user.id } });
