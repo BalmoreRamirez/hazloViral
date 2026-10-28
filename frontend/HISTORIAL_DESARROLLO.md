@@ -4,6 +4,24 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Rol visible junto a Mi cuenta
+
+- Requerimiento: FE-017.
+- Corrección de alcance: mostrar Empresa, Influencer o Administrador debajo de Mi cuenta según el rol autenticado. Se retira el acceso adicional al perfil del menú principal incorporado al interpretar la solicitud anterior.
+- Validación: comprobación de tipos de frontend y diferencias sin errores de formato.
+
+## 2026-10-28 — Mi perfil visible en el menú
+
+- Requerimiento: FE-017.
+- Cambio: acceso directo Mi perfil con icono de usuario en el menú principal de empresa e influencer, tanto en escritorio como en móvil. Respeta rutas por rol, hover compartido y estado activo.
+- Validación: compilación y comprobación de tipos de frontend.
+
+## 2026-10-28 — Indicador de mensajes pendientes
+
+- Requerimientos: FE-003, BE-004.
+- Cambio: Icono de sobre junto a Mi cuenta para empresa e influencer, contador de mensajes sin leer (99+), enlace a Chats, etiqueta accesible y hover del sistema. Consulta inicial, actualización por WebSocket y reconciliación cada 15 segundos en pestañas visibles; limpieza de listeners al desmontar. Una conversación abierta y visible marca los mensajes recibidos como leídos.
+- Validación: compilación de backend y frontend, comprobación de tipos y tres pruebas unitarias de conteo, exclusión de mensajes propios y aislamiento por rol.
+
 ## 2026-10-28 — Estándar global de hover
 
 - Requerimiento: FE-008.

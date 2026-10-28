@@ -96,6 +96,26 @@ export class ChatsService {
     return chats.map((c) => Object.assign(c, { empresa: toPublicEmpresa(c.empresa) as any }));
   }
 
+  async unreadCount(user: User) {
+    const query = this.messagesRepo.createQueryBuilder('message')
+      .innerJoin('message.chat', 'chat')
+      .innerJoin('chat.empresa', 'empresa')
+      .innerJoin('chat.influencer', 'influencer')
+      .where('message.read_at IS NULL')
+      .andWhere('message.sender_id != :userId', { userId: user.id });
+    if (user.role === UserRole.EMPRESA) query.andWhere('empresa.user_id = :userId');
+    else if (user.role === UserRole.INFLUENCER) query.andWhere('influencer.user_id = :userId');
+    else return { count: 0 };
+    return { count: await query.getCount() };
+  }
+
+  async participantUserIds(chatId: number) {
+    const chat = await this.chatsRepo.findOneOrFail({
+      where: { id: chatId }, relations: { empresa: true, influencer: true },
+    });
+    return [chat.empresa.user_id, chat.influencer.user_id];
+  }
+
   // ─── Historial de mensajes (paginado) ────────────────────────────────────────
   async getMessages(
     chatId: number,

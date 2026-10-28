@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
 import { authApi } from '@/api/auth'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useUnreadMessages } from '@/composables/useUnreadMessages'
 import AvatarUpload from '@/components/AvatarUpload.vue'
 
 const router       = useRouter()
@@ -21,6 +22,7 @@ function closeAccount() {
 const authStore    = useAuthStore()
 const creditsStore = useCreditsStore()
 
+const { unreadCount } = useUnreadMessages()
 const user           = computed(() => authStore.user)
 const balance        = computed(() => creditsStore.balance)
 const isLow          = computed(() => balance.value && !balance.value.is_above_threshold)
@@ -125,12 +127,23 @@ function logout() {
             <i class="pi pi-wallet" aria-hidden="true" />
             <span>${{ balance.balance_creditos.toFixed(2) }} <span class="hidden sm:inline">USD</span></span>
           </RouterLink>
+          <RouterLink v-if="user?.role === 'empresa' || user?.role === 'influencer'"
+            :to="viewPath('/chats')" class="relative inline-flex items-center justify-center w-10 h-10 rounded-lg ui-hover-inverse"
+            :aria-label="unreadCount ? `${unreadCount} mensajes sin leer. Abrir chats` : 'Mensajes. No tienes mensajes sin leer'"
+            :title="unreadCount ? `${unreadCount} mensajes sin leer` : 'Mensajes'">
+            <i class="pi pi-envelope text-xl" aria-hidden="true" />
+            <span v-if="unreadCount > 0" aria-hidden="true" class="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-danger text-white text-[10px] font-bold flex items-center justify-center border-2 border-navy">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+            <span class="sr-only" role="status" aria-live="polite">{{ unreadCount ? `${unreadCount} mensajes sin leer` : 'Sin mensajes pendientes' }}</span>
+          </RouterLink>
           <AvatarUpload :name="user?.email ?? ''" size="sm" />
           <div ref="accountMenu" class="relative" @keydown.esc.stop.prevent="closeAccount">
             <button ref="accountButton" id="account-toggle" type="button" :aria-expanded="accountOpen" aria-controls="account-panel"
               @click="accountOpen = !accountOpen"
               class="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 ui-hover-inverse focus-visible:outline-2 focus-visible:outline-white">
-              <span class="text-sm font-semibold whitespace-nowrap">Mi cuenta</span>
+              <span class="flex flex-col items-start whitespace-nowrap text-left leading-tight">
+                <span class="text-sm font-semibold">Mi cuenta</span>
+                <span class="text-xs text-white/80 mt-0.5">{{ roleLabel }}</span>
+              </span>
               <i class="pi pi-chevron-down text-xs" aria-hidden="true" />
             </button>
             <div v-if="accountOpen" id="account-panel" aria-labelledby="account-toggle" class="absolute right-0 top-full mt-2 z-50 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-white text-navy shadow-lg p-2">

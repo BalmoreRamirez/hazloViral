@@ -4,6 +4,12 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Contador seguro de mensajes sin leer
+
+- Requerimientos: FE-003, BE-004.
+- Cambio: GET /chats/unread-count cuenta solo mensajes recibidos sin read_at de conversaciones del usuario autenticado. POST /chats/:id/read valida participación antes de marcar lectura. Salas WebSocket privadas por usuario emiten unread_changed después de enviar un mensaje, sin publicar contenidos a otros usuarios.
+- Validación: compilación de backend y frontend, comprobación de tipos y tres pruebas unitarias de conteo, exclusión de mensajes propios y aislamiento por rol.
+
 ## 2026-10-28 — Fotos de perfil limitadas a JPG y PNG
 
 - Requerimiento: BE-008.

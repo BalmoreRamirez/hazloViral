@@ -37,6 +37,19 @@ export class ChatsController {
     return this.chatsService.listChats(user);
   }
 
+  @Get('unread-count')
+  @Roles(UserRole.EMPRESA, UserRole.INFLUENCER)
+  unreadCount(@GetUser() user: User) {
+    return this.chatsService.unreadCount(user);
+  }
+
+  @Post(':id/read')
+  @Roles(UserRole.EMPRESA, UserRole.INFLUENCER)
+  async markRead(@Param('id', ParseIntPipe) chatId: number, @GetUser() user: User) {
+    await this.chatsService.assertParticipant(chatId, user);
+    return this.chatsService.markMessagesRead(chatId, user.id);
+  }
+
   // GET /api/chats/:id/messages — historial paginado
   @Get(':id/messages')
   @Roles(UserRole.EMPRESA, UserRole.INFLUENCER)

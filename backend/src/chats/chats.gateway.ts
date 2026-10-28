@@ -55,6 +55,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.data.userId = payload.sub;
       socket.data.email = payload.email;
       socket.data.role = payload.role;
+      await socket.join(`user-${payload.sub}`);
 
       // Si es empresa, emitir estado de créditos inmediatamente
       if (payload.role === UserRole.EMPRESA) {
@@ -134,6 +135,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Emitir a todos en la sala, incluido el remitente
       this.server.to(`chat-${dto.chat_id}`).emit('new_message', message);
+      for (const userId of await this.chatsService.participantUserIds(dto.chat_id)) {
+        this.server.to(`user-${userId}`).emit('unread_changed');
+      }
+
 
       // Si es empresa, emitir estado actualizado de créditos
       if (socket.data.role === UserRole.EMPRESA) {
