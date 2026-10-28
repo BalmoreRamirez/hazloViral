@@ -4,6 +4,13 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Conteo de pendientes por conversación
+
+- Requerimiento: BE-015.
+- Cambio: `GET /chats` adjunta unread_count a cada chat mediante una consulta agrupada; solo cuenta mensajes sin read_at enviados por otra persona.
+- Seguridad: los chats se obtienen mediante el perfil asociado al usuario autenticado y el conteo no acepta un ID de propietario del cliente; se mantiene el saneamiento de datos públicos para marcas.
+- Validación: compilación de backend; no se ejecutaron pruebas automatizadas.
+
 ## 2026-10-28 — Endpoint seguro de sugerencias de influencer
 
 - Requerimiento: BE-014.

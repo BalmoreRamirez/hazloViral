@@ -6,7 +6,7 @@ import { connectSocket, getSocket } from '@/socket'
 import { useCreditsStore } from './credits'
 
 export interface ChatRoom {
-  id: number; empresa_id: number; influencer_id: number; status: string; created_at: string
+  id: number; empresa_id: number; influencer_id: number; status: string; created_at: string; unread_count?: number
   empresa?: any; influencer?: any
 }
 
