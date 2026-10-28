@@ -151,12 +151,12 @@ watch(balance, (b) => {
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <button v-for="pack in RECHARGE_PACKS" :key="pack" type="button" :aria-pressed="selectedPack === pack" :disabled="creditsStore.recharging" @click="selectedPack = pack"
                 class="py-4 rounded-xl text-lg font-semibold border transition-colors"
-                :class="selectedPack === pack ? 'bg-violet text-white border-violet' : 'border-navy/15 text-navy hover:border-violet/40'">
+                :class="selectedPack === pack ? 'bg-violet text-white border-violet' : 'border-navy/15 text-navy ui-hover'">
                 ${{ pack }}
               </button>
               <button type="button" :aria-pressed="selectedPack === 'custom'" :disabled="creditsStore.recharging" @click="selectedPack = 'custom'"
                 class="py-4 rounded-xl text-sm font-semibold border transition-colors"
-                :class="selectedPack === 'custom' ? 'bg-violet text-white border-violet' : 'border-navy/15 text-navy hover:border-violet/40'">
+                :class="selectedPack === 'custom' ? 'bg-violet text-white border-violet' : 'border-navy/15 text-navy ui-hover'">
                 Otro
               </button>
             </div>
@@ -228,7 +228,7 @@ watch(balance, (b) => {
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
-              <tr v-for="receipt in history" :key="receipt.id" class="hover:bg-slate/60">
+              <tr v-for="receipt in history" :key="receipt.id" class="ui-hover">
                 <td class="px-5 py-4 whitespace-nowrap text-ink-muted">{{ formatDateTime(receipt.created_at) }}<span v-if="receipt.metadata?.timestamp_approximate" class="block text-xs">Hora aproximada reportada</span></td>
                 <th scope="row" class="px-5 py-4 font-semibold text-navy">{{ receipt.receipt_number }}</th>
                 <td class="px-5 py-4 text-ink-muted break-all">{{ receipt.wompi_transaction_id ?? 'Sin referencia' }}</td>
@@ -266,7 +266,7 @@ watch(balance, (b) => {
                 <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"><i class="pi pi-wallet text-xl" aria-hidden="true" /></span>
                 <div><p class="text-xs uppercase tracking-wider text-white/60">InfluSmart</p><h2 id="dev-checkout-title" class="font-display text-xl font-bold">Checkout de desarrollo</h2></div>
               </div>
-              <button type="button" class="text-white/70 hover:text-white" aria-label="Cerrar" :disabled="creditsStore.recharging" @click="closeDevCheckout"><i class="pi pi-times" aria-hidden="true" /></button>
+              <button type="button" class="text-white/70 ui-hover-inverse" aria-label="Cerrar" :disabled="creditsStore.recharging" @click="closeDevCheckout"><i class="pi pi-times" aria-hidden="true" /></button>
             </div>
           </div>
           <div class="space-y-5 px-6 py-6">

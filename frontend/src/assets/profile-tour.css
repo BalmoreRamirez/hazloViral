@@ -1,0 +1,19 @@
+.profile-tour.introjs-tooltip {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  border-radius: 16px;
+  min-width: min(280px, calc(100vw - 32px));
+  max-width: min(380px, calc(100vw - 32px));
+  box-shadow: 0 12px 40px rgb(15 23 42 / 20%);
+}
+.profile-tour .introjs-tooltip-title { font-family: var(--font-display); font-size: 17px; }
+.profile-tour .introjs-tooltiptext { font-size: 14px; line-height: 1.65; }
+.profile-tour .introjs-button { font-family: inherit; text-shadow: none; border-radius: 8px; }
+.profile-tour .introjs-nextbutton { background: var(--color-violet); border-color: var(--color-violet); color: white; }
+.profile-tour .introjs-progressbar { background: var(--color-violet); }
+.profile-tour .introjs-skipbutton { color: var(--color-ink-muted); }
+.profile-tour .introjs-button:focus-visible,
+.profile-tour .introjs-skipbutton:focus-visible { outline: 2px solid var(--color-violet); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .introjs-overlay, .introjs-helperLayer, .introjs-tooltipReferenceLayer, .introjs-progressbar { transition: none !important; }
+}

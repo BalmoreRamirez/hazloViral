@@ -110,7 +110,7 @@
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2
            bg-violet-tint text-violet px-4 py-2 rounded-lg font-semibold text-sm
-           hover:bg-violet/20 transition-all duration-150
+           hover:bg-violet/20 hover:text-violet-dark transition-colors duration-150
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-danger {
@@ -122,7 +122,7 @@
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2
            border border-border-strong text-ink px-4 py-2 rounded-lg font-semibold text-sm
-           hover:bg-surface-sunken transition-all duration-150
+           hover:bg-violet-tint hover:text-violet-dark hover:border-violet transition-colors duration-150
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
@@ -131,7 +131,7 @@
     box-shadow: var(--shadow-card);
     transition: box-shadow 0.15s ease;
   }
-  .card:hover { box-shadow: var(--shadow-card-hover); }
+  /* Static cards do not imply a click action; interactive cards use ui-hover-card. */
 
   .label  { @apply text-sm font-medium text-ink-muted mb-1 block; }
   .section-title { @apply text-xs font-bold uppercase tracking-wider text-ink-muted mb-3; }
@@ -140,7 +140,7 @@
     @apply w-full bg-white border border-border-strong rounded-lg px-3 py-2
            text-sm text-ink placeholder:text-ink-muted/80
            outline-none transition-all duration-150
-           hover:border-ink-muted
+           hover:border-violet
            focus:border-violet focus:ring-2 focus:ring-violet/25
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
@@ -168,3 +168,62 @@
   .divider   { @apply w-full h-px bg-border my-4; }
 }
 
+
+/* Shared interaction language: violet surfaces, contrast and visible keyboard focus. */
+@layer utilities {
+  .ui-hover, .ui-hover-card, .ui-hover-inverse, .ui-hover-danger, .ui-hover-link {
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .ui-hover:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible),
+  .ui-hover-card:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible) {
+    background-color: var(--color-violet-tint);
+    color: var(--color-violet-dark);
+    border-color: var(--color-violet);
+    box-shadow: inset 0 0 0 1px var(--color-violet-light);
+  }
+  .ui-hover-card:not(:disabled):is(:hover, :focus-visible) {
+    box-shadow: inset 0 0 0 1px var(--color-violet-light), var(--shadow-card-hover);
+  }
+  .ui-hover-inverse:not(:disabled):is(:hover, :focus-visible) {
+    background-color: var(--color-violet-dark);
+    color: white;
+    border-color: var(--color-violet-light);
+    box-shadow: inset 0 0 0 1px var(--color-violet-light);
+  }
+  .ui-hover-danger:not(:disabled):is(:hover, :focus-visible) {
+    background-color: var(--color-coral-tint);
+    color: var(--color-coral-text);
+    box-shadow: inset 0 0 0 1px var(--color-coral-text);
+  }
+  .ui-hover-link:not(:disabled):is(:hover, :focus-visible) {
+    color: var(--color-violet-dark);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  :is(.ui-hover, .ui-hover-card, .ui-hover-inverse, .ui-hover-danger, .ui-hover-link):focus-visible {
+    outline: 2px solid var(--color-violet);
+    outline-offset: 2px;
+  }
+  tr.ui-hover:is(:hover, :focus-within) {
+    background-color: var(--color-violet-tint);
+    box-shadow: inset 3px 0 0 var(--color-violet);
+  }
+  .p-button:is(.p-button-text, .p-button-outlined, .p-button-secondary):not(.p-button-danger):not(:disabled):is(:hover, :focus-visible) {
+    background-color: var(--color-violet-tint);
+    border-color: var(--color-violet);
+    color: var(--color-violet-dark);
+  }
+  :is(.btn-secondary, .btn-ghost):not(:disabled):is(:hover, :focus-visible) {
+    background-color: #ddd6fe;
+    color: var(--color-violet-dark);
+    border-color: var(--color-violet);
+    box-shadow: inset 0 0 0 1px var(--color-violet);
+  }
+  .btn-primary:disabled:hover { background-color: var(--color-violet); }
+  .btn-secondary:disabled:hover { background-color: var(--color-violet-tint); color: var(--color-violet); }
+  .btn-ghost:disabled:hover { background-color: transparent; color: var(--color-ink); border-color: var(--color-border-strong); }
+  .btn-danger:disabled:hover { background-color: var(--color-danger); }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-hover, .ui-hover-card, .ui-hover-inverse, .ui-hover-danger, .ui-hover-link { transition: none; }
+  }
+}

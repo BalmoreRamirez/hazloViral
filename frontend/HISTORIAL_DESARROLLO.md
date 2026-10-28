@@ -4,6 +4,88 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Estándar global de hover
+
+- Requerimiento: FE-008.
+- Cambio: estilos compartidos para botones, enlaces, menús, tarjetas interactivas y filas de tablas. Fondo violeta claro, texto oscuro y borde visible; variante de contraste sobre navegación oscura y variante roja para acciones destructivas.
+- Accesibilidad: estados equivalentes con teclado, foco visible, transiciones reducidas según preferencias y controles deshabilitados sin resaltado interactivo. Las tarjetas informativas no simulan una acción.
+- Validación: compilación y comprobación de tipos del frontend; revisión de estilos compartidos y diferencias.
+
+## 2026-10-28 — Hover visible en navegación del perfil
+
+- Requerimiento: FE-008.
+- Cambio: enlaces de En esta página en empresa e influencer con fondo violeta claro, texto violeta oscuro y borde lateral violeta al pasar el cursor o enfocar con teclado. Se reserva el ancho del borde para evitar desplazamientos.
+- Validación: revisión del cambio y git diff --check; sin cambios de lógica.
+
+## 2026-10-28 — Ocultar orientación cuando el perfil está completo
+
+- Requerimiento: FE-019.
+- Cambio: tarjeta de orientación visible únicamente después de cargar y mientras falten datos importantes, en ambos perfiles. Usa el mismo estado calculado que decide la apertura automática.
+- Influencer: la evaluación usa las redes actuales del store para reflejar cambios y verificaciones sin recargar la página. La tarjeta desaparece al guardar el último dato pendiente.
+- Validación: compilación, tipos y pruebas existentes de detección de perfiles completos/incompletos.
+
+## 2026-10-28 — Asteriscos en campos obligatorios
+
+- Requerimientos: FE-001, FE-002, FE-008.
+- Cambio: marca reutilizable RequiredMark con asterisco visible y texto accesible «obligatorio» en registro, edición de perfil de empresa e influencer, datos bancarios y redes. Se acompaña de una leyenda explicativa.
+- Se mantienen sin asterisco los datos opcionales para guardar, aunque puedan formar parte de requisitos adicionales de verificación. Se conservan las validaciones por rol y tutor.
+- Accesibilidad: semántica required en controles y corrección de IDs distintos para username personal y de la red social.
+- Validación: compilación, tipos y pruebas existentes del registro.
+
+## 2026-10-28 — Fotos de perfil limitadas a JPG y PNG
+
+- Requerimientos: FE-002, BE-008.
+- Cambio: selector y validación cliente limitados a JPG/JPEG y PNG, hasta 5 MB. Backend comprueba extensión, MIME y formato real mediante Sharp antes de procesar y actualizar el avatar. Rechaza WebP, GIF, SVG y contenido que no coincide con lo declarado.
+- UX: guía de foto/logo y ayuda visible actualizadas a los formatos admitidos; los errores no reemplazan la foto actual.
+- Procesamiento: se conserva la normalización interna a WebP 400x400 y el servicio de avatares existentes; esta restricción se aplica al archivo de entrada y no cambia los formatos de entregables.
+- Validación: compilaciones backend/frontend y seis pruebas de formatos válidos, MIME/extensión no permitidos, contenido corrupto y WebP renombrado como JPG.
+
+## 2026-10-28 — Paso de foto y logo en la guía del perfil
+
+- Requerimiento: FE-019.
+- Corrección: se añade un paso específico que destaca el avatar en ambos perfiles, explica cambiar foto o logo, formatos aceptados y actualización tras la subida.
+- Se aclara que debe terminarse la guía y guardar/cancelar la edición antes de subir la imagen, conservando la protección del borrador y el bloqueo de interacciones durante el tour.
+- Validación: compilación y tipos de frontend.
+
+## 2026-10-28 — Guía automática para perfiles incompletos
+
+- Requerimiento: FE-019.
+- Cambio: inicio automático de Intro.js tras cargar exitosamente el perfil si faltan datos importantes de marca/identidad/contacto o presentación/redes/cuenta bancaria del creador. No se abre con perfil nulo ni por verificación de correo como único pendiente.
+- Frecuencia: máximo una apertura automática por visita; actualizar imagen o datos en la misma vista no vuelve a lanzar el recorrido. El botón manual se conserva y las siguientes visitas vuelven a comprobar los datos reales.
+- Validación: compilación y tipos correctos; tres pruebas de detección de pendientes y dos de ciclo de vida del recorrido satisfactorias.
+
+## 2026-10-28 — Onboarding del perfil con Intro.js
+
+- Requerimiento: FE-019.
+- Cambio: Intro.js 8.6.0 y botón Completar perfil con guía en empresa e influencer. Recorridos en español específicos por rol, preparación de edición, progreso, salida por Escape y repetición; no modifican ni envían datos.
+- UX: se evita iniciar durante carga/guardado o edición bancaria; se respeta el borrador de perfil abierto, se omiten objetivos ausentes y se restituye el foco al cerrar. El recorrido se destruye al salir de la vista.
+- Presentación: estilos alineados a la marca, ancho adaptable y reducción de movimiento. Carga diferida del JavaScript para no iniciar ni ejecutar el recorrido al entrar.
+- Validación: compilación, tipos y pruebas del ciclo de vida satisfactorios. Frontend Docker reconstruido; dependencia instalada y módulos de perfil responden HTTP 200. Pendiente prueba visual en navegador.
+- Licencia: AGPL-3.0 con opción comercial; ver [notas de integración y fuentes oficiales](../docs/INTROJS.md) antes de publicación comercial.
+
+## 2026-10-27 — Menú de cuenta sin cierre por pérdida de foco
+
+- Incidencia: al pulsar el correo en Mi cuenta, el usuario reportó una pestaña Chromium con SIGILL; la URL seguía siendo el dashboard. El correo era un párrafo sin destino de navegación.
+- Corrección preventiva: reemplazado details/summary y la mutación de open durante focusout por un desplegable controlado con estado Vue. Pulsar o seleccionar el correo no cierra el panel ni navega; cierre por botón, Escape, enlace o clic exterior. Escape devuelve foco al botón.
+- Accesibilidad: botón nativo con aria-expanded y aria-controls, panel etiquetado y correo seleccionable.
+- Validación: compilación y tipos correctos. No se reprodujo el fallo nativo SIGILL en un navegador; no se atribuye su causa al código sin esa evidencia.
+
+## 2026-10-27 — Cabecera de registro alineada al contenido
+
+- Requerimientos: FE-001, FE-008.
+- Cambio: cabecera con contenedor max-w-6xl alineado al formulario, logo y acceso en una fila, botón Iniciar sesión con mayor área de interacción y foco visible. El texto auxiliar se oculta en móvil para evitar saturación.
+- Validación: compilación y tipos de frontend.
+
+## 2026-10-27 — Registro guiado para empresa e influencer
+
+- Requerimiento: FE-001, FE-008.
+- UI: diseño de dos columnas en escritorio con contexto por rol y formulario principal; una columna adaptable en móvil. Selector de perfil con radios nativos, progreso de tres pasos e identidad visual coherente con la aplicación.
+- UX: Tu cuenta → Tu empresa/Tu perfil → Verificación. Solo se validan los campos de la etapa al avanzar; validación completa antes de crear la cuenta. Se conservan los datos al retroceder y los errores de servidor no borran el formulario.
+- Seguridad/usabilidad: mostrar/ocultar contraseña, requisitos visibles, autofill de correo/contraseña y etiquetas asociadas. Datos fiscales opcionales se expanden si tienen errores. Se bloquean avances duplicados, cambios de rol y envíos mientras procesa.
+- Reglas: máscaras de DUI/pasaporte, representante legal y tutor para menores conservados; no se cambia el payload ni los requisitos del backend.
+- Validación: compilación y tipos, pruebas de avance condicionado por validación, doble clic, verificación obligatoria y tutor requerido. No se crearon cuentas reales para probar.
+- Pendiente: revisión visual y recorrido interactivo en navegador.
+
 ## 2026-10-27 — Paginación real de reseñas
 
 - Requerimientos: FE-009, BE-011.

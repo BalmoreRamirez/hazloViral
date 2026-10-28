@@ -150,7 +150,7 @@ function neto(c: any) {
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
-              <tr v-for="c in contractsStore.contracts" :key="c.id" class="align-middle hover:bg-slate/60">
+              <tr v-for="c in contractsStore.contracts" :key="c.id" class="align-middle ui-hover">
                 <th scope="row" class="px-3 xl:px-4 py-5 font-semibold text-navy">
                   <p>Contrato #{{ c.id }}</p>
                 </th>

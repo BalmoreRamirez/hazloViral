@@ -4,6 +4,12 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Fotos de perfil limitadas a JPG y PNG
+
+- Requerimiento: BE-008.
+- Cambio: validación de extensión, MIME y formato real con Sharp para admitir solo JPG/JPEG y PNG antes de procesar el avatar. Se conserva límite de 5 MB y normalización interna a WebP, sin modificar imágenes existentes ni formatos de entregables.
+- Validación: compilación backend y seis pruebas de archivos válidos, extensiones/MIME no permitidos, contenido corrupto y WebP renombrado como JPG.
+
 ## 2026-10-27 — Paginación real de reseñas
 
 - Requerimientos: FE-009, BE-011.

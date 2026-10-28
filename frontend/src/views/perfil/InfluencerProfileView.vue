@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import RequiredMark from '@/components/RequiredMark.vue'
+import { influencerNeedsProfileGuide } from '@/utils/profile-completion'
+import { useProfileTour } from '@/composables/useProfileTour'
 import { calculateAge as calcAge } from '@/utils/date'
 import { ref, computed, onMounted } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
@@ -26,6 +29,7 @@ const bankSaving     = ref(false)
 const savingMetric   = ref(false)
 const metricError    = ref('')
 const loadError = ref('')
+let automaticGuideShown = false
 const statusMessage = ref('')
 const bankError = ref('')
 const showBankNumber = ref(false)
@@ -73,6 +77,7 @@ const metricForm = ref({ red_social: 'TikTok', username: '' })
 const bankForm   = ref({ banco_nombre: '', banco_cuenta_numero: '', banco_cuenta_tipo: 'AHORROS' })
 
 const esData         = computed(() => store.influencerProfile)
+const needsGuide = computed(() => influencerNeedsProfileGuide(esData.value ? { ...esData.value, metrics: store.metrics } : null))
 const totalFollowers = computed(() => store.metrics.reduce((sum, m) => sum + m.seguidores, 0))
 const ownSummary     = ref<RatingSummary | null>(null)
 
@@ -109,6 +114,10 @@ async function loadProfile() {
       banco_nombre:        esData.value.banco_nombre ?? '',
       banco_cuenta_numero: esData.value.banco_cuenta_numero ?? '',
       banco_cuenta_tipo:   esData.value.banco_cuenta_tipo ?? 'AHORROS',
+    }
+    if (!automaticGuideShown && needsGuide.value && !guideActive.value) {
+      automaticGuideShown = true
+      await startProfileGuide()
     }
     ownSummary.value = await ratingsApi.getSummary(esData.value.id).catch(() => null)
   }
@@ -189,6 +198,19 @@ function formatFollowers(n: number) {
   if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`
   return String(n)
 }
+
+const { start: startProfileGuide, active: guideActive, error: guideError } = useProfileTour(() => {
+  if (!editing.value) startEdit()
+}, [
+  {"selector": "#creator-progress", "title": "Tu perfil, paso a paso", "intro": "Estos requisitos reflejan tu verificación actual. La guía abre la edición, pero no guarda ni cambia tus datos."},
+  {"selector": "#creator-avatar", "title": "Cambia tu foto de perfil", "intro": "Esta es la foto que verán las marcas. Al terminar la guía, guarda o cancela la edición y selecciona esta imagen para subir tu foto. Puedes usar JPG o PNG; la imagen se actualiza al terminar la subida."},
+  {"selector": "#creator-nombre-artistico", "title": "Presentación profesional", "intro": "Revisa tu nombre artístico, usuario, biografía y ubicación. Las marcas usan esta información para conocerte."},
+  {"selector": "#creator-tarifa-base", "title": "Oferta y disponibilidad", "intro": "Define tu tarifa base y rubros, y confirma si estás disponible para nuevas campañas."},
+  {"selector": "#creator-numero-identificacion", "title": "Verifica tu identidad", "intro": "Revisa tu documento. Los datos de identidad y del tutor se mantienen privados."},
+  {"selector": "#creator-add-social", "title": "Conecta y verifica tus redes", "intro": "Después de guardar el perfil, agrega tus redes aquí y utiliza Verificar. Los resultados dependen de la validación de cada plataforma."},
+  {"selector": "#creator-bank", "title": "Prepara tus pagos", "intro": "Registra banco, número y tipo de cuenta para recibir pagos. Esta información no aparece en tu perfil público."},
+  {"selector": "#creator-save", "title": "Completa y guarda", "intro": "Termina la guía para completar el formulario y guardar los cambios. Las redes y la cuenta bancaria tienen sus propias acciones de guardado."}
+])
 </script>
 
 <template>
@@ -204,19 +226,26 @@ function formatFollowers(n: number) {
       </header>
       <p v-if="statusMessage" role="status" class="rounded-xl border border-green-200 bg-success-tint px-5 py-3 text-sm text-success">{{ statusMessage }}</p>
       <div v-if="loadError" role="alert" class="card flex flex-wrap items-center justify-between gap-3"><p class="text-coral-text">{{ loadError }}</p><button type="button" class="btn-secondary" @click="loadProfile">Reintentar</button></div>
-      <ProfileOverview :name="loadError || store.loading ? '' : esData?.nombre_artistico ?? ''" label="Creador / influencer"
+      <ProfileOverview avatar-id="creator-avatar" :name="loadError || store.loading ? '' : esData?.nombre_artistico ?? ''" label="Creador / influencer"
         :subtitle="esData?.username ? `@${esData.username}` : 'Tu identidad profesional'" :verified="esData?.is_verified" :disabled="editing || bankEditing || showMetricForm || store.loading || !!loadError" @updated="statusMessage = 'Imagen actualizada correctamente.'; loadProfile()">
         <div v-if="esData && !loadError"><p class="text-xs text-ink-muted">Tarifa por campaña</p><p class="font-semibold text-lg text-navy mt-1">{{ formatUsd(esData.tarifa_base) }} <span class="text-xs font-normal text-ink-muted">USD</span></p></div>
         <div v-if="!loadError"><p class="text-xs text-ink-muted">Comunidad total</p><p class="font-semibold text-lg text-navy mt-1">{{ formatFollowers(totalFollowers) }} <span class="text-xs font-normal text-ink-muted">seguidores</span></p></div>
       </ProfileOverview>
+      <p class="text-xs text-ink-muted"><span class="text-coral-text font-semibold">*</span> Campo obligatorio al guardar el formulario.</p>
       <div v-if="!loadError" class="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)] items-start">
         <aside class="space-y-4 xl:sticky xl:top-6">
-          <ProfileProgress :items="verificationChecklist ?? []" :loading="store.loading" />
+          <ProfileProgress id="creator-progress" :items="verificationChecklist ?? []" :loading="store.loading" />
+          <section v-if="!store.loading && needsGuide" class="rounded-xl border border-violet/20 bg-violet-tint p-4 space-y-3">
+            <h2 class="text-sm font-semibold text-navy inline-flex items-center gap-2"><i class="pi pi-compass text-violet" aria-hidden="true" />¿Necesitas orientación?</h2>
+            <p class="text-xs text-ink-muted leading-relaxed">Recorre los campos importantes con una guía paso a paso. Puedes salir con Escape y repetirla cuando quieras.</p>
+            <button type="button" @click="startProfileGuide" :disabled="store.loading || store.saving || bankSaving || bankEditing || showMetricForm || !!loadError || guideActive" class="btn-secondary w-full text-sm">{{ guideActive ? 'Guía en curso…' : 'Completar perfil con guía' }}</button>
+            <p v-if="guideError" role="alert" class="text-xs text-coral-text">{{ guideError }}</p>
+          </section>
           <nav class="card space-y-1" aria-label="Secciones de mi perfil">
             <p class="text-xs uppercase tracking-wide text-ink-muted font-semibold mb-3">En esta página</p>
-            <a href="#creator-information" class="block rounded-lg px-3 py-2 text-sm text-navy hover:bg-slate focus-visible:outline-2 focus-visible:outline-violet">Información personal</a>
-            <a href="#creator-social" class="block rounded-lg px-3 py-2 text-sm text-navy hover:bg-slate focus-visible:outline-2 focus-visible:outline-violet">Redes sociales</a>
-            <a href="#creator-bank" class="block rounded-lg px-3 py-2 text-sm text-navy hover:bg-slate focus-visible:outline-2 focus-visible:outline-violet">Cuenta bancaria</a>
+            <a href="#creator-information" class="block rounded-lg border-l-[3px] border-transparent px-3 py-2.5 text-sm font-medium text-navy transition-colors duration-150 ui-hover focus-visible:border-violet focus-visible:bg-violet-tint focus-visible:text-violet-dark focus-visible:outline-2 focus-visible:outline-violet focus-visible:outline-offset-2 motion-reduce:transition-none">Información personal</a>
+            <a href="#creator-social" class="block rounded-lg border-l-[3px] border-transparent px-3 py-2.5 text-sm font-medium text-navy transition-colors duration-150 ui-hover focus-visible:border-violet focus-visible:bg-violet-tint focus-visible:text-violet-dark focus-visible:outline-2 focus-visible:outline-violet focus-visible:outline-offset-2 motion-reduce:transition-none">Redes sociales</a>
+            <a href="#creator-bank" class="block rounded-lg border-l-[3px] border-transparent px-3 py-2.5 text-sm font-medium text-navy transition-colors duration-150 ui-hover focus-visible:border-violet focus-visible:bg-violet-tint focus-visible:text-violet-dark focus-visible:outline-2 focus-visible:outline-violet focus-visible:outline-offset-2 motion-reduce:transition-none">Cuenta bancaria</a>
           </nav>
           <p class="text-xs text-ink-muted px-2 leading-relaxed"><i class="pi pi-lock mr-1" aria-hidden="true" />Tu documento, datos del tutor y cuenta bancaria son privados. Revisa cómo se ve tu perfil público antes de compartirlo.</p>
         </aside>
@@ -288,11 +317,11 @@ function formatFollowers(n: number) {
             <h4 class="font-semibold text-navy">1. Presentación y ubicación</h4>
 
           <div class="field">
-            <label class="label" for="creator-username">Username</label>
+            <label class="label" for="creator-username">Username<RequiredMark /></label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted font-medium select-none">@</span>
               <input id="creator-username" v-model="form.username" placeholder="mario_blue"
-                :class="['input pl-7 w-full', { '!border-coral': v$.username.$error }]" />
+                :class="['input pl-7 w-full', { '!border-coral': v$.username.$error }]" aria-required="true" required />
             </div>
             <p v-if="v$.username.$error" class="text-coral-text text-xs mt-1">
               {{ v$.username.$errors[0]?.$message }}
@@ -300,9 +329,9 @@ function formatFollowers(n: number) {
           </div>
 
           <div class="field">
-            <label class="label" for="creator-nombre-artistico">Nombre artístico</label>
+            <label class="label" for="creator-nombre-artistico">Nombre artístico<RequiredMark /></label>
             <input id="creator-nombre-artistico" v-model="form.nombre_artistico"
-              :class="['input', { '!border-coral': v$.nombre_artistico.$error }]" />
+              :class="['input', { '!border-coral': v$.nombre_artistico.$error }]" aria-required="true" required />
             <p v-if="v$.nombre_artistico.$error" class="text-coral-text text-xs mt-1">
               {{ v$.nombre_artistico.$errors[0]?.$message }}
             </p>
@@ -316,9 +345,9 @@ function formatFollowers(n: number) {
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="field">
-              <label class="label" for="creator-pais">País</label>
+              <label class="label" for="creator-pais">País<RequiredMark /></label>
               <select id="creator-pais" v-model="form.pais" @change="form.departamento = ''"
-                :class="['input', { '!border-coral': v$.pais.$error }]">
+                :class="['input', { '!border-coral': v$.pais.$error }]" aria-required="true" required>
                 <option value="">— Selecciona —</option>
                 <option v-for="p in PAISES" :key="p">{{ p }}</option>
               </select>
@@ -344,7 +373,7 @@ function formatFollowers(n: number) {
           </div>
 
           <div class="field">
-            <label class="label">Rubro / nicho <span class="text-ink-muted font-normal">(puedes elegir varios)</span></label>
+            <label class="label">Rubro / nicho <RequiredMark /><span class="text-ink-muted font-normal">(puedes elegir varios)</span></label>
             <div class="flex flex-wrap gap-2 mt-1">
               <button
                 v-for="r in RUBROS_LIST" :key="r.value" :aria-pressed="form.rubros.includes(r.value)"
@@ -354,7 +383,7 @@ function formatFollowers(n: number) {
                   : form.rubros.push(r.value)"
                 :class="form.rubros.includes(r.value)
                   ? 'bg-violet text-white border-violet'
-                  : 'bg-white text-ink-muted border-navy/15 hover:border-violet/40'"
+                  : 'bg-white text-ink-muted border-navy/15 ui-hover'"
                 class="px-3 py-1.5 rounded-full border text-xs font-medium transition-all select-none cursor-pointer">
                 <i v-if="form.rubros[0] === r.value" class="pi pi-star text-[10px]" title="Rubro principal" aria-hidden="true" /> {{ r.label }}
               </button>
@@ -383,15 +412,15 @@ function formatFollowers(n: number) {
             <p class="text-xs text-ink-muted">Estos datos se usan para verificar tu identidad y no forman parte de tu presentación pública.</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="field">
-              <label class="label" for="creator-tipo-identificacion">Tipo de identificación</label>
-              <select id="creator-tipo-identificacion" v-model="form.tipo_identificacion" class="input">
+              <label class="label" for="creator-tipo-identificacion">Tipo de identificación<RequiredMark /></label>
+              <select id="creator-tipo-identificacion" v-model="form.tipo_identificacion" class="input" aria-required="true" required>
                 <option v-for="t in TIPOS_ID" :key="t">{{ t }}</option>
               </select>
             </div>
             <div class="field">
-              <label class="label" for="creator-numero-identificacion">Número de identificación</label>
+              <label class="label" for="creator-numero-identificacion">Número de identificación<RequiredMark /></label>
               <input id="creator-numero-identificacion" v-model="form.numero_identificacion" placeholder="00000000-0"
-                :class="['input', { '!border-coral': v$.numero_identificacion.$error }]" />
+                :class="['input', { '!border-coral': v$.numero_identificacion.$error }]" aria-required="true" required />
               <p v-if="v$.numero_identificacion.$error" class="text-coral-text text-xs mt-1">
                 {{ v$.numero_identificacion.$errors[0]?.$message }}
               </p>
@@ -402,7 +431,7 @@ function formatFollowers(n: number) {
           <p v-if="saveError" role="alert" class="text-coral-text text-sm">{{ saveError }}</p>
 
           <div class="sticky bottom-0 z-10 bg-white border-t border-border py-4 flex flex-wrap justify-end gap-2">
-            <button type="submit" :disabled="store.saving" class="btn-primary text-sm">
+            <button id="creator-save" type="submit" :disabled="store.saving" class="btn-primary text-sm">
               {{ store.saving ? 'Guardando…' : 'Guardar cambios' }}
             </button>
             <button type="button" :disabled="store.saving" @click="editing = false" class="btn-ghost text-sm">Cancelar</button>
@@ -424,7 +453,7 @@ function formatFollowers(n: number) {
               <template v-else>Agrega tus redes para aparecer en búsquedas</template>
             </p>
           </div>
-          <button :disabled="store.loading || !esData" @click="showMetricForm = !showMetricForm" class="btn-primary text-sm inline-flex items-center gap-2">
+          <button id="creator-add-social" :disabled="store.loading || !esData" @click="showMetricForm = !showMetricForm" class="btn-primary text-sm inline-flex items-center gap-2">
             <i :class="showMetricForm ? 'pi pi-times' : 'pi pi-plus'" aria-hidden="true" /> {{ showMetricForm ? 'Cerrar' : 'Agregar red' }}
           </button>
         </div>
@@ -438,15 +467,15 @@ function formatFollowers(n: number) {
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="field">
-              <label class="label" for="creator-red-social">Red social</label>
-              <select id="creator-red-social" v-model="metricForm.red_social" class="input">
+              <label class="label" for="creator-red-social">Red social<RequiredMark /></label>
+              <select id="creator-red-social" v-model="metricForm.red_social" class="input" aria-required="true" required>
                 <option v-for="r in REDES" :key="r">{{ r }}</option>
               </select>
             </div>
             <div class="field">
-              <label class="label" for="creator-username">Username (sin @)</label>
-              <input id="creator-username" v-model="metricForm.username" class="input" placeholder="tuusuario"
-                @keyup.enter="addMetric" />
+              <label class="label" for="creator-social-username">Username (sin @)<RequiredMark /></label>
+              <input id="creator-social-username" v-model="metricForm.username" class="input" placeholder="tuusuario"
+                @keyup.enter="addMetric" aria-required="true" required />
             </div>
           </div>
           <div class="flex gap-2">
@@ -469,7 +498,7 @@ function formatFollowers(n: number) {
         <!-- Metric cards -->
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div v-for="m in store.metrics" :key="m.id"
-            class="relative flex items-center gap-3 p-3.5 bg-white rounded-xl border border-border hover:shadow-sm transition-shadow overflow-hidden"
+            class="relative flex items-center gap-3 p-3.5 bg-white rounded-xl border border-border ui-hover-card transition-shadow overflow-hidden"
             :style="{ borderLeftWidth: '3px', borderLeftColor: PLATFORM_COLOR[m.red_social] ?? '#7C3AED' }">
 
             <!-- Platform icon -->
@@ -508,12 +537,12 @@ function formatFollowers(n: number) {
             <!-- Actions -->
             <div class="flex flex-col items-center gap-2 shrink-0 ml-1">
               <button @click="verifyMetric(m.id)" :disabled="verifyingId === m.id"
-                class="text-ink-muted hover:text-violet disabled:opacity-30 transition-colors text-sm"
+                class="text-ink-muted ui-hover disabled:opacity-30 transition-colors text-sm"
                 title="Re-verificar">
                 <i :class="['pi pi-refresh', { 'pi-spin': verifyingId === m.id }]" aria-hidden="true" />
               </button>
               <button @click="deleteMetric(m.id)" :disabled="deletingId === m.id"
-                class="text-navy/20 hover:text-coral-text disabled:opacity-30 transition-colors text-sm">✕</button>
+                class="text-navy/20 ui-hover-danger disabled:opacity-30 transition-colors text-sm">✕</button>
             </div>
           </div>
         </div>
@@ -556,17 +585,17 @@ function formatFollowers(n: number) {
         <p v-if="bankError" role="alert" class="text-sm text-coral-text mb-3">{{ bankError }}</p>
         <form v-if="bankEditing" @submit.prevent="saveBank" class="space-y-3">
           <div class="field">
-            <label class="label" for="creator-banco-nombre">Nombre del banco</label>
+            <label class="label" for="creator-banco-nombre">Nombre del banco<RequiredMark /></label>
             <input id="creator-banco-nombre" v-model="bankForm.banco_nombre" class="input" placeholder="Ej. Banco Agrícola" required />
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="field">
-              <label class="label" for="creator-banco-cuenta-numero">Número de cuenta</label>
+              <label class="label" for="creator-banco-cuenta-numero">Número de cuenta<RequiredMark /></label>
               <input id="creator-banco-cuenta-numero" v-model="bankForm.banco_cuenta_numero" class="input" placeholder="000000000" required />
             </div>
             <div class="field">
-              <label class="label" for="creator-banco-cuenta-tipo">Tipo de cuenta</label>
-              <select id="creator-banco-cuenta-tipo" v-model="bankForm.banco_cuenta_tipo" class="input">
+              <label class="label" for="creator-banco-cuenta-tipo">Tipo de cuenta<RequiredMark /></label>
+              <select id="creator-banco-cuenta-tipo" v-model="bankForm.banco_cuenta_tipo" class="input" aria-required="true" required>
                 <option v-for="t in TIPOS_CUENTA" :key="t">{{ t }}</option>
               </select>
             </div>

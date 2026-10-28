@@ -56,7 +56,7 @@ async function submit() {
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="label mb-0">Contraseña</label>
-              <RouterLink to="/forgot-password" class="text-xs text-violet hover:underline">
+              <RouterLink to="/forgot-password" class="text-xs text-violet ui-hover-link">
                 ¿Olvidaste tu contraseña?
               </RouterLink>
             </div>

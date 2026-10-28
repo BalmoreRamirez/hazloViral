@@ -138,7 +138,7 @@ async function submitRating() {
     <template v-else-if="profile">
       <div class="space-y-5">
         <!-- Back -->
-        <button @click="router.back()" class="text-ink-muted hover:text-navy text-sm flex items-center gap-1">
+        <button @click="router.back()" class="text-ink-muted ui-hover text-sm flex items-center gap-1">
           ← Volver al buscador
         </button>
 

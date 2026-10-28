@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import RequiredMark from '@/components/RequiredMark.vue'
+import { companyNeedsProfileGuide } from '@/utils/profile-completion'
+import { useProfileTour } from '@/composables/useProfileTour'
 import { viewPath } from '@/router/paths'
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
@@ -34,12 +37,20 @@ const CHECKLIST_LABELS: Record<string, string> = {
 }
 
 const p = computed(() => store.empresaProfile)
+const needsGuide = computed(() => companyNeedsProfileGuide(p.value))
 
 const checklist = computed(() => Object.entries(CHECKLIST_LABELS).map(([key, label]) => ({ label, ok: !!p.value?.verification_checklist?.[key as keyof typeof p.value.verification_checklist] })))
 const loadError = ref('')
+let automaticGuideShown = false
 async function loadProfile() {
   loadError.value = ''
-  try { await store.loadEmpresaProfile() }
+  try {
+    await store.loadEmpresaProfile()
+    if (!automaticGuideShown && needsGuide.value && !guideActive.value) {
+      automaticGuideShown = true
+      await startProfileGuide()
+    }
+  }
   catch { loadError.value = 'No se pudo cargar el perfil de empresa. Intenta nuevamente.' }
 }
 
@@ -138,6 +149,18 @@ async function saveProfile() {
 
 onMounted(loadProfile)
 
+
+const { start: startProfileGuide, active: guideActive, error: guideError } = useProfileTour(() => {
+  if (!editing.value) startEdit()
+}, [
+  {"selector": "#company-progress", "title": "Completa tu perfil con confianza", "intro": "Aquí ves los requisitos reales de tu marca. La guía abre la edición, pero no modifica ni guarda tus datos."},
+  {"selector": "#company-avatar", "title": "Cambia el logo de tu empresa", "intro": "Este es el logo que verán los influencers. Al terminar la guía, guarda o cancela la edición y selecciona esta imagen para subir tu logo. Puedes usar JPG o PNG; la imagen se actualiza al terminar la subida."},
+  {"selector": "#company-nombre-comercial", "title": "Identidad de marca", "intro": "Revisa tu nombre comercial, descripción y ubicación. Esta información presenta tu marca a los influencers."},
+  {"selector": "#company-presencia", "title": "Presencia online", "intro": "Agrega tu sitio web o redes con enlaces completos. Una presencia online ayuda a completar la verificación."},
+  {"selector": "#company-nit", "title": "Contacto y facturación", "intro": "Completa el contacto y los datos fiscales que correspondan. Esta información es privada."},
+  {"selector": "#company-representante-nombre", "title": "Representante legal", "intro": "Revisa el nombre, tipo y número de documento de quien representa la empresa."},
+  {"selector": "#company-save", "title": "Guarda tus cambios", "intro": "Ahora puedes completar los campos y pulsar Guardar cambios. El estado de verificación se actualizará con los datos guardados. Para cambiar el logo, termina la edición y selecciona tu imagen."}
+])
 </script>
 
 <template>
@@ -158,16 +181,23 @@ onMounted(loadProfile)
       </div>
 
       <div v-if="loadError" class="card text-coral-text flex flex-wrap items-center justify-between gap-3" role="alert"><p>{{ loadError }}</p><button type="button" class="btn-secondary" @click="loadProfile">Reintentar</button></div>
-      <ProfileOverview :name="loadError || store.loading ? '' : p?.nombre_comercial ?? ''" label="Empresa / marca"
+      <ProfileOverview avatar-id="company-avatar" :name="loadError || store.loading ? '' : p?.nombre_comercial ?? ''" label="Empresa / marca"
         :subtitle="p?.rubro ? rubroLabel(p.rubro) : 'Completa tu identidad de marca'" :verified="p?.is_verified" :disabled="editing || store.loading || !!loadError" @updated="toast.add({ severity: 'success', summary: 'Logo actualizado', life: 3000 }); loadProfile()">
         <div><p class="text-xs text-ink-muted">Estado de marca</p><p class="text-sm font-semibold mt-1" :class="p?.is_verified ? 'text-success' : 'text-ink-muted'">{{ p?.is_verified ? 'Verificada' : 'Por completar' }}</p></div>
       </ProfileOverview>
+      <p class="text-xs text-ink-muted"><span class="text-coral-text font-semibold">*</span> Campo obligatorio al guardar el formulario.</p>
       <div v-if="!loadError" class="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)] items-start">
         <aside class="space-y-4 xl:sticky xl:top-6">
-          <ProfileProgress :items="checklist" :loading="store.loading" />
+          <ProfileProgress id="company-progress" :items="checklist" :loading="store.loading" />
+          <section v-if="!store.loading && needsGuide" class="rounded-xl border border-violet/20 bg-violet-tint p-4 space-y-3">
+            <h2 class="text-sm font-semibold text-navy inline-flex items-center gap-2"><i class="pi pi-compass text-violet" aria-hidden="true" />¿Necesitas orientación?</h2>
+            <p class="text-xs text-ink-muted leading-relaxed">Recorre los campos importantes con una guía paso a paso. Puedes salir con Escape y repetirla cuando quieras.</p>
+            <button type="button" @click="startProfileGuide" :disabled="store.loading || store.saving || !!loadError || guideActive" class="btn-secondary w-full text-sm">{{ guideActive ? 'Guía en curso…' : 'Completar perfil con guía' }}</button>
+            <p v-if="guideError" role="alert" class="text-xs text-coral-text">{{ guideError }}</p>
+          </section>
           <nav class="card space-y-1" aria-label="Secciones de mi perfil">
             <p class="text-xs uppercase tracking-wide text-ink-muted font-semibold mb-3">En esta página</p>
-            <a v-for="section in [{ id: 'marca', label: 'Identidad de marca' }, { id: 'presencia', label: 'Presencia online' }, { id: 'facturacion', label: 'Contacto y facturación' }, { id: 'representante', label: 'Representante legal' }]" :key="section.id" :href="`#company-${section.id}`" class="block rounded-lg px-3 py-2 text-sm text-navy hover:bg-slate focus-visible:outline-2 focus-visible:outline-violet">{{ section.label }}</a>
+            <a v-for="section in [{ id: 'marca', label: 'Identidad de marca' }, { id: 'presencia', label: 'Presencia online' }, { id: 'facturacion', label: 'Contacto y facturación' }, { id: 'representante', label: 'Representante legal' }]" :key="section.id" :href="`#company-${section.id}`" class="block rounded-lg border-l-[3px] border-transparent px-3 py-2.5 text-sm font-medium text-navy transition-colors duration-150 ui-hover focus-visible:border-violet focus-visible:bg-violet-tint focus-visible:text-violet-dark focus-visible:outline-2 focus-visible:outline-violet focus-visible:outline-offset-2 motion-reduce:transition-none">{{ section.label }}</a>
           </nav>
           <p class="text-xs text-ink-muted px-2 leading-relaxed"><i class="pi pi-lock mr-1" aria-hidden="true" />Los datos de facturación y del representante son privados. Tu marca y presencia online forman tu perfil público.</p>
         </aside>
@@ -231,7 +261,7 @@ onMounted(loadProfile)
                 <dt class="label">{{ link.label }}</dt>
                 <dd>
                   <a v-if="link.url" :href="link.url" target="_blank" rel="noopener"
-                    class="text-violet underline hover:text-violet/80 break-all">{{ link.url }}</a>
+                    class="text-violet underline ui-hover break-all">{{ link.url }}</a>
                   <span v-else class="text-ink-muted italic">No configurado</span>
                 </dd>
               </div>
@@ -306,7 +336,7 @@ onMounted(loadProfile)
             <h3 class="section-title">Marca</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="field">
-                <label class="label" for="company-nombre-comercial">Nombre comercial</label>
+                <label class="label" for="company-nombre-comercial">Nombre comercial<RequiredMark /></label>
                 <input id="company-nombre-comercial" v-model="form.nombre_comercial" required maxlength="255"
                   :class="['input', { '!border-coral': pv$.nombre_comercial.$error }]" />
                 <p v-if="pv$.nombre_comercial.$error" class="text-coral-text text-xs mt-1">
@@ -314,7 +344,7 @@ onMounted(loadProfile)
                 </p>
               </div>
               <div class="field">
-                <label class="label" for="company-rubro">Rubro / industria</label>
+                <label class="label" for="company-rubro">Rubro / industria<RequiredMark /></label>
                 <select id="company-rubro" v-model="form.rubro" required
                   :class="['input', { '!border-coral': pv$.rubro.$error }]">
                   <option value="">— Selecciona —</option>
@@ -332,7 +362,7 @@ onMounted(loadProfile)
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div class="field">
-                <label class="label" for="company-pais">País</label>
+                <label class="label" for="company-pais">País<RequiredMark /></label>
                 <select id="company-pais" v-model="form.pais" required @change="form.departamento = ''"
                   :class="['input', { '!border-coral': pv$.pais.$error }]">
                   <option value="">— Selecciona —</option>
@@ -378,7 +408,7 @@ onMounted(loadProfile)
             <h3 class="section-title">Contacto y facturación</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="field">
-                <label class="label" for="company-telefono">Teléfono / WhatsApp</label>
+                <label class="label" for="company-telefono">Teléfono / WhatsApp<RequiredMark /></label>
                 <input id="company-telefono" v-model="form.telefono" type="tel" required placeholder="+503 7000-0000"
                   :class="['input', { '!border-coral': pv$.telefono.$error }]" />
                 <p v-if="pv$.telefono.$error" class="text-coral-text text-xs mt-1">
@@ -419,7 +449,7 @@ onMounted(loadProfile)
           <section id="company-representante" class="scroll-mt-6 rounded-xl border border-border p-4 sm:p-5">
             <h3 class="section-title">Representante legal</h3>
             <div class="field">
-              <label class="label" for="company-representante-nombre">Nombre completo del representante</label>
+              <label class="label" for="company-representante-nombre">Nombre completo del representante<RequiredMark /></label>
               <input id="company-representante-nombre" v-model="form.representante_nombre" required placeholder="Nombre Apellido"
                 :class="['input', { '!border-coral': pv$.representante_nombre.$error }]" />
               <p v-if="pv$.representante_nombre.$error" class="text-coral-text text-xs mt-1">
@@ -428,14 +458,14 @@ onMounted(loadProfile)
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="field">
-                <label class="label" for="company-representante-tipo-identificacion">Tipo de identificación</label>
+                <label class="label" for="company-representante-tipo-identificacion">Tipo de identificación<RequiredMark /></label>
                 <select id="company-representante-tipo-identificacion" v-model="form.representante_tipo_identificacion" class="input"
-                  @change="pv$.representante_numero_identificacion.$reset()">
+                  @change="pv$.representante_numero_identificacion.$reset()" aria-required="true" required>
                   <option v-for="t in TIPOS_ID" :key="t">{{ t }}</option>
                 </select>
               </div>
               <div class="field">
-                <label class="label" for="company-representante-numero-identificacion">Número de identificación</label>
+                <label class="label" for="company-representante-numero-identificacion">Número de identificación<RequiredMark /></label>
                 <input id="company-representante-numero-identificacion" v-model="form.representante_numero_identificacion" required
                   :placeholder="form.representante_tipo_identificacion === 'DUI' ? '00000000-0' : 'A00000000'"
                   :class="['input', { '!border-coral': pv$.representante_numero_identificacion.$error }]" />
@@ -449,13 +479,13 @@ onMounted(loadProfile)
           <p v-if="pv$.$error" class="text-coral-text text-sm">Revisa los campos marcados en rojo.</p>
           <p v-else-if="profileError" class="text-coral-text text-sm">{{ profileError }}</p>
           <div class="sticky bottom-0 z-10 bg-white border-t border-border py-4 flex flex-wrap justify-end gap-2">
-            <Button type="submit" :loading="store.saving" label="Guardar cambios" icon="pi pi-check" size="small" />
+            <Button id="company-save" type="submit" :loading="store.saving" label="Guardar cambios" icon="pi pi-check" size="small" />
             <Button type="button" :disabled="store.saving" @click="editing = false" label="Cancelar" icon="pi pi-times" severity="secondary" outlined size="small" />
           </div>
         </form>
       </div>
 
-      <RouterLink :to="viewPath('/briefs')" class="card flex items-center justify-between gap-3 hover:border-violet">
+      <RouterLink :to="viewPath('/briefs')" class="card flex items-center justify-between gap-3 ui-hover">
         <span><span class="font-semibold text-navy">Briefs de campaña</span><span class="block text-sm text-ink-muted mt-1">Crea y gestiona los briefs de tu marca.</span></span>
         <i class="pi pi-arrow-right text-violet" aria-hidden="true" />
       </RouterLink>

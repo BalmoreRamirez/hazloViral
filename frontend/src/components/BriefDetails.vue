@@ -63,7 +63,7 @@ function sizeLabel(bytes: number) {
 
       <div v-if="b.archivos?.length" class="flex flex-wrap gap-2 pt-1">
         <a v-for="f in b.archivos" :key="f.url" :href="f.url" target="_blank" rel="noopener"
-          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-border bg-white hover:border-violet/40 transition-colors">
+          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-border bg-white ui-hover transition-colors">
           <i :class="f.tipo_archivo === 'documento' ? 'pi pi-file' : 'pi pi-image'" class="text-violet" />
           <span class="max-w-[160px] truncate text-navy">{{ f.nombre }}</span>
           <span class="text-ink-muted">{{ sizeLabel(f.size_bytes) }}</span>

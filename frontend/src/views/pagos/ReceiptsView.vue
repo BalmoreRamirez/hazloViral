@@ -133,7 +133,7 @@ onMounted(() => store.fetchReceipts())
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
-              <tr v-for="receipt in sortedReceipts" :key="receipt.id" class="align-top hover:bg-slate/60">
+              <tr v-for="receipt in sortedReceipts" :key="receipt.id" class="align-top ui-hover">
                 <td class="px-4 py-4">
                   <p class="font-semibold text-navy">{{ labels[receipt.operation_type] ?? receipt.operation_type }}</p>
                   <span class="text-xs text-ink-muted mt-1 inline-block">{{ formatDate(receipt.created_at) }}</span>
@@ -183,7 +183,7 @@ onMounted(() => store.fetchReceipts())
               {{ selectedReceipt.receipt_number }}
             </h2>
           </div>
-          <button type="button" class="text-ink-muted hover:text-navy" aria-label="Cerrar detalle" @click="closeDetails">
+          <button type="button" class="text-ink-muted ui-hover" aria-label="Cerrar detalle" @click="closeDetails">
             <i class="pi pi-times text-lg" aria-hidden="true" />
           </button>
         </div>

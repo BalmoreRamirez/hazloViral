@@ -336,7 +336,7 @@ const TIPO_ICON: Record<string, string> = {
 
         <!-- Header -->
         <div class="flex items-start gap-3">
-          <button @click="router.push(viewPath('/contratos'))" class="text-ink-muted hover:text-navy text-lg mt-0.5">←</button>
+          <button @click="router.push(viewPath('/contratos'))" class="text-ink-muted ui-hover text-lg mt-0.5">←</button>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
               <h1 class="text-2xl font-display font-bold text-navy">Contrato</h1>
@@ -352,7 +352,7 @@ const TIPO_ICON: Record<string, string> = {
                   {{ (contrato.empresa?.nombre_comercial?.[0] ?? 'E').toUpperCase() }}
                 </div>
                 <RouterLink v-if="contrato.empresa?.id" :to="viewPath(`/empresas/${contrato.empresa.id}`)"
-                  class="font-medium text-navy hover:text-violet">{{ contrato.empresa.nombre_comercial ?? 'Empresa' }}</RouterLink>
+                  class="font-medium text-navy ui-hover">{{ contrato.empresa.nombre_comercial ?? 'Empresa' }}</RouterLink>
                 <span v-else class="font-medium text-navy">Empresa</span>
                 <VerifiedBadge v-if="contrato.empresa?.is_verified" size="sm" />
               </div>
@@ -375,7 +375,7 @@ const TIPO_ICON: Record<string, string> = {
             @click="activeTab = t"
             :class="['inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors', activeTab === t
               ? 'text-violet border-b-2 border-violet -mb-px'
-              : 'text-ink-muted hover:text-navy']">
+              : 'text-ink-muted ui-hover']">
             <i :class="['pi', t === 'detalle' ? 'pi-clipboard' : 'pi-history']" aria-hidden="true" />
             {{ t === 'detalle' ? 'Detalle' : 'Auditoría' }}
           </button>
@@ -404,7 +404,7 @@ const TIPO_ICON: Record<string, string> = {
                     }]"><i :class="['pi', step.icon]" aria-hidden="true" /></div>
                     <!-- Tooltip flotante -->
                     <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-52 bg-navy text-white text-xs rounded-xl px-3 py-2.5 text-center leading-relaxed
-                                opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-20 shadow-lg">
+                                opacity-0 group-hover:opacity-100 focus-within:opacity-100 pointer-events-none transition-opacity duration-150 z-20 shadow-lg">
                       {{ step.tooltip }}
                       <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-navy" />
                     </div>
@@ -449,7 +449,7 @@ const TIPO_ICON: Record<string, string> = {
               </div>
               <div v-if="contrato.contrato_pdf_url" class="pt-1">
                 <a :href="contrato.contrato_pdf_url" target="_blank"
-                  class="inline-flex items-center gap-1.5 text-xs text-violet font-medium hover:underline">
+                  class="inline-flex items-center gap-1.5 text-xs text-violet font-medium ui-hover-link">
                   <i class="pi pi-file-pdf" aria-hidden="true" />Ver contrato PDF oficial
                 </a>
               </div>
@@ -479,7 +479,7 @@ const TIPO_ICON: Record<string, string> = {
                       class="w-full rounded-lg max-h-72 object-contain bg-slate" />
                     <!-- Documento — solo link de descarga -->
                     <a v-else :href="a.url" target="_blank" download
-                      class="flex items-center gap-1.5 text-xs text-violet hover:underline">
+                      class="flex items-center gap-1.5 text-xs text-violet ui-hover-link">
                       <i class="pi pi-paperclip" aria-hidden="true" />{{ a.nombre }}
                     </a>
                     <!-- Nombre y peso debajo de video/imagen -->
@@ -531,7 +531,7 @@ const TIPO_ICON: Record<string, string> = {
             <div v-for="(p, i) in contrato.publication_links" :key="i"
               class="flex items-center gap-3 rounded-lg border border-border bg-slate p-3 text-sm">
               <span class="font-semibold text-navy w-24 shrink-0">{{ p.red_social }}</span>
-              <a :href="p.url" target="_blank" class="text-violet hover:underline truncate flex-1">{{ p.url }}</a>
+              <a :href="p.url" target="_blank" class="text-violet ui-hover-link truncate flex-1">{{ p.url }}</a>
               <span class="text-xs text-ink-muted shrink-0">{{ formatDate(p.publicado_at) }}</span>
             </div>
           </div>
@@ -576,7 +576,7 @@ const TIPO_ICON: Record<string, string> = {
                     <p v-if="slot.descripcion" class="text-xs text-ink-muted">{{ slot.descripcion }}</p>
                   </div>
                   <label class="flex items-center gap-2 cursor-pointer">
-                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-navy/20 text-sm text-ink-muted hover:border-violet/40 transition-colors">
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-navy/20 text-sm text-ink-muted ui-hover transition-colors">
                       <i class="pi pi-paperclip" aria-hidden="true" /> Seleccionar archivos…
                     </div>
                     <input type="file" multiple class="hidden"
@@ -588,7 +588,7 @@ const TIPO_ICON: Record<string, string> = {
                       class="flex items-center gap-2 text-xs text-ink-muted bg-slate rounded px-2 py-1">
                       <i :class="['pi', p.uploaded ? 'pi-check-circle text-success' : 'pi-clock']" aria-hidden="true" />
                       <span class="flex-1 truncate">{{ p.file.name }}</span>
-                      <button @click="removePendingFile(idx, i)" class="text-coral-text hover:text-coral-text">✕</button>
+                      <button @click="removePendingFile(idx, i)" class="text-coral-text ui-hover-danger">✕</button>
                     </div>
                   </div>
                 </div>
@@ -624,7 +624,7 @@ const TIPO_ICON: Record<string, string> = {
                     puedes reportar un incumplimiento para que el equipo de InfluSmart intervenga.
                   </p>
                   <button @click="showNonCompliance = !showNonCompliance"
-                    class="btn-ghost text-xs border-coral/40 text-coral-text hover:bg-coral/5">
+                    class="btn-ghost text-xs border-coral/40 text-coral-text ui-hover-danger">
                     <i class="pi pi-ban" aria-hidden="true" />
                     Reportar incumplimiento
                   </button>
@@ -714,7 +714,7 @@ const TIPO_ICON: Record<string, string> = {
                 <p class="text-success text-sm mt-1">El pago fue liberado al influencer.</p>
               </template>
               <RouterLink v-if="!isEmpresa && contrato.empresa?.id" :to="viewPath(`/empresas/${contrato.empresa.id}`)"
-                class="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:text-violet/80 mt-2">
+                class="inline-flex items-center gap-1 text-sm font-semibold text-violet ui-hover mt-2">
                 <i class="pi pi-star" aria-hidden="true" />
                 Califica tu experiencia con {{ contrato.empresa.nombre_comercial }}
               </RouterLink>

@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { isAvatarFileType, validateAvatarContent } from './avatar-validation';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage, memoryStorage } from 'multer';
 import { extname, join } from 'path';
@@ -31,7 +32,7 @@ const FILES_DIR   = join(process.cwd(), 'uploads', 'files');
 const AVATARS_DIR = join(process.cwd(), 'uploads', 'avatars');
 
 /** Estándares de avatar:
- *  - Entrada:  JPEG, PNG, WebP, GIF — máx 5 MB
+ *  - Entrada:  JPG/JPEG o PNG — máx 5 MB
  *  - Proceso:  Sharp resize 400×400 cover (crop centrado) → WebP calidad 80
  *  - Salida:   ~50-80 KB WebP, reducción promedio del 95% vs original
  */
@@ -53,7 +54,6 @@ const ALLOWED_MIME: Record<string, 'video' | 'imagen' | 'banner' | 'documento'> 
   'application/x-zip-compressed': 'documento',
 };
 
-const AVATAR_ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 function ensureDir(dir: string) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -86,8 +86,8 @@ export class UploadsController {
       storage: memoryStorage(),           // buffer en RAM para que Sharp pueda procesarlo
       limits: { fileSize: AVATAR_MAX_MB * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
-        if (!AVATAR_ALLOWED_MIME.has(file.mimetype)) {
-          return cb(new BadRequestException('Solo se aceptan imágenes: JPEG, PNG, WebP o GIF'), false);
+        if (!isAvatarFileType(file.mimetype, file.originalname)) {
+          return cb(new BadRequestException('Solo se aceptan fotos JPG o PNG'), false);
         }
         cb(null, true);
       },
@@ -99,6 +99,7 @@ export class UploadsController {
   ) {
     if (!file) throw new BadRequestException('No se recibió ningún archivo');
 
+    await validateAvatarContent(file.buffer, file.mimetype, file.originalname);
     ensureDir(AVATARS_DIR);
 
     const filename = `${Date.now()}-${Math.round(Math.random() * 1e6)}.webp`;

@@ -11,7 +11,13 @@ import AvatarUpload from '@/components/AvatarUpload.vue'
 const router       = useRouter()
 const route = useRoute()
 const mobileMenuOpen = ref(false)
-const accountMenu = ref<HTMLDetailsElement | null>(null)
+const accountMenu = ref<HTMLElement | null>(null)
+const accountButton = ref<HTMLButtonElement | null>(null)
+const accountOpen = ref(false)
+function closeAccount() {
+  accountOpen.value = false
+  accountButton.value?.focus()
+}
 const authStore    = useAuthStore()
 const creditsStore = useCreditsStore()
 
@@ -70,7 +76,7 @@ async function resendVerification() {
 
 function closeAccountOnOutsideClick(event: MouseEvent) {
   if (event.target instanceof Node && !accountMenu.value?.contains(event.target)) {
-    accountMenu.value?.removeAttribute('open')
+    accountOpen.value = false
   }
 }
 onUnmounted(() => document.removeEventListener('click', closeAccountOnOutsideClick))
@@ -91,7 +97,7 @@ function logout() {
     <header class="relative bg-navy text-white shadow-lg">
       <div class="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3 2xl:gap-6">
         <div class="flex items-center gap-3 shrink-0">
-          <button type="button" class="2xl:hidden p-2 rounded-lg hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white"
+          <button type="button" class="2xl:hidden p-2 rounded-lg ui-hover-inverse focus-visible:outline-2 focus-visible:outline-white"
             :aria-expanded="mobileMenuOpen" aria-controls="main-navigation" :aria-label="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'" @click="mobileMenuOpen = !mobileMenuOpen">
             <i :class="['pi', mobileMenuOpen ? 'pi-times' : 'pi-bars']" aria-hidden="true" />
           </button>
@@ -105,7 +111,7 @@ function logout() {
               <RouterLink v-for="item in group.items" :key="item.path" :to="viewPath(item.path)"
                 :aria-current="itemActive(item.path) ? 'page' : undefined" @click="mobileMenuOpen = false"
                 class="inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-white"
-                :class="itemActive(item.path) ? 'bg-white/15 text-white font-semibold' : 'text-white/80 hover:text-white hover:bg-white/10'">
+                :class="itemActive(item.path) ? 'bg-white/15 text-white font-semibold' : 'text-white/80 ui-hover-inverse'">
                 <i :class="['pi', item.icon]" aria-hidden="true" />{{ item.label }}
               </RouterLink>
             </div>
@@ -114,30 +120,32 @@ function logout() {
       </nav>
         <div class="flex items-center gap-3 sm:gap-5 min-w-0 shrink-0">
           <RouterLink v-if="authStore.isEmpresa && balance" :to="viewPath('/saldo/recargar')"
-            class="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-white/10 whitespace-nowrap"
+            class="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm ui-hover-inverse whitespace-nowrap"
             title="Saldo disponible. Recargar saldo" :class="isLow ? 'text-rose-200' : 'text-white'">
             <i class="pi pi-wallet" aria-hidden="true" />
             <span>${{ balance.balance_creditos.toFixed(2) }} <span class="hidden sm:inline">USD</span></span>
           </RouterLink>
           <AvatarUpload :name="user?.email ?? ''" size="sm" />
-          <details ref="accountMenu" class="relative" @keydown.esc="accountMenu?.removeAttribute('open')" @focusout="(event) => { if (!event.currentTarget || !(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node)) accountMenu?.removeAttribute('open') }">
-            <summary class="cursor-pointer list-none inline-flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white">
+          <div ref="accountMenu" class="relative" @keydown.esc.stop.prevent="closeAccount">
+            <button ref="accountButton" id="account-toggle" type="button" :aria-expanded="accountOpen" aria-controls="account-panel"
+              @click="accountOpen = !accountOpen"
+              class="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 ui-hover-inverse focus-visible:outline-2 focus-visible:outline-white">
               <span class="text-sm font-semibold whitespace-nowrap">Mi cuenta</span>
               <i class="pi pi-chevron-down text-xs" aria-hidden="true" />
-            </summary>
-            <div class="absolute right-0 top-full mt-2 z-50 w-64 rounded-xl border border-border bg-white text-navy shadow-lg p-2">
+            </button>
+            <div v-if="accountOpen" id="account-panel" aria-labelledby="account-toggle" class="absolute right-0 top-full mt-2 z-50 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-white text-navy shadow-lg p-2">
               <div class="px-3 py-2 border-b border-border mb-1">
                 <p class="text-xs text-ink-muted">{{ roleLabel }}</p>
-                <p class="text-sm font-medium break-all mt-1">{{ user?.email }}</p>
+                <p class="text-sm font-medium break-all mt-1 select-text cursor-text">{{ user?.email }}</p>
               </div>
-              <RouterLink v-if="profilePath" :to="viewPath(profilePath)" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-slate focus-visible:outline-2 focus-visible:outline-violet">
+              <RouterLink v-if="profilePath" :to="viewPath(profilePath)" @click="accountOpen = false" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm ui-hover focus-visible:outline-2 focus-visible:outline-violet">
                 <i class="pi pi-user" aria-hidden="true" />Mi perfil
               </RouterLink>
-              <button type="button" @click="logout" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-coral-text hover:bg-coral/10 focus-visible:outline-2 focus-visible:outline-violet">
+              <button type="button" @click="logout" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-coral-text ui-hover-danger focus-visible:outline-2 focus-visible:outline-violet">
                 <i class="pi pi-sign-out" aria-hidden="true" />Cerrar sesión
               </button>
             </div>
-          </details>
+          </div>
         </div>
       </div>
 
@@ -152,7 +160,7 @@ function logout() {
         <div class="flex items-center gap-3">
           <span v-if="resendDone" class="text-success text-xs font-medium">¡Enviado! Revisa tu bandeja.</span>
           <button v-if="!resendDone" @click="resendVerification" :disabled="resendLoading"
-            class="text-xs text-warning border border-amber-400 rounded px-2 py-1 hover:bg-warning-tint transition-colors">
+            class="text-xs text-warning border border-amber-400 rounded px-2 py-1 ui-hover transition-colors">
             {{ resendLoading ? 'Enviando…' : 'Reenviar correo' }}
           </button>
         </div>

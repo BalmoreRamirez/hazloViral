@@ -67,7 +67,7 @@ async function openChat() {
         <div v-else class="divide-y divide-navy/5">
           <div v-for="chat in chatStore.chats" :key="chat.id"
             @click="router.push(viewPath(`/chats/${chat.id}`))"
-            class="py-4 flex items-center justify-between cursor-pointer hover:bg-slate rounded-lg -mx-5 px-5 transition-colors">
+            class="py-4 flex items-center justify-between cursor-pointer ui-hover rounded-lg -mx-5 px-5 transition-colors">
             <div class="flex items-center gap-3">
               <!-- Avatar con punto de no leído -->
               <div class="relative shrink-0">

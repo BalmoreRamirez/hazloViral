@@ -177,7 +177,7 @@ const REDES_ICON: Record<string, string> = {
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div v-for="inf in results" :key="inf.id"
             @click="router.push(viewPath(`/influencers/${inf.id}`))"
-            class="card cursor-pointer hover:shadow-md transition-shadow flex flex-col">
+            class="card cursor-pointer ui-hover-card transition-shadow flex flex-col">
             <!-- Foto + nombre + @username -->
             <div class="flex items-center gap-3 mb-3">
               <img v-if="inf.user?.avatar_url" :src="inf.user.avatar_url" :alt="inf.nombre_artistico"

@@ -248,7 +248,7 @@ function confirmDelete(id: number, titulo: string) {
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
-              <tr v-for="b in store.briefs" :key="b.id" class="hover:bg-slate/60 align-top">
+              <tr v-for="b in store.briefs" :key="b.id" class="ui-hover align-top">
                 <th scope="row" class="px-4 py-4 font-semibold text-navy">
                   <span class="block max-w-xs break-words">{{ b.titulo_campana }}</span>
                   <span class="block text-xs font-normal text-ink-muted mt-1">Creado el {{ formatDate(b.created_at) }}</span>
@@ -330,7 +330,7 @@ function confirmDelete(id: number, titulo: string) {
                   class="px-3 py-1.5 rounded-full text-sm border transition-colors"
                   :class="briefForm.plataformas.includes(pl)
                     ? 'bg-violet text-white border-violet'
-                    : 'bg-white text-ink-muted border-navy/15 hover:border-violet/40'">
+                    : 'bg-white text-ink-muted border-navy/15 ui-hover'">
                   {{ pl }}
                 </button>
               </div>
@@ -434,11 +434,11 @@ function confirmDelete(id: number, titulo: string) {
                   class="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg border border-border bg-white text-xs">
                   <i :class="f.tipo_archivo === 'documento' ? 'pi pi-file' : 'pi pi-image'" class="text-violet" />
                   <span class="max-w-[160px] truncate">{{ f.nombre }}</span>
-                  <button type="button" @click="removeArchivo(idx)" class="text-ink-muted hover:text-coral-text px-1" title="Quitar">
+                  <button type="button" @click="removeArchivo(idx)" class="text-ink-muted ui-hover-danger px-1" title="Quitar">
                     <i class="pi pi-times text-[0.65rem]" />
                   </button>
                 </div>
-                <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-violet/40 text-violet text-xs font-medium cursor-pointer hover:bg-violet/5">
+                <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-violet/40 text-violet text-xs font-medium cursor-pointer ui-hover">
                   <i :class="uploading ? 'pi pi-spin pi-spinner' : 'pi pi-upload'" />
                   {{ uploading ? 'Subiendo…' : 'Adjuntar archivos' }}
                   <input type="file" multiple class="hidden" :disabled="uploading"

@@ -293,7 +293,7 @@ function formatTime(dt: string) {
       <!-- Header del chat -->
       <div class="card mb-3 flex items-center justify-between py-3">
         <div class="flex items-center gap-3">
-          <button @click="router.push(viewPath('/chats'))" class="text-ink-muted hover:text-navy text-lg leading-none">←</button>
+          <button @click="router.push(viewPath('/chats'))" class="text-ink-muted ui-hover text-lg leading-none">←</button>
           <template v-if="counterpart">
             <img v-if="counterpart.avatar_url"
               :src="counterpart.avatar_url"
@@ -304,7 +304,7 @@ function formatTime(dt: string) {
             <div class="min-w-0">
               <div class="flex items-center gap-1.5">
                 <RouterLink v-if="counterpart.profile_url" :to="counterpart.profile_url"
-                  class="font-display font-semibold text-navy leading-tight hover:text-violet"
+                  class="font-display font-semibold text-navy leading-tight ui-hover"
                   :title="isEmpresa ? 'Ver perfil del influencer' : 'Ver perfil de la marca'">{{ counterpart.name }}</RouterLink>
                 <p v-else class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
                 <VerifiedBadge v-if="counterpart.is_verified" size="sm" />
@@ -385,7 +385,7 @@ function formatTime(dt: string) {
                   <p v-for="(e, i) in msg.proposal_data.entregables ?? []" :key="i" class="flex items-start gap-1.5"><i class="pi pi-box mt-0.5" aria-hidden="true" /><span><strong>{{ e.tipo }}:</strong> {{ e.descripcion }}</span></p>
                   <p class="flex items-center gap-1.5"><i class="pi pi-calendar" aria-hidden="true" />Plazo: {{ msg.proposal_data.plazo }}</p>
                   <a v-if="msg.proposal_data.contrato_pdf_url" :href="msg.proposal_data.contrato_pdf_url" target="_blank"
-                    class="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-lg bg-violet/10 text-violet text-xs font-medium hover:bg-violet/20 transition-colors">
+                    class="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-lg bg-violet/10 text-violet text-xs font-medium ui-hover transition-colors">
                     <i class="pi pi-file-pdf" aria-hidden="true" /> Ver contrato PDF
                   </a>
                 </template>
@@ -491,7 +491,7 @@ function formatTime(dt: string) {
         class="mb-3 flex items-start gap-2 bg-coral/10 border border-coral/20 rounded-lg px-3 py-2 text-sm text-coral-text">
         <i class="pi pi-exclamation-triangle mt-0.5" aria-hidden="true" />
         <span class="flex-1">{{ chatStore.socketError }}</span>
-        <button @click="chatStore.socketError = null" class="text-coral-text hover:text-coral-text" title="Cerrar">✕</button>
+        <button @click="chatStore.socketError = null" class="text-coral-text ui-hover-danger" title="Cerrar">✕</button>
       </div>
 
       <!-- Formulario de propuesta -->
@@ -528,20 +528,20 @@ function formatTime(dt: string) {
               </p>
             </div>
             <button v-if="propEntregables.length > 1" type="button" @click="removeEntregable(i)"
-              class="text-ink-muted hover:text-coral-text text-sm mt-2" title="Quitar entregable">✕</button>
+              class="text-ink-muted ui-hover-danger text-sm mt-2" title="Quitar entregable">✕</button>
           </div>
           <button type="button" @click="addEntregable"
-            class="text-sm font-semibold text-violet hover:text-violet/80">+ Agregar otro entregable</button>
+            class="text-sm font-semibold text-violet ui-hover">+ Agregar otro entregable</button>
         </div>
         <div>
           <label class="label">Contrato PDF <span class="text-ink-muted font-normal">(opcional, máx. 10 MB)</span></label>
           <label class="flex items-center gap-3 cursor-pointer group">
             <div :class="['flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all',
-              propPdfFile ? 'border-violet/50 bg-violet/5 text-violet' : 'border-navy/20 bg-white text-ink-muted group-hover:border-violet/40']">
+              propPdfFile ? 'border-violet/50 bg-violet/5 text-violet' : 'border-navy/20 bg-white text-ink-muted group-hover:border-violet']">
               <i class="pi pi-paperclip" aria-hidden="true" />
               <span class="truncate max-w-[200px]">{{ propPdfFile ? propPdfFile.name : 'Adjuntar PDF…' }}</span>
               <button v-if="propPdfFile" type="button" @click.prevent="propPdfFile = null"
-                class="ml-1 text-ink-muted hover:text-coral-text text-xs">✕</button>
+                class="ml-1 text-ink-muted ui-hover-danger text-xs">✕</button>
             </div>
             <input type="file" accept="application/pdf" class="hidden" @change="onPdfChange" />
           </label>
@@ -560,7 +560,7 @@ function formatTime(dt: string) {
       <div v-if="showBriefPicker && isEmpresa" class="card mb-2 space-y-2">
         <p class="font-semibold text-navy text-sm flex items-center gap-2">
           <i class="pi pi-clipboard" aria-hidden="true" /> Enviar brief de campaña
-          <button @click="showBriefPicker = false" class="ml-auto text-ink-muted hover:text-navy text-xs">✕</button>
+          <button @click="showBriefPicker = false" class="ml-auto text-ink-muted ui-hover text-xs">✕</button>
         </p>
         <div v-if="!profileStore.briefs.length" class="text-ink-muted text-sm text-center py-3">
           No tienes briefs creados.
@@ -570,7 +570,7 @@ function formatTime(dt: string) {
           <button v-for="b in profileStore.briefs" :key="b.id"
             @click="pickBrief(b.id)"
             :disabled="sendingBrief || sentBriefIds.has(b.id) || !counterpart?.is_verified"
-            class="w-full text-left px-2 py-2.5 hover:bg-violet/5 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none">
+            class="w-full text-left px-2 py-2.5 ui-hover rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none">
             <p class="text-sm font-medium text-navy">{{ b.titulo_campana }}</p>
             <p v-if="b.objetivo_principal" class="text-xs text-ink-muted truncate mt-0.5">
               {{ b.objetivo_principal }}

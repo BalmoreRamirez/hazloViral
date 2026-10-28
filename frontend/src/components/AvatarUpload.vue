@@ -62,7 +62,17 @@ async function onFileChange(event: Event) {
   const file  = input.files?.[0]
   if (!file) return
 
-  error.value    = ''
+  error.value = ''
+  if (!((file.type === 'image/jpeg' && /\.jpe?g$/i.test(file.name)) || (file.type === 'image/png' && /\.png$/i.test(file.name)))) {
+    error.value = 'Solo se aceptan fotos JPG o PNG.'
+    input.value = ''
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    error.value = 'La foto no debe superar los 5 MB.'
+    input.value = ''
+    return
+  }
   uploading.value = true
   try {
     const fd = new FormData()
@@ -106,7 +116,7 @@ async function onFileChange(event: Event) {
     <!-- Overlay editable -->
     <div
       v-if="editable"
-      class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+      class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 cursor-pointer"
       @click="triggerPicker"
     >
       <i v-if="!uploading" class="pi pi-camera text-white text-sm"></i>
@@ -128,7 +138,7 @@ async function onFileChange(event: Event) {
     <input
       ref="fileInput"
       type="file"
-      accept="image/jpeg,image/png,image/webp,image/gif"
+      accept=".jpg,.jpeg,.png,image/jpeg,image/png"
       class="hidden"
       @change="onFileChange"
     />
