@@ -40,7 +40,7 @@ export class CompanyProfile {
   @Column()
   user_id: number;
 
-  @OneToOne(() => User, (user) => user.empresaProfile)
+  @OneToOne(() => User, (user) => user.empresaProfile, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 

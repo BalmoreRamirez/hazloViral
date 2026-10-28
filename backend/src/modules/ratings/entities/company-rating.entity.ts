@@ -1,5 +1,6 @@
 import {
   Column,
+  Check,
   CreateDateColumn,
   Entity,
   JoinColumn,
@@ -14,6 +15,7 @@ import { CompanyProfile } from '../../companies/entities/company-profile.entity'
 /** Calificación que un influencer da a una marca tras completar un contrato (una por par). */
 @Entity('empresa_ratings')
 @Unique(['empresa_id', 'influencer_id'])
+@Check('chk_company_rating_stars', 'estrellas BETWEEN 1 AND 5')
 export class CompanyRating {
   @PrimaryGeneratedColumn()
   id: number;
@@ -36,11 +38,11 @@ export class CompanyRating {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 
-  @ManyToOne(() => CompanyProfile, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CompanyProfile, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'empresa_id' })
   empresa: CompanyProfile;
 
-  @ManyToOne(() => InfluencerProfile, { onDelete: 'CASCADE' })
+  @ManyToOne(() => InfluencerProfile, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'influencer_id' })
   influencer: InfluencerProfile;
 }

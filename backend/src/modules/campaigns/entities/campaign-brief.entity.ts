@@ -1,5 +1,6 @@
 import {
   Column,
+  Check,
   CreateDateColumn,
   Entity,
   JoinColumn,
@@ -32,6 +33,10 @@ export const BRIEF_CONTENT_FIELDS = [
 ] as const;
 
 @Entity('campaign_briefs')
+@Check('chk_campaign_budget_nonnegative', '(presupuesto_min IS NULL OR presupuesto_min >= 0) AND (presupuesto_max IS NULL OR presupuesto_max >= 0)')
+@Check('chk_campaign_budget_range', 'presupuesto_min IS NULL OR presupuesto_max IS NULL OR presupuesto_min <= presupuesto_max')
+@Check('chk_campaign_date_range', 'fecha_inicio IS NULL OR fecha_fin IS NULL OR fecha_inicio <= fecha_fin')
+@Check('chk_campaign_exclusivity_nonnegative', 'exclusividad_dias IS NULL OR exclusividad_dias >= 0')
 export class CampaignBrief {
   @PrimaryGeneratedColumn()
   id: number;

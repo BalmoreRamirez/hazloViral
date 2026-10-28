@@ -13,6 +13,9 @@ export function databaseConfig(config: ConfigService): TypeOrmModuleOptions {
     username: config.get<string>('DB_USERNAME'),
     password: config.get<string>('DB_PASSWORD'),
     entities: [join(__dirname, '..', 'modules', '**', '*.entity{.ts,.js}')],
+    migrations: [join(__dirname, '..', 'migrations', '*{.ts,.js}')],
+    migrationsTableName: 'typeorm_migrations',
+    migrationsRun: config.get<string>('DB_MIGRATIONS_RUN') === 'true',
     synchronize: config.get<string>('NODE_ENV') === 'development',
     logging: config.get<string>('NODE_ENV') === 'development',
   };

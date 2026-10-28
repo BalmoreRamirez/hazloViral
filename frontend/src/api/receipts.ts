@@ -8,7 +8,7 @@ export interface PaymentReceipt {
   operation_reference: string
   wompi_transaction_id: string | null
   contrato_id: number | null
-  amount_usd: number
+  amount_usd: number | null
   currency: 'USD'
   issuer_snapshot: Record<string, string | null>
   customer_snapshot: Record<string, string | null>
@@ -29,11 +29,23 @@ export interface PaymentReceipt {
   created_at: string
 }
 
-function normalizeReceipt(receipt: PaymentReceipt): PaymentReceipt {
+type ReceiptDteResponse = Omit<NonNullable<PaymentReceipt['dte']>, 'subtotal' | 'monto_iva' | 'total_pagar'> & {
+  subtotal?: number | string | null
+  monto_iva?: number | string | null
+  total_pagar?: number | string | null
+}
+
+type PaymentReceiptResponse = Omit<PaymentReceipt, 'amount_usd' | 'dte'> & {
+  amount_usd: number | string | null
+  dte: ReceiptDteResponse | null
+}
+
+function normalizeReceipt(receipt: PaymentReceiptResponse): PaymentReceipt {
   // USD is the platform currency. Normalize historical receipts created before
   // the currency migration so the UI never presents COP.
   return {
     ...receipt,
+    amount_usd: parseMoney(receipt.amount_usd),
     currency: 'USD',
     dte: receipt.dte ? {
       ...receipt.dte,
@@ -46,9 +58,9 @@ function normalizeReceipt(receipt: PaymentReceipt): PaymentReceipt {
 
 export const receiptsApi = {
   sendInvoice: (id: number) => api.post<{ sent: boolean }>(`/receipts/${id}/send-invoice`).then(r => r.data),
-  listTopUps: () => api.get<PaymentReceipt[]>('/receipts/top-ups').then(r => r.data.map(normalizeReceipt)),
-  list: () => api.get<PaymentReceipt[]>('/receipts').then((r) => r.data.map(normalizeReceipt)),
-  get: (id: number) => api.get<PaymentReceipt>(`/receipts/${id}`).then((r) => normalizeReceipt(r.data)),
+  listTopUps: () => api.get<PaymentReceiptResponse[]>('/receipts/top-ups').then(r => r.data.map(normalizeReceipt)),
+  list: () => api.get<PaymentReceiptResponse[]>('/receipts').then((r) => r.data.map(normalizeReceipt)),
+  get: (id: number) => api.get<PaymentReceiptResponse>(`/receipts/${id}`).then((r) => normalizeReceipt(r.data)),
   downloadDte: async (url: string): Promise<Blob> => {
     const path = url.replace(/^\/api/, '')
     const response = await api.get<Blob>(path, { responseType: 'blob' })

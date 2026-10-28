@@ -333,40 +333,47 @@ export class ContractsService {
 
   // ─── 7. Empresa solicita cambios (máx 3 rondas) ──────────────────────────────
   async requestChanges(user: User, dto: RequestChangesDto): Promise<EscrowContract> {
-    const contrato = await this.findAndAuthorize(dto.contrato_id, user, UserRole.EMPRESA);
+    const authorized = await this.findAndAuthorize(dto.contrato_id, user, UserRole.EMPRESA);
+    const saved = await this.dataSource.transaction(async (manager) => {
+      const contratosRepo = manager.getRepository(EscrowContract);
+      const contrato = await contratosRepo.findOne({
+        where: { id: authorized.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!contrato) throw new NotFoundException('Contrato no encontrado.');
 
-    if (contrato.status !== ContractStatus.UNDER_REVIEW) {
-      throw new BadRequestException(`El contrato debe estar en under_review. Estado: ${contrato.status}`);
-    }
+      if (contrato.status !== ContractStatus.UNDER_REVIEW) {
+        throw new BadRequestException(`El contrato debe estar en under_review. Estado: ${contrato.status}`);
+      }
+      if (contrato.revision_round >= MAX_REVISION_ROUNDS) {
+        throw new BadRequestException(
+          `Se alcanzó el máximo de ${MAX_REVISION_ROUNDS} rondas de revisión. Considera iniciar una disputa.`,
+        );
+      }
 
-    if (contrato.revision_round >= MAX_REVISION_ROUNDS) {
-      throw new BadRequestException(
-        `Se alcanzó el máximo de ${MAX_REVISION_ROUNDS} rondas de revisión. Considera iniciar una disputa.`,
-      );
-    }
+      const prevStatus = contrato.status;
+      contrato.revision_round += 1;
+      contrato.status = ContractStatus.CHANGES_REQUESTED;
+      const updated = await contratosRepo.save(contrato);
 
-    const prevStatus = contrato.status;
-    contrato.revision_round += 1;
-    contrato.status = ContractStatus.CHANGES_REQUESTED;
-    const saved = await this.contratosRepo.save(contrato);
-
-    const round = new ContractRevisionRound();
-    round.contrato_id = saved.id;
-    round.round_number = saved.revision_round;
-    round.feedback = dto.feedback;
-    round.requested_by = user.id;
-    await this.revisionRoundsRepo.save(round);
-
-    await this.writeAudit(null, {
-      contrato_id: saved.id,
-      actor_id: user.id,
-      action: 'changes_requested',
-      previous_status: prevStatus,
-      new_status: ContractStatus.CHANGES_REQUESTED,
-      metadata: { round_number: saved.revision_round, feedback: dto.feedback },
+      await manager.getRepository(ContractRevisionRound).save({
+        contrato_id: updated.id,
+        round_number: updated.revision_round,
+        feedback: dto.feedback,
+        requested_by: user.id,
+      });
+      await this.writeAudit(manager, {
+        contrato_id: updated.id,
+        actor_id: user.id,
+        action: 'changes_requested',
+        previous_status: prevStatus,
+        new_status: ContractStatus.CHANGES_REQUESTED,
+        metadata: { round_number: updated.revision_round, feedback: dto.feedback },
+      });
+      return updated;
     });
 
-    this.chatGateway.server.to(`chat-${contrato.chat_id}`).emit('changes_requested', {
+    this.chatGateway.server.to(`chat-${saved.chat_id}`).emit('changes_requested', {
       contrato_id: saved.id,
       round_number: saved.revision_round,
       feedback: dto.feedback,

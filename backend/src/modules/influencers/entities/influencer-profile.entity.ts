@@ -20,7 +20,7 @@ export class InfluencerProfile {
   @Column()
   user_id: number;
 
-  @OneToOne(() => User, (user) => user.influencerProfile)
+  @OneToOne(() => User, (user) => user.influencerProfile, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 

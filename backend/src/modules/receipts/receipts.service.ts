@@ -240,7 +240,19 @@ export class ReceiptsService {
     return enriched;
   }
 
-  private async createOnce(data: Omit<PaymentReceipt, 'id' | 'receipt_number' | 'created_at' | 'currency' | 'is_fiscal_dte' | 'factura_enviada' | 'issuer_snapshot'>): Promise<PaymentReceipt> {
+  private async createOnce(data: Omit<PaymentReceipt,
+    | 'id'
+    | 'receipt_number'
+    | 'created_at'
+    | 'currency'
+    | 'is_fiscal_dte'
+    | 'factura_enviada'
+    | 'issuer_snapshot'
+    | 'empresa'
+    | 'influencer'
+    | 'contrato'
+    | 'electronic_invoice'
+  >): Promise<PaymentReceipt> {
     const existing = await this.receiptsRepo.findOne({
       where: { operation_type: data.operation_type, operation_reference: data.operation_reference },
     });

@@ -3,9 +3,14 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { PaymentReceipt } from '../../receipts/entities/payment-receipt.entity';
+import { InvoiceDetail } from './invoice-detail.entity';
 
 export type ElectronicInvoiceType = '01' | '03' | '05' | '06' | '14';
 export type ElectronicInvoiceStatus =
@@ -86,6 +91,13 @@ export class ElectronicInvoice {
   @Column({ type: 'int', nullable: true })
   payment_receipt_id: number | null;
 
+  @OneToOne(() => PaymentReceipt, (receipt) => receipt.electronic_invoice, {
+    nullable: true,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'payment_receipt_id' })
+  payment_receipt: PaymentReceipt | null;
+
   @Column({ type: 'varchar', length: 500, nullable: true })
   pdf_url: string | null;
 
@@ -94,4 +106,7 @@ export class ElectronicInvoice {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @OneToMany(() => InvoiceDetail, (detail) => detail.dte)
+  details: InvoiceDetail[];
 }

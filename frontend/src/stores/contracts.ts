@@ -145,16 +145,11 @@ export const useContractsStore = defineStore('contracts', () => {
     return current.value
   }
 
-  async function dispute(id: number, motivo: string) {
-    current.value = await contractsApi.dispute(id, motivo)
-    return current.value
-  }
-
   return {
     contracts, current, loading, revisionRounds, auditLog,
     fetchContracts, fetchContract, fetchRevisionRounds, fetchAuditLog,
     acceptProposal, rejectProposal, counterProposal, resolveCounter,
     fundContract, simulateFund, submitDeliverables, requestChanges, approveDeliverables,
-    registerPublications, approve, reportNonCompliance, dispute,
+    registerPublications, approve, reportNonCompliance,
   }
 })

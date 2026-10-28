@@ -34,7 +34,7 @@ export class ContractAuditLog {
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 
-  @ManyToOne(() => EscrowContract, { onDelete: 'CASCADE' })
+  @ManyToOne(() => EscrowContract, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'contrato_id' })
   contrato: EscrowContract;
 
