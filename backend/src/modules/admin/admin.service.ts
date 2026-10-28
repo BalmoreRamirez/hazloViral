@@ -1,6 +1,6 @@
-import { Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { GlobalSetting } from './entities/global-setting.entity';
 import { EscrowContract } from '../contracts/entities/escrow-contract.entity';
@@ -11,10 +11,10 @@ import { UserRole, ContractStatus } from '../../common/enums';
 
 // Valores por defecto según claude.md §5.1
 const DEFAULTS: { key: string; value: string; description: string }[] = [
-  { key: 'chat_open_cost',          value: '1.00',  description: 'Créditos que consume abrir un chat' },
-  { key: 'platform_commission_pct', value: '10.00', description: 'Comisión de la plataforma sobre contratos (%)' },
-  { key: 'welcome_bonus',           value: '10.00', description: 'Bono de bienvenida en créditos para empresas nuevas' },
-  { key: 'min_credit_threshold',    value: '5.00',  description: 'Umbral mínimo; por debajo los chats quedan en solo lectura' },
+  { key: 'chat_open_cost',          value: '1.00',  description: 'Créditos que se descuentan a la empresa al abrir cada chat nuevo' },
+  { key: 'platform_commission_pct', value: '10.00', description: 'Comisión aplicada al crear nuevos contratos (%)' },
+  { key: 'welcome_bonus',           value: '10.00', description: 'Créditos de bienvenida para empresas que se registren a partir del cambio' },
+  { key: 'min_credit_threshold',    value: '5.00',  description: 'Saldo mínimo vigente para empresas; por debajo, sus chats quedan en solo lectura' },
 ];
 
 @Injectable()
@@ -52,19 +52,48 @@ export class AdminService implements OnApplicationBootstrap {
   }
 
   async findAll(): Promise<GlobalSetting[]> {
-    return this.settingsRepo.find({ order: { key: 'ASC' } });
+    return this.settingsRepo.find({ where: { key: In(DEFAULTS.map((setting) => setting.key)) }, order: { key: 'ASC' } });
   }
 
   async set(key: string, value: string, description?: string): Promise<GlobalSetting> {
-    const existing = await this.settingsRepo.findOne({ where: { key } });
-    if (existing) {
-      existing.value = value;
-      if (description) existing.description = description;
-      return this.settingsRepo.save(existing);
+    const definition = DEFAULTS.find((setting) => setting.key === key);
+    if (!definition) throw new BadRequestException('Este parámetro no está habilitado para edición.');
+    const normalizedValue = this.validateSettingValue(key, value);
+    const numericValue = Number(normalizedValue);
+
+    return this.settingsRepo.manager.transaction(async (manager) => {
+      const settings = manager.getRepository(GlobalSetting);
+      const setting = await settings.findOne({ where: { key } });
+      const updated = setting ?? settings.create({ key, description: definition.description });
+      updated.value = normalizedValue;
+      if (description) updated.description = description;
+      const saved = await settings.save(updated);
+
+      // Este umbral también se conserva en cada perfil para las vistas de empresa;
+      // la validación del servidor siempre usa el parámetro global vigente.
+      if (key === 'min_credit_threshold') {
+        await manager.createQueryBuilder()
+          .update(CompanyProfile)
+          .set({ umbral_creditos: numericValue })
+          .execute();
+      }
+      return saved;
+    });
+  }
+
+  private validateSettingValue(key: string, value: string): string {
+    const trimmed = String(value ?? '').trim();
+    const numeric = Number(trimmed);
+    if (!trimmed || !Number.isFinite(numeric) || numeric < 0 || !Number.isSafeInteger(Math.round(numeric * 100))) {
+      throw new BadRequestException('Ingresa un valor numérico válido, igual o mayor que cero y con hasta dos decimales.');
     }
-    return this.settingsRepo.save(
-      this.settingsRepo.create({ key, value, description: description ?? '' }),
-    );
+    if (Math.abs(numeric * 100 - Math.round(numeric * 100)) > 1e-7) {
+      throw new BadRequestException('El parámetro admite hasta dos decimales.');
+    }
+    if (key === 'platform_commission_pct' && numeric > 100) {
+      throw new BadRequestException('La comisión debe estar entre 0 y 100 %.');
+    }
+    return numeric.toFixed(2);
   }
 
   // ─── Usuarios ─────────────────────────────────────────────────────────────────
@@ -127,8 +156,13 @@ export class AdminService implements OnApplicationBootstrap {
   // ─── Seeds ────────────────────────────────────────────────────────────────────
   private async seedDefaults(): Promise<void> {
     for (const def of DEFAULTS) {
-      const exists = await this.settingsRepo.existsBy({ key: def.key });
-      if (!exists) await this.settingsRepo.save(this.settingsRepo.create(def));
+      const exists = await this.settingsRepo.findOne({ where: { key: def.key } });
+      if (!exists) {
+        await this.settingsRepo.save(this.settingsRepo.create(def));
+      } else if (exists.description !== def.description) {
+        exists.description = def.description;
+        await this.settingsRepo.save(exists);
+      }
     }
   }
 

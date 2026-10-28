@@ -18,6 +18,7 @@ import { CompanyProfile } from '../companies/entities/company-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
+import { GlobalSetting } from '../admin/entities/global-setting.entity';
 import { UserRole } from '../../common/enums';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { RegisterInfluencerDto } from './dto/register-influencer.dto';
@@ -27,8 +28,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ConfigService } from '@nestjs/config';
 
 const SALT_ROUNDS = 10;
-// Bono de bienvenida definido en claude.md §5.1
-const WELCOME_BONUS = 10.0;
 
 @Injectable()
 export class AuthService {
@@ -39,6 +38,8 @@ export class AuthService {
     private readonly resetTokensRepo: Repository<PasswordResetToken>,
     @InjectRepository(EmailVerificationToken)
     private readonly emailVerifRepo: Repository<EmailVerificationToken>,
+    @InjectRepository(GlobalSetting)
+    private readonly settingsRepo: Repository<GlobalSetting>,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
     private readonly notifications: NotificationsService,
@@ -63,10 +64,20 @@ export class AuthService {
     return { accepted_terms: true, accepted_privacy: true, accepted_at: new Date().toISOString(), documents, source: 'registration' };
   }
 
+  private async getConfiguredNumber(key: string, fallback: number): Promise<number> {
+    const setting = await this.settingsRepo.findOne({ where: { key } });
+    const value = Number(setting?.value);
+    return Number.isFinite(value) && value >= 0 ? value : fallback;
+  }
+
   // ─── Registro Empresa ────────────────────────────────────────────────────────
   async registerEmpresa(dto: RegisterCompanyDto) {
     const consent = this.registrationConsent(dto);
     await this.assertEmailFree(dto.email);
+    const [welcomeBonus, creditThreshold] = await Promise.all([
+      this.getConfiguredNumber('welcome_bonus', 10),
+      this.getConfiguredNumber('min_credit_threshold', 5),
+    ]);
 
     return this.dataSource.transaction(async (manager) => {
       const hashed = await bcrypt.hash(dto.password, SALT_ROUNDS);
@@ -92,8 +103,8 @@ export class AuthService {
       profile.representante_nombre                = dto.representante_nombre;
       profile.representante_tipo_identificacion   = dto.representante_tipo_identificacion;
       profile.representante_numero_identificacion = dto.representante_numero_identificacion;
-      profile.balance_creditos = WELCOME_BONUS; // §5.1 Bono de bienvenida
-      profile.umbral_creditos = 5.0;
+      profile.balance_creditos = welcomeBonus;
+      profile.umbral_creditos = creditThreshold;
       await manager.save(profile);
 
       const result = { user: this.sanitize(user), profile, token: this.sign(user) };

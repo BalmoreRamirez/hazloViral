@@ -4,6 +4,34 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Efecto de Configuración en los roles
+
+- Requerimientos: FE-003, FE-016.
+- Cambio: la configuración muestra solo parámetros con efecto implementado. La empresa ve costo de chat y valor por crédito por separado; los errores de validación al editar se presentan con el mensaje del servidor.
+- Alcance: el costo aplica a chat nuevo, el umbral afecta a empresas actuales y nuevas, el bono solo a nuevos registros y la comisión a contratos nuevos. Los contratos existentes conservan su comisión acordada.
+- Validación: compilación de frontend; la integración de efectos se valida con pruebas de backend.
+
+## 2026-10-28 — Mostrar el costo vigente de abrir chat
+
+- Requerimientos: FE-003, FE-016.
+- Cambio: las vistas de Chats y Recargar saldo consultan `GET /credits/chat-cost` y presentan el valor configurado tanto en créditos como en USD. Recargar saldo separa esa tarifa de la equivalencia monetaria de $1 USD por crédito.
+- Backend: se reutiliza el endpoint y el parámetro `chat_open_cost` que ya utiliza el servicio de cobro.
+- Validación: compilación de frontend; no se ejecutaron pruebas automatizadas.
+
+## 2026-10-28 — Menú y vistas separadas para administración
+
+- Requerimientos: FE-007, FE-017.
+- Cambio: navegación administrativa con Inicio, Usuarios, Incumplimientos y Configuración; se quitó Buscar influencers del menú de admin. Cada área tiene una ruta opaca protegida por rol, con el contenido administrativo compartido y presentado según sección.
+- Inicio: el acceso /dashboard redirige al admin autenticado al resumen administrativo, con métricas y accesos a las tres áreas de gestión.
+- Validación: compilación de frontend; no se ejecutaron pruebas automatizadas.
+
+## 2026-10-28 — Mejora de Inicio de administración
+
+- Requerimiento: FE-007.
+- Cambio: métricas traducidas y resumidas, aviso prioritario para contratos pendientes, casos sin resolver en primer lugar, búsqueda de usuarios y carga progresiva de ocho cuentas y cinco casos por tanda. Parámetros económicos quedan al final de la vista.
+- UX: espaciado adaptable, nombres de rol y estado localizados, estados de carga/error y reintento; los errores de guardar/activar/resolver se comunican en la página.
+- Validación: compilación de frontend; no se ejecutaron pruebas automatizadas.
+
 ## 2026-10-28 — Mejora de UX en Mis Chats
 
 - Requerimiento: FE-021.

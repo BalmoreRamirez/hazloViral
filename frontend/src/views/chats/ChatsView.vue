@@ -6,11 +6,14 @@ import AppLayout from '@/components/AppLayout.vue'
 import { formatDate } from '@/utils/date'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
+import { useCreditsStore } from '@/stores/credits'
+import { formatUsd } from '@/utils/money'
 import { influencerApi, type InfluencerChatSuggestion } from '@/api/profiles'
 
 const router    = useRouter()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const creditsStore = useCreditsStore()
 
 const usernameInput = ref('')
 const openError     = ref('')
@@ -97,7 +100,10 @@ async function loadChats() {
   }
 }
 
-onMounted(loadChats)
+onMounted(() => {
+  void loadChats()
+  if (authStore.isEmpresa) void creditsStore.fetchChatOpenCost().catch(() => null)
+})
 
 function counterpartName(chat: (typeof chatStore.chats)[number]) {
   return authStore.isEmpresa
@@ -185,7 +191,12 @@ async function openChat() {
           </button>
         </div>
         <p v-if="openError" role="alert" class="mt-2 text-sm text-coral-text">{{ openError }}</p>
-        <p class="mt-3 flex items-center gap-2 text-xs text-ink-muted"><i class="pi pi-info-circle" aria-hidden="true" /> El primer chat consume 1 crédito. Si ya existe, no se vuelve a cobrar.</p>
+        <p class="mt-3 flex items-center gap-2 text-xs text-ink-muted">
+          <i class="pi pi-info-circle" aria-hidden="true" />
+          <template v-if="creditsStore.chatOpenCost !== null">Un chat nuevo cuesta {{ creditsStore.chatOpenCost }} {{ creditsStore.chatOpenCost === 1 ? 'crédito' : 'créditos' }} ({{ formatUsd(creditsStore.chatOpenCost) }} USD). Si ya existe, no se vuelve a cobrar.</template>
+          <template v-else-if="creditsStore.chatOpenCostLoading">Consultando el costo actual del chat…</template>
+          <template v-else>El costo vigente se confirmará al iniciar el chat.</template>
+        </p>
       </section>
 
       <section class="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">

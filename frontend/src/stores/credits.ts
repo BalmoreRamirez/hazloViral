@@ -13,6 +13,8 @@ export interface BalanceInfo {
 export const useCreditsStore = defineStore('credits', () => {
   const balance = ref<BalanceInfo | null>(null)
   const loading = ref(false)
+  const chatOpenCost = ref<number | null>(null)
+  const chatOpenCostLoading = ref(false)
 
   async function fetchBalance() {
     loading.value = true
@@ -20,6 +22,19 @@ export const useCreditsStore = defineStore('credits', () => {
       balance.value = await creditsApi.getBalance()
     } finally {
       loading.value = false
+    }
+  }
+
+  async function fetchChatOpenCost() {
+    chatOpenCostLoading.value = true
+    try {
+      const { costo } = await creditsApi.getChatCost()
+      const parsedCost = Number(costo)
+      if (!Number.isFinite(parsedCost) || parsedCost < 0) throw new Error('Costo de chat inválido')
+      chatOpenCost.value = parsedCost
+      return parsedCost
+    } finally {
+      chatOpenCostLoading.value = false
     }
   }
 
@@ -59,5 +74,5 @@ export const useCreditsStore = defineStore('credits', () => {
     }
   }
 
-  return { balance, loading, recharging, rechargeError, fetchBalance, updateFromSocket, recharge, simulateRecharge }
+  return { balance, loading, chatOpenCost, chatOpenCostLoading, recharging, rechargeError, fetchBalance, fetchChatOpenCost, updateFromSocket, recharge, simulateRecharge }
 })

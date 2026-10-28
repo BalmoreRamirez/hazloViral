@@ -29,7 +29,8 @@ const isLow          = computed(() => balance.value && !balance.value.is_above_t
 const profilePath = computed(() => user.value?.role === 'empresa' ? '/perfil/empresa' : user.value?.role === 'influencer' ? '/perfil/influencer' : null)
 const roleLabel = computed(() => ({ empresa: 'Empresa', influencer: 'Influencer', admin: 'Administrador' })[user.value?.role ?? 'empresa'])
 const navigationGroups = computed(() => {
-  const groups = [{ label: 'General', items: [{ label: 'Inicio', path: '/dashboard', icon: 'pi-home' }] }]
+  const homePath = user.value?.role === 'admin' ? '/admin' : '/dashboard'
+  const groups = [{ label: 'General', items: [{ label: 'Inicio', path: homePath, icon: 'pi-home' }] }]
   if (user.value?.role === 'empresa') {
     groups.push({ label: 'Campañas', items: [
       { label: 'Briefs de campaña', path: '/briefs', icon: 'pi-clipboard' },
@@ -49,8 +50,9 @@ const navigationGroups = computed(() => {
     ] })
   } else if (user.value?.role === 'admin') {
     groups.push({ label: 'Administración', items: [
-      { label: 'Panel de administración', path: '/admin', icon: 'pi-cog' },
-      { label: 'Buscar influencers', path: '/influencers', icon: 'pi-search' },
+      { label: 'Usuarios', path: '/admin/usuarios', icon: 'pi-users' },
+      { label: 'Incumplimientos', path: '/admin/incumplimientos', icon: 'pi-shield' },
+      { label: 'Configuración', path: '/admin/configuracion', icon: 'pi-sliders-h' },
     ] })
   }
   return groups

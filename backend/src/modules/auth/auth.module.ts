@@ -12,6 +12,7 @@ import { CompanyProfile } from '../companies/entities/company-profile.entity';
 import { InfluencerProfile } from '../influencers/entities/influencer-profile.entity';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
+import { GlobalSetting } from '../admin/entities/global-setting.entity';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { EmailVerificationToken } from './entities/email-verification-token.enti
         signOptions: { expiresIn: config.get('JWT_EXPIRATION', '7d') as any },
       }),
     }),
-    TypeOrmModule.forFeature([User, CompanyProfile, InfluencerProfile, PasswordResetToken, EmailVerificationToken]),
+    TypeOrmModule.forFeature([User, CompanyProfile, InfluencerProfile, PasswordResetToken, EmailVerificationToken, GlobalSetting]),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

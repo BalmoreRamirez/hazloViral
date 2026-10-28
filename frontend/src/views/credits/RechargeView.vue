@@ -55,12 +55,16 @@ async function loadHistory() {
   finally { historyLoading.value = false }
 }
 async function refreshData() {
-  await Promise.all([loadBalance(), loadHistory()])
+  await Promise.all([loadBalance(), loadHistory(), loadChatOpenCost()])
 }
 async function loadBalance() {
   loadError.value = ''
   try { await creditsStore.fetchBalance() }
   catch { loadError.value = 'No se pudo consultar el saldo. Intenta de nuevo.' }
+}
+async function loadChatOpenCost() {
+  try { await creditsStore.fetchChatOpenCost() }
+  catch { /* El costo se consulta de nuevo al refrescar; no bloquea la recarga. */ }
 }
 onMounted(() => {
   creditsStore.rechargeError = null
@@ -146,7 +150,13 @@ watch(balance, (b) => {
           <div class="card h-full flex flex-col gap-4">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <h2 class="font-display font-semibold text-navy">Elige cuánto recargar</h2>
-              <span class="badge-info">1 crédito = $1 USD</span>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="badge-info">Valor del crédito: $1 USD</span>
+                <span v-if="creditsStore.chatOpenCost !== null" class="rounded-full bg-violet-tint px-2.5 py-1 text-xs font-semibold text-violet">
+                  Chat nuevo: {{ creditsStore.chatOpenCost }} {{ creditsStore.chatOpenCost === 1 ? 'crédito' : 'créditos' }} · {{ formatUsd(creditsStore.chatOpenCost) }} USD
+                </span>
+                <span v-else-if="creditsStore.chatOpenCostLoading" class="text-xs text-ink-muted">Consultando costo del chat…</span>
+              </div>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <button v-for="pack in RECHARGE_PACKS" :key="pack" type="button" :aria-pressed="selectedPack === pack" :disabled="creditsStore.recharging" @click="selectedPack = pack"

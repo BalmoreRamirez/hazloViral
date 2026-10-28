@@ -4,6 +4,14 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Efecto de los parámetros de administración
+
+- Requerimiento: BE-003.
+- Auditoría: `chat_open_cost` ya se descontaba al iniciar chats; `platform_commission_pct` se aplicaba al crear contratos; `welcome_bonus` estaba fijo en el registro y `min_credit_threshold` se guardaba pero no gobernaba el comportamiento global.
+- Cambio: el bono se consulta al registrar empresas; el umbral global gobierna saldo, permiso para enviar mensajes e iniciar chats, se copia a perfiles existentes al guardarlo y se asigna a las empresas nuevas. El cobro valida costo y umbral dentro de la transacción.
+- Validación de configuración: solo se editan claves conectadas, se normalizan importes a dos decimales, se rechazan negativos, valores no numéricos y comisiones sobre 100%. Las descripciones indican el alcance y los valores confirmados existentes no se recalculan.
+- Validación: pruebas unitarias específicas para propagación del umbral, configuración inválida, bono de alta, costo de chat y saldo efectivo; compilaciones de backend y frontend.
+
 ## 2026-10-28 — Conteo de pendientes por conversación
 
 - Requerimiento: BE-015.
