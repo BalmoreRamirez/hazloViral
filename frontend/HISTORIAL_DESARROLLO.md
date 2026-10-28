@@ -4,6 +4,15 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Mejora de UX en Mis Chats
+
+- Requerimiento: FE-021.
+- Cambio: encabezado con resumen, búsqueda por contacto, filtro de chats sin leer y filas adaptables con avatar, estado traducido, fecha y contador real de pendientes. Se revisó el ritmo de espacios: separación de 20 px entre secciones, panel de inicio compacto y filas con padding vertical consistente.
+- Cantidad inicial: se muestran los 10 chats más recientes y un botón carga 10 adicionales; al cambiar búsqueda o filtro, el límite vuelve a 10. Se informa cuántos resultados se muestran del total filtrado.
+- Estados: vacíos diferenciados para cuenta nueva y búsqueda sin resultados; skeleton de carga y recuperación por error.
+- Accesibilidad: controles etiquetados, lista navegable por enlaces y foco visible; controles de búsqueda apilados en pantallas estrechas.
+- Validación: compilación de frontend; no se ejecutaron pruebas automatizadas.
+
 ## 2026-10-28 — Sugerencias de influencers al iniciar chat
 
 - Requerimiento: FE-020.

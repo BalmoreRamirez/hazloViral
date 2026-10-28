@@ -27,6 +27,7 @@ Inventario inicial basado en la especificación y la estructura del código. Tod
 
 | BE-013 | Registrar IVA en nuevos borradores DTE de desarrollo | Mostrar y conservar base, IVA y total coherentes; simulación al 13% incluido sin cambiar el pago ni documentos anteriores. Ver [alcance fiscal](../docs/IVA.md). | Por validar | `src/modules/electronic-invoicing/; src/modules/receipts/` | FE-011 |
 | BE-014 | Sugerencias seguras para iniciar chat | Exponer a empresas autenticadas una búsqueda de influencers por nombre artístico o username, limitada a perfiles disponibles, completos y verificables; mínimo de dos caracteres, máximo cinco resultados y solo campos públicos necesarios. | Por validar | `src/modules/influencers/influencers.controller.ts; src/modules/influencers/influencers.service.ts` | FE-020 |
+| BE-015 | Conteo de mensajes sin leer por chat | Incluir en la lista de chats el número de mensajes no leídos por conversación, contando solo mensajes ajenos al usuario autenticado y usando el participante validado por la sesión; no aceptar IDs de propietario desde el cliente. | Por validar | `src/modules/chats/chats.service.ts` | FE-021 |
 
 ## Historial de cambios de requerimientos
 

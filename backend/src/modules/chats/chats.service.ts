@@ -79,11 +79,12 @@ export class ChatsService {
     if (user.role === UserRole.EMPRESA) {
       const empresa = await this.empresasRepo.findOne({ where: { user_id: user.id } });
       if (!empresa) return [];
-      return this.chatsRepo.find({
+      const chats = await this.chatsRepo.find({
         where: { empresa_id: empresa.id },
         relations: { influencer: { user: true, metrics: true } },
         order: { created_at: 'DESC' },
       });
+      return this.withUnreadCounts(chats, user.id);
     }
 
     const influencer = await this.influencersRepo.findOne({ where: { user_id: user.id } });
@@ -94,7 +95,22 @@ export class ChatsService {
       order: { created_at: 'DESC' },
     });
     // El influencer solo ve los datos públicos de la marca (sin NIT, teléfono ni saldo)
-    return chats.map((c) => Object.assign(c, { empresa: toPublicCompany(c.empresa) as any }));
+    const safeChats = chats.map((c) => Object.assign(c, { empresa: toPublicCompany(c.empresa) as any }));
+    return this.withUnreadCounts(safeChats, user.id);
+  }
+
+  private async withUnreadCounts(chats: Chat[], userId: number): Promise<Chat[]> {
+    if (!chats.length) return chats;
+    const rows = await this.messagesRepo.createQueryBuilder('message')
+      .select('message.chat_id', 'chat_id')
+      .addSelect('COUNT(*)', 'unread_count')
+      .where('message.chat_id IN (:...chatIds)', { chatIds: chats.map((chat) => chat.id) })
+      .andWhere('message.read_at IS NULL')
+      .andWhere('message.sender_id != :userId', { userId })
+      .groupBy('message.chat_id')
+      .getRawMany<{ chat_id: number; unread_count: string }>();
+    const unreadByChat = new Map(rows.map((row) => [Number(row.chat_id), Number(row.unread_count)]));
+    return chats.map((chat) => Object.assign(chat, { unread_count: unreadByChat.get(chat.id) ?? 0 }));
   }
 
   async unreadCount(user: User) {
