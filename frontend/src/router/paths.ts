@@ -16,6 +16,9 @@ export const VIEW_PATHS: Record<string, string> = {
   "/contratos/:id": "/v/4d7651b1383832d2/:id",
   "/pagos/comprobantes": "/v/7fcc24d86b6fb141",
   "/admin": "/v/2194da0bf144b9b2",
+  "/admin/usuarios": "/v/9d1770a1a91b204d",
+  "/admin/incumplimientos": "/v/6bc26f6b37efb204",
+  "/admin/configuracion": "/v/1b8cde064e82af70",
   "/acceso-restringido": "/v/5c2a7844ebd6523b"
 }
 

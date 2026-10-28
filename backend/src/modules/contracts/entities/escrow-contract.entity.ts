@@ -1,5 +1,6 @@
 import {
   Column,
+  Check,
   CreateDateColumn,
   Entity,
   Index,
@@ -7,6 +8,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { ContractStatus } from '../../../common/enums';
@@ -40,6 +42,8 @@ export interface BriefSnapshot {
 
 @Entity('contratos_escrow')
 @Index('idx_contratos_status', ['status'])
+@Check('chk_contract_amount_nonnegative', 'monto_total >= 0 AND comision_plataforma >= 0')
+@Unique('uq_contract_id_parties', ['id', 'empresa_id', 'influencer_id'])
 export class EscrowContract {
   @PrimaryGeneratedColumn()
   id: number;
@@ -54,7 +58,11 @@ export class EscrowContract {
   influencer_id: number;
 
   @ManyToOne(() => Chat, (chat) => chat.contratos, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'chat_id' })
+  @JoinColumn([
+    { name: 'chat_id', referencedColumnName: 'id' },
+    { name: 'empresa_id', referencedColumnName: 'empresa_id' },
+    { name: 'influencer_id', referencedColumnName: 'influencer_id' },
+  ])
   chat: Chat;
 
   @ManyToOne(() => CompanyProfile, (empresa) => empresa.contratos, { onDelete: 'RESTRICT' })

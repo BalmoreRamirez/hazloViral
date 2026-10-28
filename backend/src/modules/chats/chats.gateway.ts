@@ -16,6 +16,7 @@ import { SendMessageDto } from './dto/send-message.dto';
 import { UserRole } from '../../common/enums';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { getAllowedCorsOrigins } from '../../common/config/cors-origins';
 
 interface AuthSocket extends Socket {
   data: {
@@ -26,7 +27,13 @@ interface AuthSocket extends Socket {
 }
 
 @WebSocketGateway({
-  cors: { origin: 'http://localhost:5173', credentials: true },
+  cors: {
+    origin: (origin, callback) => {
+      const allowedOrigins = getAllowedCorsOrigins();
+      callback(null, !origin || allowedOrigins.includes(origin));
+    },
+    credentials: true,
+  },
   namespace: '/chat',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {

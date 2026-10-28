@@ -35,20 +35,23 @@ export class CreditsService {
   async getBalance(userId: number): Promise<BalanceInfo> {
     const empresa = await this.empresasRepo.findOne({ where: { user_id: userId } });
     if (!empresa) throw new NotFoundException('Perfil de empresa no encontrado.');
-    return this.buildBalanceInfo(empresa);
+    const threshold = await this.adminService.getNumber('min_credit_threshold', Number(empresa.umbral_creditos));
+    return this.buildBalanceInfo(empresa, threshold);
   }
 
   async getBalanceByEmpresaId(empresaId: number): Promise<BalanceInfo> {
     const empresa = await this.empresasRepo.findOne({ where: { id: empresaId } });
     if (!empresa) throw new NotFoundException('Empresa no encontrada.');
-    return this.buildBalanceInfo(empresa);
+    const threshold = await this.adminService.getNumber('min_credit_threshold', Number(empresa.umbral_creditos));
+    return this.buildBalanceInfo(empresa, threshold);
   }
 
   // ─── Verificación de umbral (claude.md §5.1) ──────────────────────────────────
   async isAboveThreshold(empresaId: number): Promise<boolean> {
     const empresa = await this.empresasRepo.findOne({ where: { id: empresaId } });
     if (!empresa) return false;
-    return Number(empresa.balance_creditos) > Number(empresa.umbral_creditos);
+    const threshold = await this.adminService.getNumber('min_credit_threshold', Number(empresa.umbral_creditos));
+    return Number(empresa.balance_creditos) > threshold;
   }
 
   /** Costo actual de abrir un chat nuevo (configurable por el admin en global_settings). */
@@ -58,7 +61,10 @@ export class CreditsService {
 
   // ─── Debitar créditos al abrir chat (claude.md §5.1) ─────────────────────────
   async deductChatOpenCost(empresaId: number): Promise<BalanceInfo> {
-    const cost = await this.adminService.getNumber('chat_open_cost', 1.0);
+    const [cost, threshold] = await Promise.all([
+      this.adminService.getNumber('chat_open_cost', 1.0),
+      this.adminService.getNumber('min_credit_threshold', 5.0),
+    ]);
 
     return this.dataSource.transaction(async (manager) => {
       // SELECT FOR UPDATE — evita condición de carrera
@@ -72,7 +78,11 @@ export class CreditsService {
       if (!empresa) throw new NotFoundException('Empresa no encontrada.');
 
       const balance = Number(empresa.balance_creditos);
-      const umbral = Number(empresa.umbral_creditos);
+      if (balance <= threshold) {
+        throw new BadRequestException(
+          `Saldo insuficiente. Necesitas superar el umbral de ${threshold} créditos para iniciar chats. Saldo actual: ${balance}.`,
+        );
+      }
 
       if (balance < cost) {
         throw new BadRequestException(
@@ -83,13 +93,14 @@ export class CreditsService {
       empresa.balance_creditos = parseFloat((balance - cost).toFixed(2));
       await manager.save(empresa);
 
-      return this.buildBalanceInfo(empresa);
+      return this.buildBalanceInfo(empresa, threshold);
     });
   }
 
   // ─── Agregar créditos (llamado por Stripe webhook en Parte 7) ─────────────────
   async addCredits(empresaId: number, amount: number, simulationReference?: string): Promise<BalanceInfo> {
     if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException('El monto debe ser positivo.');
+    const threshold = await this.adminService.getNumber('min_credit_threshold', 5.0);
 
     let receiptId: number | null = null;
     const result = await this.dataSource.transaction(async (manager) => {
@@ -135,7 +146,7 @@ export class CreditsService {
         }
       }
 
-      return this.buildBalanceInfo(empresa);
+      return this.buildBalanceInfo(empresa, threshold);
     });
     if (receiptId !== null) await this.receiptsService.sendCreditsTopUpInvoice(receiptId);
     return result;
@@ -154,13 +165,14 @@ export class CreditsService {
     if (!empresa) throw new NotFoundException('Empresa no encontrada.');
     empresa.umbral_creditos = newThreshold;
     await this.empresasRepo.save(empresa);
-    return this.buildBalanceInfo(empresa);
+    const threshold = await this.adminService.getNumber('min_credit_threshold', newThreshold);
+    return this.buildBalanceInfo(empresa, threshold);
   }
 
   // ─── Helper ───────────────────────────────────────────────────────────────────
-  private buildBalanceInfo(empresa: CompanyProfile): BalanceInfo {
+  private buildBalanceInfo(empresa: CompanyProfile, configuredThreshold = Number(empresa.umbral_creditos)): BalanceInfo {
     const balance = Number(empresa.balance_creditos);
-    const umbral = Number(empresa.umbral_creditos);
+    const umbral = configuredThreshold;
     const isAbove = balance > umbral;
     return {
       empresa_id: empresa.id,

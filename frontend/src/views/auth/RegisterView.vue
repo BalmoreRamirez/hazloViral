@@ -274,7 +274,7 @@ async function submit() {
         bio:        bio.value       || undefined,
         ubicacion:  departamento.value ? `${departamento.value}, El Salvador` : 'El Salvador',
         direccion:  direccion.value || undefined,
-        rubro:      rubro.value     || undefined,
+        rubros:     rubro.value ? [rubro.value] : undefined,
         tarifa_base: tarifa_base.value || undefined,
         fecha_nacimiento: fecha_nacimiento.value,
         tipo_identificacion:   tipo_identificacion.value,

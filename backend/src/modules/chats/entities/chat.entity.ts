@@ -16,6 +16,7 @@ import { EscrowContract } from '../../contracts/entities/escrow-contract.entity'
 
 @Entity('chats')
 @Unique('unique_chat_relation', ['empresa_id', 'influencer_id'])
+@Unique('uq_chat_id_parties', ['id', 'empresa_id', 'influencer_id'])
 export class Chat {
   @PrimaryGeneratedColumn()
   id: number;

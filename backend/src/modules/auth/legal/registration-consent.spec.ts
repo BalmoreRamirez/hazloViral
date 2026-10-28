@@ -9,14 +9,15 @@ import { User } from '../../users/entities/user.entity';
 function setup() {
   const manager = { save: jest.fn(async entity => { entity.id = entity.id || 9; return entity; }) };
   const dataSource = { transaction: jest.fn(callback => callback(manager)) };
+  const settingsRepo = { findOne: jest.fn(async ({ where }) => ({ value: where.key === 'welcome_bonus' ? '25.00' : '8.00' })) };
   const service = new AuthService(
-    { existsBy: jest.fn().mockResolvedValue(false) } as any, {} as any, {} as any,
+    { existsBy: jest.fn().mockResolvedValue(false) } as any, {} as any, {} as any, settingsRepo as any,
     { sign: () => 'test-token' } as any, dataSource as any, {} as any,
     { get: () => undefined } as any,
   );
   jest.spyOn(service as any, 'sendVerificationEmail').mockResolvedValue(undefined);
   const docs = service.getRegistrationDocuments();
-  return { service, manager, dataSource, docs, consent: { accepted_terms: true, accepted_privacy: true, terms_version: docs.terms.version, privacy_version: docs.privacy.version } };
+  return { service, manager, dataSource, docs, settingsRepo, consent: { accepted_terms: true, accepted_privacy: true, terms_version: docs.terms.version, privacy_version: docs.privacy.version } };
 }
 describe('Registration legal consent', () => {
   it.each([undefined, false, 'true', 1])('requires explicit boolean true, rejecting %s', value => {
@@ -46,10 +47,59 @@ describe('Registration legal consent', () => {
     expect(result.user).not.toHaveProperty('registration_consent');
     expect(result.user).not.toHaveProperty('password');
   });
+  it('applies the current welcome bonus and credit threshold to new companies', async () => {
+    const { service, consent, manager } = setup();
+    await service.registerEmpresa({ ...consent, email: 'brand@example.com', password: 'Password123!', nombre_comercial: 'Marca' } as any);
+    const profile = manager.save.mock.calls.map(([entity]) => entity).find(entity => entity?.nombre_comercial === 'Marca');
+    expect(profile.balance_creditos).toBe(25);
+    expect(profile.umbral_creditos).toBe(8);
+  });
   it('document versions cover all displayed text including controller identity', () => {
     const { service, docs } = setup();
     expect(service.getRegistrationDocuments()).toEqual(docs);
     expect(docs.privacy.sections[0].text).toContain('admin@yopmail.com');
     expect(docs.terms.sha256).toHaveLength(64);
+  });
+});
+
+describe('Contrato de datos del registro de influencers', () => {
+  it('acepta rubros como arreglo y elimina el campo singular desconocido con whitelist', () => {
+    const dto = Object.assign(new RegisterInfluencerDto(), {
+      accepted_terms: true,
+      accepted_privacy: true,
+      terms_version: 'terms-v1',
+      privacy_version: 'privacy-v1',
+      email: 'creator@example.com',
+      password: 'Password123!',
+      username: 'creator_1',
+      nombre_artistico: 'Creator',
+      fecha_nacimiento: '2000-01-01',
+      tipo_identificacion: 'DUI',
+      numero_identificacion: '12345678-9',
+      rubros: ['fitness'],
+      rubro: 'fitness',
+    });
+
+    expect(validateSync(dto, { whitelist: true })).toHaveLength(0);
+    expect(dto.rubros).toEqual(['fitness']);
+    expect(dto).not.toHaveProperty('rubro');
+  });
+
+  it('persiste la selección rubros recibida en el perfil', async () => {
+    const { service, consent, manager } = setup();
+    await service.registerInfluencer({
+      ...consent,
+      email: 'creator@example.com',
+      password: 'Password123!',
+      username: 'creator_1',
+      nombre_artistico: 'Creator',
+      fecha_nacimiento: '2000-01-01',
+      tipo_identificacion: 'DUI',
+      numero_identificacion: '12345678-9',
+      rubros: ['fitness', 'gaming'],
+    } as any);
+
+    const profile = manager.save.mock.calls.map(([entity]) => entity).find(entity => entity?.nombre_artistico === 'Creator');
+    expect(profile.rubros).toEqual(['fitness', 'gaming']);
   });
 });

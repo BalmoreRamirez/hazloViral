@@ -25,7 +25,7 @@ export const authApi = {
 
   registerInfluencer: (data: RegistrationConsentPayload & {
     email: string; password: string; username: string; nombre_artistico: string
-    bio?: string; ubicacion?: string; direccion?: string; rubro?: string; tarifa_base?: number; fecha_nacimiento: string
+    bio?: string; ubicacion?: string; direccion?: string; rubros?: string[]; tarifa_base?: number; fecha_nacimiento: string
     tipo_identificacion: 'DUI' | 'PASAPORTE'; numero_identificacion: string
     tutor_nombre?: string; tutor_documento_id?: string; tutor_email?: string; tutor_autorizacion?: boolean
   }) => api.post('/auth/register/influencer', data).then((r) => r.data),

@@ -29,7 +29,8 @@ const isLow          = computed(() => balance.value && !balance.value.is_above_t
 const profilePath = computed(() => user.value?.role === 'empresa' ? '/perfil/empresa' : user.value?.role === 'influencer' ? '/perfil/influencer' : null)
 const roleLabel = computed(() => ({ empresa: 'Empresa', influencer: 'Influencer', admin: 'Administrador' })[user.value?.role ?? 'empresa'])
 const navigationGroups = computed(() => {
-  const groups = [{ label: 'General', items: [{ label: 'Inicio', path: '/dashboard', icon: 'pi-home' }] }]
+  const homePath = user.value?.role === 'admin' ? '/admin' : '/dashboard'
+  const groups = [{ label: 'General', items: [{ label: 'Inicio', path: homePath, icon: 'pi-home' }] }]
   if (user.value?.role === 'empresa') {
     groups.push({ label: 'Campañas', items: [
       { label: 'Briefs de campaña', path: '/briefs', icon: 'pi-clipboard' },
@@ -49,8 +50,9 @@ const navigationGroups = computed(() => {
     ] })
   } else if (user.value?.role === 'admin') {
     groups.push({ label: 'Administración', items: [
-      { label: 'Panel de administración', path: '/admin', icon: 'pi-cog' },
-      { label: 'Buscar influencers', path: '/influencers', icon: 'pi-search' },
+      { label: 'Usuarios', path: '/admin/usuarios', icon: 'pi-users' },
+      { label: 'Incumplimientos', path: '/admin/incumplimientos', icon: 'pi-shield' },
+      { label: 'Configuración', path: '/admin/configuracion', icon: 'pi-sliders-h' },
     ] })
   }
   return groups
@@ -97,13 +99,13 @@ function logout() {
 <template>
   <div class="min-h-screen flex flex-col bg-slate">
     <header class="relative bg-navy text-white shadow-lg">
-      <div class="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3 2xl:gap-6">
-        <div class="flex items-center gap-3 shrink-0">
+      <div class="px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-1.5 sm:gap-3 2xl:gap-6">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
           <button type="button" class="2xl:hidden p-2 rounded-lg ui-hover-inverse focus-visible:outline-2 focus-visible:outline-white"
             :aria-expanded="mobileMenuOpen" aria-controls="main-navigation" :aria-label="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'" @click="mobileMenuOpen = !mobileMenuOpen">
             <i :class="['pi', mobileMenuOpen ? 'pi-times' : 'pi-bars']" aria-hidden="true" />
           </button>
-          <RouterLink :to="viewPath('/dashboard')" class="text-xl" aria-label="InfluSmart — Inicio"><BrandName /></RouterLink>
+          <RouterLink :to="viewPath('/dashboard')" class="text-lg sm:text-xl" aria-label="InfluSmart — Inicio"><BrandName /></RouterLink>
         </div>
       <nav id="main-navigation" aria-label="Navegación principal" :class="mobileMenuOpen ? 'block' : 'hidden 2xl:block'" class="absolute top-full left-0 right-0 z-40 bg-navy border-t border-white/10 p-4 shadow-lg 2xl:static 2xl:flex-1 2xl:min-w-0 2xl:border-0 2xl:p-0 2xl:shadow-none">
         <div class="flex flex-col 2xl:flex-row 2xl:items-center gap-4 2xl:gap-3">
@@ -120,31 +122,34 @@ function logout() {
           </section>
         </div>
       </nav>
-        <div class="flex items-center gap-3 sm:gap-5 min-w-0 shrink-0">
+        <div class="flex items-center gap-1 sm:gap-5 min-w-0 shrink-0">
           <RouterLink v-if="authStore.isEmpresa && balance" :to="viewPath('/saldo/recargar')"
-            class="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm ui-hover-inverse whitespace-nowrap"
+            class="inline-flex h-9 w-9 sm:h-auto sm:w-auto items-center justify-center gap-2 rounded-lg px-0 sm:px-2 sm:py-2 text-sm ui-hover-inverse whitespace-nowrap"
+            :aria-label="`Saldo disponible ${balance.balance_creditos.toFixed(2)} USD. Recargar saldo`"
             title="Saldo disponible. Recargar saldo" :class="isLow ? 'text-rose-200' : 'text-white'">
-            <i class="pi pi-wallet" aria-hidden="true" />
-            <span>${{ balance.balance_creditos.toFixed(2) }} <span class="hidden sm:inline">USD</span></span>
+            <i class="pi pi-wallet text-lg" aria-hidden="true" />
+            <span class="hidden sm:inline">${{ balance.balance_creditos.toFixed(2) }} USD</span>
           </RouterLink>
           <RouterLink v-if="user?.role === 'empresa' || user?.role === 'influencer'"
-            :to="viewPath('/chats')" class="relative inline-flex items-center justify-center w-10 h-10 rounded-lg ui-hover-inverse"
+            :to="viewPath('/chats')" class="relative inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg ui-hover-inverse"
             :aria-label="unreadCount ? `${unreadCount} mensajes sin leer. Abrir chats` : 'Mensajes. No tienes mensajes sin leer'"
             :title="unreadCount ? `${unreadCount} mensajes sin leer` : 'Mensajes'">
             <i class="pi pi-envelope text-xl" aria-hidden="true" />
             <span v-if="unreadCount > 0" aria-hidden="true" class="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-danger text-white text-[10px] font-bold flex items-center justify-center border-2 border-navy">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
             <span class="sr-only" role="status" aria-live="polite">{{ unreadCount ? `${unreadCount} mensajes sin leer` : 'Sin mensajes pendientes' }}</span>
           </RouterLink>
-          <AvatarUpload :name="user?.email ?? ''" size="sm" />
+          <AvatarUpload :name="user?.email ?? ''" size="sm" class="hidden sm:block" />
           <div ref="accountMenu" class="relative" @keydown.esc.stop.prevent="closeAccount">
             <button ref="accountButton" id="account-toggle" type="button" :aria-expanded="accountOpen" aria-controls="account-panel"
               @click="accountOpen = !accountOpen"
-              class="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 ui-hover-inverse focus-visible:outline-2 focus-visible:outline-white">
-              <span class="flex flex-col items-start whitespace-nowrap text-left leading-tight">
+              aria-label="Abrir menú de cuenta"
+              class="inline-flex h-9 w-9 sm:h-auto sm:w-auto items-center justify-center gap-2 rounded-lg px-1 sm:px-2 sm:py-1.5 ui-hover-inverse focus-visible:outline-2 focus-visible:outline-white">
+              <i class="pi pi-user-circle text-xl sm:hidden" aria-hidden="true" />
+              <span class="hidden sm:flex flex-col items-start whitespace-nowrap text-left leading-tight">
                 <span class="text-sm font-semibold">Mi cuenta</span>
                 <span class="text-xs text-white/80 mt-0.5">{{ roleLabel }}</span>
               </span>
-              <i class="pi pi-chevron-down text-xs" aria-hidden="true" />
+              <i class="pi pi-chevron-down hidden sm:inline text-xs" aria-hidden="true" />
             </button>
             <div v-if="accountOpen" id="account-panel" aria-labelledby="account-toggle" class="absolute right-0 top-full mt-2 z-50 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-white text-navy shadow-lg p-2">
               <div class="px-3 py-2 border-b border-border mb-1">
@@ -181,12 +186,12 @@ function logout() {
     </div>
 
     <!-- Alerta saldo bajo (claude.md §5.1) -->
-    <div v-if="isLow" class="bg-coral/10 border-b border-coral/30 px-6 py-2 flex items-center justify-between">
-      <p class="text-coral-text text-sm font-medium">
+    <div v-if="isLow" class="bg-coral/10 border-b border-coral/30 px-4 sm:px-6 py-3 sm:py-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-coral-text text-sm font-medium leading-relaxed">
         <i class="pi pi-exclamation-triangle mr-1.5" aria-hidden="true" />Saldo bajo el mínimo (te faltan ${{ balance?.deficit.toFixed(2) }} USD).
         Los chats están en <strong>solo lectura</strong>.
       </p>
-      <RouterLink :to="viewPath('/saldo/recargar')" class="text-sm underline text-coral-text font-semibold">Recargar saldo →</RouterLink>
+      <RouterLink :to="viewPath('/saldo/recargar')" class="text-sm underline text-coral-text font-semibold whitespace-nowrap">Recargar saldo →</RouterLink>
     </div>
 
     <main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6 mx-auto w-full max-w-[1600px] xl:w-[90%]">

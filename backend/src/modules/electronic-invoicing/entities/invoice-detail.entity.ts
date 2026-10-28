@@ -1,18 +1,25 @@
 import {
   Column,
   Entity,
-  Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
 } from 'typeorm';
+import { ElectronicInvoice } from './electronic-invoice.entity';
 
 @Entity('dte_details')
-@Index('idx_dte_details_document', ['dte_id', 'num_item'])
+@Unique('uq_dte_detail_document_item', ['dte_id', 'num_item'])
 export class InvoiceDetail {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: string;
 
   @Column({ type: 'bigint' })
   dte_id: string;
+
+  @ManyToOne(() => ElectronicInvoice, (dte) => dte.details, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'dte_id' })
+  dte: ElectronicInvoice;
 
   @Column({ type: 'int' })
   num_item: number;

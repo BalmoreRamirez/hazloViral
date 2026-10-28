@@ -289,11 +289,11 @@ function formatTime(dt: string) {
 
 <template>
   <AppLayout>
-    <div class="flex flex-col h-[calc(100vh-10rem)]">
+    <div class="flex h-[calc(100dvh-10rem)] min-h-[20rem] flex-col sm:h-[calc(100vh-10rem)] sm:min-h-0">
       <!-- Header del chat -->
-      <div class="card mb-3 flex items-center justify-between py-3">
-        <div class="flex items-center gap-3">
-          <button @click="router.push(viewPath('/chats'))" class="text-ink-muted ui-hover text-lg leading-none">←</button>
+      <div class="card mb-3 flex min-w-0 items-center justify-between gap-2 py-3">
+        <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+          <button aria-label="Volver a conversaciones" @click="router.push(viewPath('/chats'))" class="shrink-0 text-ink-muted ui-hover text-lg leading-none">←</button>
           <template v-if="counterpart">
             <img v-if="counterpart.avatar_url"
               :src="counterpart.avatar_url"
@@ -302,19 +302,19 @@ function formatTime(dt: string) {
               {{ counterpart.initials }}
             </div>
             <div class="min-w-0">
-              <div class="flex items-center gap-1.5">
+              <div class="flex min-w-0 items-center gap-1.5">
                 <RouterLink v-if="counterpart.profile_url" :to="counterpart.profile_url"
-                  class="font-display font-semibold text-navy leading-tight ui-hover"
+                  class="block min-w-0 truncate font-display font-semibold text-navy leading-tight ui-hover"
                   :title="isEmpresa ? 'Ver perfil del influencer' : 'Ver perfil de la marca'">{{ counterpart.name }}</RouterLink>
-                <p v-else class="font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
+                <p v-else class="min-w-0 truncate font-display font-semibold text-navy leading-tight">{{ counterpart.name }}</p>
                 <VerifiedBadge v-if="counterpart.is_verified" size="sm" />
               </div>
-              <span v-if="counterpart.sub" class="text-xs text-ink-muted">{{ counterpart.sub }}</span>
+              <span v-if="counterpart.sub" class="block truncate text-xs text-ink-muted">{{ counterpart.sub }}</span>
             </div>
           </template>
           <p v-else class="font-display font-semibold text-navy">Chat</p>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex shrink-0 items-center gap-1 sm:gap-2">
           <RouterLink v-if="counterpart?.profile_url" :to="counterpart.profile_url"
             v-tooltip.top="isEmpresa ? 'Ver perfil del influencer' : 'Ver perfil de la marca'"
             :aria-label="`Ver perfil público de ${counterpart.name}`"
@@ -342,7 +342,7 @@ function formatTime(dt: string) {
       </div>
 
       <!-- Mensajes -->
-      <div class="flex-1 overflow-y-auto space-y-3 pr-2 pb-2">
+      <div class="min-h-0 flex-1 overflow-y-auto space-y-3 pr-2 pb-2">
         <div v-if="chatStore.loadingMessages" class="text-center text-ink-muted py-8">Cargando…</div>
 
         <template v-for="msg in messages" :key="msg.id">
@@ -454,14 +454,25 @@ function formatTime(dt: string) {
 
           <!-- ── Tarjeta de brief ── -->
           <div v-else-if="msg.campaignBrief" class="flex justify-center">
-            <div class="card max-w-sm w-full border-amber-200 bg-warning-tint space-y-2">
-              <div class="flex items-center gap-2">
-                <i class="pi pi-clipboard text-warning" aria-hidden="true" />
-                <p class="font-display font-semibold text-warning text-sm">Brief de campaña</p>
-                <span class="ml-auto text-xs text-warning">{{ formatTime(msg.created_at) }}</span>
+            <div class="w-full max-w-2xl overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
+              <div class="flex items-center gap-3 border-b border-amber-100 bg-amber-50/70 px-4 py-3 sm:px-5">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-amber-700 shadow-sm ring-1 ring-amber-200">
+                  <i class="pi pi-clipboard" aria-hidden="true" />
+                </span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-amber-800">Brief de campaña</p>
+                  <p class="truncate text-xs text-ink-muted">Información para la colaboración</p>
+                </div>
+                <time class="shrink-0 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-ink-muted" :datetime="msg.created_at">
+                  {{ formatTime(msg.created_at) }}
+                </time>
               </div>
-              <p class="font-semibold text-navy text-sm">{{ msg.campaignBrief.titulo_campana }}</p>
-              <BriefDetails :brief="msg.campaignBrief" />
+              <div class="space-y-4 p-4 sm:p-5">
+                <h3 class="break-words font-display text-lg font-bold leading-snug text-navy sm:text-xl">
+                  {{ msg.campaignBrief.titulo_campana }}
+                </h3>
+                <BriefDetails :brief="msg.campaignBrief" />
+              </div>
             </div>
           </div>
 

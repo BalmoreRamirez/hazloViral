@@ -51,9 +51,6 @@ export const contractsApi = {
   retryPayout: (id: number) => api.post(`/contratos/${id}/retry-payout`).then((r) => r.data),
   reportNonCompliance: (contrato_id: number, motivo: string) =>
     api.post(`/contratos/${contrato_id}/report-noncompliance`, { contrato_id, motivo }).then((r) => r.data),
-  dispute: (id: number, motivo: string) =>
-    api.post(`/contratos/${id}/dispute`, { motivo }).then((r) => r.data),
-
   // Solo FORMA_PAGO=desarrollo: simula el fondeo sin pasar por Wompi
   simulateFund: (id: number) =>
     api.post(`/wompi/dev/simulate-fund/${id}`).then((r) => r.data),

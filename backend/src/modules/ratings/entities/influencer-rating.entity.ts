@@ -1,5 +1,6 @@
 import {
   Column,
+  Check,
   CreateDateColumn,
   Entity,
   JoinColumn,
@@ -13,6 +14,7 @@ import { CompanyProfile } from '../../companies/entities/company-profile.entity'
 
 @Entity('influencer_ratings')
 @Unique(['influencer_id', 'empresa_id'])
+@Check('chk_influencer_rating_stars', 'estrellas BETWEEN 1 AND 5')
 export class InfluencerRating {
   @PrimaryGeneratedColumn()
   id: number;
@@ -35,11 +37,11 @@ export class InfluencerRating {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 
-  @ManyToOne(() => InfluencerProfile, { onDelete: 'CASCADE' })
+  @ManyToOne(() => InfluencerProfile, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'influencer_id' })
   influencer: InfluencerProfile;
 
-  @ManyToOne(() => CompanyProfile, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CompanyProfile, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'empresa_id' })
   empresa: CompanyProfile;
 }

@@ -86,7 +86,10 @@ const router = createRouter({
     },
 
     // ── Admin ───────────────────────────────────────────────────────────────
-    { path: '/admin', name: 'admin', component: () => import('@/views/admin/AdminView.vue'), meta: { auth: true, role: 'admin' } },
+    { path: '/admin', name: 'admin', component: () => import('@/views/admin/AdminView.vue'), meta: { auth: true, role: 'admin', adminSection: 'overview' } },
+    { path: '/admin/usuarios', name: 'admin-users', component: () => import('@/views/admin/AdminView.vue'), meta: { auth: true, role: 'admin', adminSection: 'users' } },
+    { path: '/admin/incumplimientos', name: 'admin-incidents', component: () => import('@/views/admin/AdminView.vue'), meta: { auth: true, role: 'admin', adminSection: 'incidents' } },
+    { path: '/admin/configuracion', name: 'admin-settings', component: () => import('@/views/admin/AdminView.vue'), meta: { auth: true, role: 'admin', adminSection: 'settings' } },
 
     {
       path: '/acceso-restringido',
@@ -100,8 +103,15 @@ const router = createRouter({
   ]),
 })
 
-router.beforeEach((to) => createAccessGuard(useAuthStore(), async (resource) => {
-  await api.get(resource)
-})(to))
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+  const result = await createAccessGuard(auth, async (resource) => {
+    await api.get(resource)
+  })(to)
+  if (result === true && to.name === 'dashboard' && auth.user?.role === 'admin') {
+    return { name: 'admin' }
+  }
+  return result
+})
 
 export default router

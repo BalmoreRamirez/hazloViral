@@ -6,7 +6,7 @@ import { parse } from '@vue/compiler-sfc'
 import ts from 'typescript'
 const require = createRequire(import.meta.url)
 
-function setup({ validFields = false } = {}) {
+function setup({ validFields = false, age = 17 } = {}) {
   const { descriptor } = parse(fs.readFileSync(new URL('../src/views/auth/RegisterView.vue', import.meta.url), 'utf8'))
   const code = ts.transpile(descriptor.scriptSetup.content, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS })
   let submitted = 0
@@ -14,12 +14,12 @@ function setup({ validFields = false } = {}) {
   const imports = {
     'vue-router': { useRouter: () => ({ push() {} }) },
     '@/stores/auth': { useAuthStore: () => ({ registerEmpresa: async data => { submitted++; payload = data }, registerInfluencer: async data => { submitted++; payload = data } }) },
-    '@/utils/date': { calculateAge: () => 17 },
+    '@/utils/date': { calculateAge: () => age },
     '@/constants/ubicaciones': { DEPARTAMENTOS_SV: [] },
     '@/constants/rubros': { RUBROS: [] },
   }
   if (validFields) imports['@vuelidate/core'] = { useVuelidate: () => require('vue').ref({ $validate: async () => true, $reset() {} }) }
-  const state = new Function('exports', 'require', code + '\nreturn { submit, legalDocuments, acceptedTerms, acceptedPrivacy, nextStep, handleSubmit, step, role, email_, password, nombre_comercial, telefono, registered, loading, username, nombre_artistico, fecha_nacimiento, numero_identificacion };')({}, name => imports[name] ?? (name.startsWith('@/') ? {} : require(name)))
+  const state = new Function('exports', 'require', code + '\nreturn { submit, legalDocuments, acceptedTerms, acceptedPrivacy, nextStep, handleSubmit, step, role, email_, password, nombre_comercial, telefono, registered, loading, username, nombre_artistico, fecha_nacimiento, numero_identificacion, rubro, tipo_identificacion, tutor_nombre, tutor_documento_id, tutor_email, tutor_autorizacion };')({}, name => imports[name] ?? (name.startsWith('@/') ? {} : require(name)))
   return { ...state, submitted: () => submitted, payload: () => payload }
 }
 test('no avanza sin credenciales válidas ni envía la cuenta antes de terminar', async () => {
@@ -96,4 +96,43 @@ test('no registra sin documentos disponibles y reinicia aceptación al cambiar r
   await require('vue').nextTick()
   assert.equal(form.acceptedTerms.value, false)
   assert.equal(form.acceptedPrivacy.value, false)
+})
+
+test('registro de influencer envía el rubro como arreglo compatible con el DTO', async () => {
+  const form = setup({ validFields: true, age: 20 })
+  form.role.value = 'influencer'
+  await require('vue').nextTick()
+  form.email_.value = 'creator@example.com'
+  form.password.value = 'Example123!'
+  form.username.value = 'creador_test'
+  form.nombre_artistico.value = 'Creador'
+  form.fecha_nacimiento.value = '2000-01-01'
+  form.numero_identificacion.value = '12345678-9'
+  form.rubro.value = 'fitness'
+  form.legalDocuments.value = { terms: { version: 'terms-v1' }, privacy: { version: 'privacy-v1' } }
+  form.acceptedTerms.value = true
+  form.acceptedPrivacy.value = true
+
+  await form.submit()
+
+  assert.deepEqual(form.payload().rubros, ['fitness'])
+  assert.equal(Object.hasOwn(form.payload(), 'rubro'), false)
+  assert.equal(form.registered.value, true)
+})
+
+test('registro de empresa mantiene el campo rubro singular', async () => {
+  const form = setup({ validFields: true })
+  form.email_.value = 'brand@example.com'
+  form.password.value = 'Example123!'
+  form.nombre_comercial.value = 'Marca'
+  form.telefono.value = '+503 7000-0000'
+  form.rubro.value = 'gastronomia'
+  form.legalDocuments.value = { terms: { version: 'terms-v1' }, privacy: { version: 'privacy-v1' } }
+  form.acceptedTerms.value = true
+  form.acceptedPrivacy.value = true
+
+  await form.submit()
+
+  assert.equal(form.payload().rubro, 'gastronomia')
+  assert.equal(Object.hasOwn(form.payload(), 'rubros'), false)
 })

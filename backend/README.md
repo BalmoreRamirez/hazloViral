@@ -12,6 +12,8 @@ backend/
 │   ├── app.module.ts           # Composición de módulos e infraestructura
 │   ├── app.controller.ts
 │   ├── app.service.ts
+│   ├── data-source.ts          # DataSource para ejecutar migraciones
+│   ├── migrations/             # Cambios versionados del esquema PostgreSQL
 │   ├── config/
 │   │   ├── database.config.ts  # Configuración y descubrimiento de entidades
 │   │   └── timezone.ts         # Zona horaria del proceso
@@ -88,6 +90,19 @@ al recompilar en modo watch. Los archivos subidos permanecen fuera de `src`, en
 `uploads/`, y Docker los conserva en un volumen.
 
 ## Mantenimiento
+
+Las migraciones de PostgreSQL se aplican explícitamente desde `backend`:
+
+```bash
+npm run migration:show
+npm run migration:run
+```
+
+`migration:run` compila el backend y aplica las migraciones pendientes usando las
+variables de `.env`. La migración de integridad verifica primero que no existan
+referencias huérfanas ni datos que incumplan las nuevas restricciones; si encuentra
+filas inválidas, se detiene sin corregirlas automáticamente para evitar alterar
+historial financiero o fiscal.
 
 Ejecutar desde `backend` para resolver `.env`, dependencias y rutas de archivos:
 
