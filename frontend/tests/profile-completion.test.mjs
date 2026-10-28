@@ -32,3 +32,22 @@ test('detecta presentación, identidad, redes y cuenta bancaria del creador', ()
     assert.equal(completion.influencerNeedsProfileGuide({ ...influencer, ...change }), true)
   }
 })
+
+test('perfil verificado no muestra guía aunque falten datos adicionales o bancarios', () => {
+  assert.equal(completion.influencerNeedsProfileGuide({ ...influencer, is_verified: true, bio: '', banco_cuenta_numero: null }), false)
+  assert.equal(completion.companyNeedsProfileGuide({ ...company, is_verified: true, rubro: '' }), false)
+})
+
+test('influencer: dos campos pendientes producen exactamente dos pasos específicos', () => {
+  const steps = completion.influencerProfileGuideSteps({ ...influencer, bio: '', banco_cuenta_numero: null })
+  assert.deepEqual(steps.map(step => step.selector), ['#creator-bio', '#creator-banco-cuenta-numero'])
+})
+test('empresa: dos campos pendientes producen exactamente dos pasos específicos', () => {
+  const steps = completion.companyProfileGuideSteps({ ...company, telefono: '', representante_nombre: '' })
+  assert.deepEqual(steps.map(step => step.selector), ['#company-telefono', '#company-representante-nombre'])
+})
+test('no agrega pasos generales, de guardado ni de campos ya completos', () => {
+  assert.deepEqual(completion.companyProfileGuideSteps(company), [])
+  const steps = completion.influencerProfileGuideSteps({ ...influencer, user: { avatar_url: null } })
+  assert.deepEqual(steps.map(step => step.selector), ['#creator-avatar'])
+})

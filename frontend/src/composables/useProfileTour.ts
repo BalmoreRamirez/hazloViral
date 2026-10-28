@@ -1,11 +1,11 @@
-import { nextTick, onBeforeUnmount, ref } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import 'intro.js/introjs.css'
 import '@/assets/profile-tour.css'
 
 export interface ProfileTourStep { selector: string; title: string; intro: string }
 
 /** Shared manual/automatic guide: it never submits or changes profile data. */
-export function useProfileTour(prepare: () => void, steps: ProfileTourStep[]) {
+export function useProfileTour(prepare: () => void, steps: ProfileTourStep[] | (() => ProfileTourStep[]), isNeeded: () => boolean = () => true) {
   const active = ref(false)
   const error = ref('')
   let disposed = false
@@ -13,17 +13,18 @@ export function useProfileTour(prepare: () => void, steps: ProfileTourStep[]) {
   let trigger: HTMLElement | null = null
 
   async function start() {
-    if (active.value || disposed) return
+    if (active.value || disposed || !isNeeded()) return
     active.value = true
     error.value = ''
     trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null
     try {
       const { default: introJs } = await import('intro.js')
-      if (disposed) return
+      if (disposed || !isNeeded()) { active.value = false; return }
       prepare()
       await nextTick()
-      if (disposed) return
-      const visibleSteps = steps.flatMap(step => {
+      if (disposed || !isNeeded()) { active.value = false; return }
+      const currentSteps = typeof steps === 'function' ? steps() : steps
+      const visibleSteps = currentSteps.flatMap(step => {
         const element = document.querySelector<HTMLElement>(step.selector)
         return element?.getClientRects().length ? [{ element, title: step.title, intro: step.intro }] : []
       })
@@ -48,6 +49,12 @@ export function useProfileTour(prepare: () => void, steps: ProfileTourStep[]) {
       error.value = 'No se pudo abrir la guía. Puedes completar el formulario o volver a intentarlo.'
     }
   }
+  watch(isNeeded, needed => {
+    if (!needed) {
+      active.value = false
+      void tour?.exit(true).catch(() => {})
+    }
+  })
   onBeforeUnmount(() => {
     disposed = true
     active.value = false

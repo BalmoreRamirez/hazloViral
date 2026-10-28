@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import RequiredMark from '@/components/RequiredMark.vue'
-import { influencerNeedsProfileGuide } from '@/utils/profile-completion'
+import { influencerNeedsProfileGuide, influencerProfileGuideSteps } from '@/utils/profile-completion'
 import { useProfileTour } from '@/composables/useProfileTour'
 import { calculateAge as calcAge } from '@/utils/date'
 import { ref, computed, onMounted } from 'vue'
@@ -93,6 +93,13 @@ const verificationChecklist = computed(() => {
     { label: 'Edad mínima de 16 años', ok: !!p.fecha_nacimiento && calcAge(p.fecha_nacimiento) >= 16 },
   ]
 })
+
+async function onAvatarUpdated() {
+  statusMessage.value = 'Imagen actualizada correctamente.'
+  // Refresh verification without replacing unsaved profile/bank forms.
+  try { await store.loadInfluencerProfile() }
+  catch { statusMessage.value += ' No se pudo actualizar el resumen del perfil; vuelve a cargarlo cuando termines de editar.' }
+}
 
 async function loadProfile() {
   loadError.value = ''
@@ -201,16 +208,8 @@ function formatFollowers(n: number) {
 
 const { start: startProfileGuide, active: guideActive, error: guideError } = useProfileTour(() => {
   if (!editing.value) startEdit()
-}, [
-  {"selector": "#creator-progress", "title": "Tu perfil, paso a paso", "intro": "Estos requisitos reflejan tu verificación actual. La guía abre la edición, pero no guarda ni cambia tus datos."},
-  {"selector": "#creator-avatar", "title": "Cambia tu foto de perfil", "intro": "Esta es la foto que verán las marcas. Al terminar la guía, guarda o cancela la edición y selecciona esta imagen para subir tu foto. Puedes usar JPG o PNG; la imagen se actualiza al terminar la subida."},
-  {"selector": "#creator-nombre-artistico", "title": "Presentación profesional", "intro": "Revisa tu nombre artístico, usuario, biografía y ubicación. Las marcas usan esta información para conocerte."},
-  {"selector": "#creator-tarifa-base", "title": "Oferta y disponibilidad", "intro": "Define tu tarifa base y rubros, y confirma si estás disponible para nuevas campañas."},
-  {"selector": "#creator-numero-identificacion", "title": "Verifica tu identidad", "intro": "Revisa tu documento. Los datos de identidad y del tutor se mantienen privados."},
-  {"selector": "#creator-add-social", "title": "Conecta y verifica tus redes", "intro": "Después de guardar el perfil, agrega tus redes aquí y utiliza Verificar. Los resultados dependen de la validación de cada plataforma."},
-  {"selector": "#creator-bank", "title": "Prepara tus pagos", "intro": "Registra banco, número y tipo de cuenta para recibir pagos. Esta información no aparece en tu perfil público."},
-  {"selector": "#creator-save", "title": "Completa y guarda", "intro": "Termina la guía para completar el formulario y guardar los cambios. Las redes y la cuenta bancaria tienen sus propias acciones de guardado."}
-])
+  if (influencerProfileGuideSteps(esData.value).some(step => step.selector.startsWith('#creator-banco-')) && !bankEditing.value) startBankEdit()
+}, () => influencerProfileGuideSteps(esData.value ? { ...esData.value, metrics: store.metrics } : null), () => needsGuide.value)
 </script>
 
 <template>
@@ -227,7 +226,7 @@ const { start: startProfileGuide, active: guideActive, error: guideError } = use
       <p v-if="statusMessage" role="status" class="rounded-xl border border-green-200 bg-success-tint px-5 py-3 text-sm text-success">{{ statusMessage }}</p>
       <div v-if="loadError" role="alert" class="card flex flex-wrap items-center justify-between gap-3"><p class="text-coral-text">{{ loadError }}</p><button type="button" class="btn-secondary" @click="loadProfile">Reintentar</button></div>
       <ProfileOverview avatar-id="creator-avatar" :name="loadError || store.loading ? '' : esData?.nombre_artistico ?? ''" label="Creador / influencer"
-        :subtitle="esData?.username ? `@${esData.username}` : 'Tu identidad profesional'" :verified="esData?.is_verified" :disabled="editing || bankEditing || showMetricForm || store.loading || !!loadError" @updated="statusMessage = 'Imagen actualizada correctamente.'; loadProfile()">
+        :subtitle="esData?.username ? `@${esData.username}` : 'Tu identidad profesional'" :verified="esData?.is_verified" :disabled="store.loading || !!loadError" @updated="onAvatarUpdated">
         <div v-if="esData && !loadError"><p class="text-xs text-ink-muted">Tarifa por campaña</p><p class="font-semibold text-lg text-navy mt-1">{{ formatUsd(esData.tarifa_base) }} <span class="text-xs font-normal text-ink-muted">USD</span></p></div>
         <div v-if="!loadError"><p class="text-xs text-ink-muted">Comunidad total</p><p class="font-semibold text-lg text-navy mt-1">{{ formatFollowers(totalFollowers) }} <span class="text-xs font-normal text-ink-muted">seguidores</span></p></div>
       </ProfileOverview>
@@ -372,7 +371,7 @@ const { start: startProfileGuide, active: guideActive, error: guideError } = use
             <input id="creator-tarifa-base" v-model.number="form.tarifa_base" type="number" min="0" class="input" />
           </div>
 
-          <div class="field">
+          <div id="creator-rubros" class="field">
             <label class="label">Rubro / nicho <RequiredMark /><span class="text-ink-muted font-normal">(puedes elegir varios)</span></label>
             <div class="flex flex-wrap gap-2 mt-1">
               <button

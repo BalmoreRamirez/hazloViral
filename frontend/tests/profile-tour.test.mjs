@@ -6,7 +6,7 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const vue = require('vue')
 
-function setup() {
+function setup(needed = vue.ref(true)) {
   let unmount, options, onExit, prepared = 0, started = 0, exits = 0, focused = 0
   class Element { getClientRects() { return [1] } focus() { focused++ } }
   globalThis.HTMLElement = Element
@@ -26,7 +26,7 @@ function setup() {
   const guide = exports.useProfileTour(() => { prepared++ }, [
     { selector: '#visible', title: 'Tu marca', intro: 'Completa este campo.' },
     { selector: '#missing', title: 'Oculto', intro: 'No debe aparecer.' },
-  ])
+  ], () => needed.value)
   return { guide, unmount: () => unmount(), exit: () => onExit(), stats: () => ({ options, prepared, started, exits, focused }) }
 }
 test('guía voluntaria en español, sin objetivos ausentes ni inicio duplicado', async () => {
@@ -52,4 +52,22 @@ test('salir de la vista elimina el recorrido y evita iniciarlo después', async 
   assert.equal(state.stats().exits, 1)
   assert.equal(state.stats().started, 1)
   assert.equal(state.stats().focused, 0)
+})
+
+test('perfil completo impide abrir la guía y no prepara edición', async () => {
+  const state = setup(vue.ref(false))
+  await state.guide.start()
+  assert.equal(state.stats().started, 0)
+  assert.equal(state.stats().prepared, 0)
+})
+test('completar perfil cierra una guía que ya estaba abierta', async () => {
+  const needed = vue.ref(true)
+  const state = setup(needed)
+  await state.guide.start()
+  needed.value = false
+  await vue.nextTick()
+  assert.equal(state.guide.active.value, false)
+  assert.equal(state.stats().exits, 1)
+  await state.guide.start()
+  assert.equal(state.stats().started, 1)
 })

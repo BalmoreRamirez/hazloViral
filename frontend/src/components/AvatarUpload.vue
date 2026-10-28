@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/api/index'
 
@@ -42,6 +42,8 @@ const initials = computed(() => {
 
 const bgColor    = computed(() => hashColor(props.name || 'user'))
 const avatarUrl  = computed(() => authStore.user?.avatar_url ?? null)
+const imageFailed = ref(false)
+watch(avatarUrl, () => { imageFailed.value = false })
 
 // ── Tamaños ───────────────────────────────────────────────────────────────
 const sizeClass = computed(() => ({
@@ -53,11 +55,12 @@ const sizeClass = computed(() => ({
 
 // ── Upload ────────────────────────────────────────────────────────────────
 function triggerPicker() {
-  if (!props.editable) return
+  if (!props.editable || uploading.value) return
   fileInput.value?.click()
 }
 
 async function onFileChange(event: Event) {
+  if (uploading.value || !props.editable) return
   const input = event.target as HTMLInputElement
   const file  = input.files?.[0]
   if (!file) return
@@ -97,36 +100,43 @@ async function onFileChange(event: Event) {
   <div class="relative inline-block">
     <!-- Avatar -->
     <div
-      :class="[sizeClass, 'rounded-full overflow-hidden select-none flex items-center justify-center font-semibold text-white ring-2 ring-white shadow-md transition-all duration-200', editable && 'cursor-pointer']"
-      :style="avatarUrl ? {} : { backgroundColor: bgColor }"
+      :class="[sizeClass, 'relative rounded-full overflow-hidden select-none flex items-center justify-center font-semibold text-white ring-2 ring-white shadow-md transition-all duration-200', editable && 'cursor-pointer']"
+      :style="avatarUrl && !imageFailed ? {} : { backgroundColor: bgColor }"
       @click="triggerPicker"
     >
       <!-- Foto real -->
       <img
-        v-if="avatarUrl"
+        v-if="avatarUrl && !imageFailed"
         :src="avatarUrl"
         :alt="name"
         class="w-full h-full object-cover"
-        @error="(e) => { (e.target as HTMLImageElement).style.display = 'none' }"
+        @error="imageFailed = true"
       />
       <!-- Iniciales (fallback) -->
       <span v-else>{{ initials }}</span>
     </div>
 
     <!-- Overlay editable -->
-    <div
+    <button
       v-if="editable"
-      class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 cursor-pointer"
+      type="button"
+      :disabled="uploading"
+      :aria-label="uploading ? 'Subiendo foto de perfil' : 'Cambiar foto de perfil'"
+      :aria-busy="uploading"
+      :class="sizeClass" class="absolute top-0 left-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet transition-opacity duration-200 cursor-pointer"
       @click="triggerPicker"
     >
       <i v-if="!uploading" class="pi pi-camera text-white text-sm"></i>
-      <i v-else class="pi pi-spin pi-spinner text-white text-sm"></i>
-    </div>
+      <i v-else class="pi pi-spin pi-spinner text-white text-sm" aria-hidden="true"></i>
+    </button>
 
     <!-- Badge de cámara (esquina inferior derecha) en tamaños lg/xl -->
     <button
       v-if="editable && (size === 'lg' || size === 'xl')"
-      class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-violet text-white flex items-center justify-center shadow-md hover:bg-violet-dark transition-colors"
+      type="button"
+      aria-label="Cambiar foto de perfil"
+      :class="size === 'xl' ? 'top-[68px] left-[68px]' : 'top-9 left-9'"
+      class="absolute w-7 h-7 rounded-full bg-violet text-white flex items-center justify-center shadow-md hover:bg-violet-dark transition-colors"
       @click.stop="triggerPicker"
       :disabled="uploading"
       title="Cambiar foto"
@@ -144,7 +154,7 @@ async function onFileChange(event: Event) {
     />
 
     <!-- Error toast inline -->
-    <p v-if="error" class="absolute top-full left-0 mt-1 text-xs text-coral-text whitespace-nowrap">
+    <p v-if="error" role="alert" class="mt-2 max-w-64 text-xs text-coral-text break-words">
       {{ error }}
     </p>
   </div>

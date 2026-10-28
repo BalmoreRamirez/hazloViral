@@ -17,7 +17,7 @@ defineEmits<{ updated: [] }>()
         <VerifiedBadge v-if="verified" size="sm" />
       </div>
       <p v-if="subtitle" class="text-sm text-ink-muted mt-1 break-words">{{ subtitle }}</p>
-      <p class="text-xs text-ink-muted mt-2">{{ disabled ? 'Guarda o cancela los cambios para actualizar tu imagen.' : 'Selecciona tu imagen para actualizarla. Solo JPG o PNG, hasta 5 MB.' }}</p>
+      <p class="text-xs text-ink-muted mt-2">{{ disabled ? 'La imagen no está disponible mientras se carga el perfil.' : 'Selecciona tu imagen para actualizarla. Solo JPG o PNG, hasta 5 MB.' }}</p>
     </div>
     <div v-if="$slots.default" class="flex flex-wrap gap-6 sm:border-l sm:border-border sm:pl-6"><slot /></div>
   </section>

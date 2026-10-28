@@ -4,6 +4,28 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-10-28 — Guía limitada a campos pendientes
+
+- Requerimiento: FE-019.
+- Cambio: pasos generados desde los datos guardados de cada perfil. Cada campo pendiente tiene su propio objetivo; se omiten campos completos y pasos generales de introducción y guardado. Foto, presencia online y verificación social se incluyen únicamente cuando faltan.
+- Influencer: abre la edición bancaria si hay campos bancarios pendientes para que cada paso apunte al control correspondiente. Conserva la exclusión de perfiles verificados completos.
+- Validación: compilación, tipos y pruebas de ambos roles con exactamente dos campos pendientes, solo foto pendiente y ausencia de pasos para perfiles completos.
+
+## 2026-10-28 — No mostrar guía con perfil verificado completo
+
+- Requerimiento: FE-019.
+- Causa: el criterio de orientación incluía datos adicionales aunque el servidor confirmara el perfil verificado y el indicador mostrara todos los requisitos cumplidos.
+- Cambio: is_verified=true impide la guía y la tarjeta de orientación en ambos roles. El recorrido valida elegibilidad antes y después de cargar Intro.js y se cierra si el perfil se completa mientras está abierto; no vuelve a abrir edición por una acción pendiente.
+- Validación: compilación y tipos, pruebas de perfil verificado con datos adicionales ausentes, bloqueo de apertura y cierre reactivo del recorrido.
+
+## 2026-10-28 — Permitir cambiar foto durante edición del perfil
+
+- Requerimientos: FE-002, FE-019.
+- Causa: la edición abierta por la guía deshabilitaba la foto. También se bloqueaba al editar banco o redes del influencer.
+- Cambio: foto disponible durante la edición, solo bloqueada mientras carga el perfil o si falla su carga. El influencer refresca los datos guardados y la verificación sin sobrescribir formularios pendientes. Mismo acceso durante edición para el logo de empresa.
+- Accesibilidad y errores: botones con tipo explícito y etiqueta, selección por teclado, prevención de cargas simultáneas, iniciales si falla la imagen y error legible. Se mantienen JPG/PNG hasta 5 MB.
+- Validación: compilación y tipos; pruebas existentes del frontend y pruebas de carga válida, rechazo de formato y prevención de doble subida. Sin sustituir la foto real del usuario durante las pruebas.
+
 ## 2026-10-28 — Separar pagos a influencers y recargas de empresa
 
 - Requerimientos: FE-010, FE-016, BE-009.

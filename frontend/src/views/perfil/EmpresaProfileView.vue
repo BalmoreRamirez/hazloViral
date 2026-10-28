@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import RequiredMark from '@/components/RequiredMark.vue'
-import { companyNeedsProfileGuide } from '@/utils/profile-completion'
+import { companyNeedsProfileGuide, companyProfileGuideSteps } from '@/utils/profile-completion'
 import { useProfileTour } from '@/composables/useProfileTour'
 import { viewPath } from '@/router/paths'
 import { ref, computed, onMounted } from 'vue'
@@ -152,15 +152,7 @@ onMounted(loadProfile)
 
 const { start: startProfileGuide, active: guideActive, error: guideError } = useProfileTour(() => {
   if (!editing.value) startEdit()
-}, [
-  {"selector": "#company-progress", "title": "Completa tu perfil con confianza", "intro": "Aquí ves los requisitos reales de tu marca. La guía abre la edición, pero no modifica ni guarda tus datos."},
-  {"selector": "#company-avatar", "title": "Cambia el logo de tu empresa", "intro": "Este es el logo que verán los influencers. Al terminar la guía, guarda o cancela la edición y selecciona esta imagen para subir tu logo. Puedes usar JPG o PNG; la imagen se actualiza al terminar la subida."},
-  {"selector": "#company-nombre-comercial", "title": "Identidad de marca", "intro": "Revisa tu nombre comercial, descripción y ubicación. Esta información presenta tu marca a los influencers."},
-  {"selector": "#company-presencia", "title": "Presencia online", "intro": "Agrega tu sitio web o redes con enlaces completos. Una presencia online ayuda a completar la verificación."},
-  {"selector": "#company-nit", "title": "Contacto y facturación", "intro": "Completa el contacto y los datos fiscales que correspondan. Esta información es privada."},
-  {"selector": "#company-representante-nombre", "title": "Representante legal", "intro": "Revisa el nombre, tipo y número de documento de quien representa la empresa."},
-  {"selector": "#company-save", "title": "Guarda tus cambios", "intro": "Ahora puedes completar los campos y pulsar Guardar cambios. El estado de verificación se actualizará con los datos guardados. Para cambiar el logo, termina la edición y selecciona tu imagen."}
-])
+}, () => companyProfileGuideSteps(p.value), () => needsGuide.value)
 </script>
 
 <template>
@@ -182,7 +174,7 @@ const { start: startProfileGuide, active: guideActive, error: guideError } = use
 
       <div v-if="loadError" class="card text-coral-text flex flex-wrap items-center justify-between gap-3" role="alert"><p>{{ loadError }}</p><button type="button" class="btn-secondary" @click="loadProfile">Reintentar</button></div>
       <ProfileOverview avatar-id="company-avatar" :name="loadError || store.loading ? '' : p?.nombre_comercial ?? ''" label="Empresa / marca"
-        :subtitle="p?.rubro ? rubroLabel(p.rubro) : 'Completa tu identidad de marca'" :verified="p?.is_verified" :disabled="editing || store.loading || !!loadError" @updated="toast.add({ severity: 'success', summary: 'Logo actualizado', life: 3000 }); loadProfile()">
+        :subtitle="p?.rubro ? rubroLabel(p.rubro) : 'Completa tu identidad de marca'" :verified="p?.is_verified" :disabled="store.loading || !!loadError" @updated="toast.add({ severity: 'success', summary: 'Logo actualizado', life: 3000 }); loadProfile()">
         <div><p class="text-xs text-ink-muted">Estado de marca</p><p class="text-sm font-semibold mt-1" :class="p?.is_verified ? 'text-success' : 'text-ink-muted'">{{ p?.is_verified ? 'Verificada' : 'Por completar' }}</p></div>
       </ProfileOverview>
       <p class="text-xs text-ink-muted"><span class="text-coral-text font-semibold">*</span> Campo obligatorio al guardar el formulario.</p>
