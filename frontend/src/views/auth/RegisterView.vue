@@ -312,10 +312,10 @@ async function submit() {
     <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
       <section v-if="registered" class="card max-w-lg mx-auto text-center p-8 space-y-4">
         <span class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-tint text-success"><i class="pi pi-check text-2xl" aria-hidden="true" /></span>
-        <h1 class="page-title font-display font-bold text-navy">Tu cuenta está creada</h1>
-        <p class="text-sm text-ink-muted">Revisa el correo de verificación en <strong class="text-navy break-all">{{ email_ }}</strong>. Si no lo encuentras, revisa spam o solicita otro desde tu cuenta.</p>
-        <p class="text-xs text-ink-muted">El enlace de verificación expira en 24 horas.</p>
-        <button type="button" class="btn-primary w-full" @click="router.push(viewPath('/dashboard'))">Ir a mi inicio</button>
+        <h1 class="page-title font-display font-bold text-navy">Solicitud recibida</h1>
+        <p class="text-sm text-ink-muted">Si la dirección puede registrarse, enviaremos los siguientes pasos a <strong class="text-navy break-all">{{ email_ }}</strong>. Revisa también la carpeta de spam.</p>
+        <p class="text-xs text-ink-muted">El enlace de verificación, cuando corresponda, expira en 24 horas.</p>
+        <RouterLink to="/login" class="btn-primary w-full inline-flex justify-center">Ir al inicio de sesión</RouterLink>
       </section>
       <div v-else class="grid lg:grid-cols-[minmax(240px,1fr)_minmax(0,1.8fr)] gap-8 lg:gap-12 items-start">
         <aside class="lg:sticky lg:top-8 space-y-6">

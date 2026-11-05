@@ -27,13 +27,12 @@ export class NotificationsService {
         port,
         secure: port === 465,
         auth: { user, pass },
-        tls: { rejectUnauthorized: false },
       });
       this.logger.log(`SMTP configurado: ${host}:${port} (usuario: ${user})`);
     } else {
       this.logger.warn(
         'SMTP no configurado (SMTP_HOST/SMTP_USER/SMTP_PASS ausentes). ' +
-          'Los emails se imprimirán en consola.',
+        'Los emails de autenticación no se enviarán hasta configurar SMTP.',
       );
     }
   }
@@ -108,7 +107,7 @@ export class NotificationsService {
 
     if (!this.transporter) {
       this.logger.warn(
-        `[EMAIL NO ENVIADO — SMTP no configurado]\nPara: ${email}\nAsunto: ${subject}\nURL: ${resetUrl}`,
+        `[EMAIL DE RECUPERACIÓN NO ENVIADO — SMTP no configurado] Para: ${email}`,
       );
       return;
     }
@@ -123,7 +122,7 @@ export class NotificationsService {
       this.logger.log(`Email de recuperación enviado a ${email}`);
     } catch (err: any) {
       this.logger.error(`Error al enviar email de recuperación a ${email}: ${err?.message}`);
-      throw err; // relanzar para que forgotPassword lo capture en dev
+      throw err;
     }
   }
 

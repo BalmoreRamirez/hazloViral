@@ -38,6 +38,13 @@ export class User {
   @Column({ default: false })
   is_email_verified: boolean;
 
+  /** Incremented to invalidate every previously issued bearer token. */
+  @Column({ type: 'integer', default: 0, select: false })
+  session_version: number;
+
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
+  last_activity_at: Date;
+
   @Column({ type: 'jsonb', nullable: true, select: false })
   registration_consent: Record<string, unknown> | null;
 

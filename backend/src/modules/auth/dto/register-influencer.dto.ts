@@ -16,6 +16,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsNotCommonPassword } from '../password-policy';
 
 const TIPOS_ID = ['DUI', 'PASAPORTE'] as const;
 
@@ -29,6 +30,7 @@ export class RegisterInfluencerDto extends RegistrationConsentDto {
   @IsString()
   @MaxLength(128)
   @Matches(PASSWORD_REGEX, { message: PASSWORD_MSG })
+  @IsNotCommonPassword({ message: 'Elige una contraseña que no sea común o fácil de adivinar.' })
   password: string;
 
   @IsString()

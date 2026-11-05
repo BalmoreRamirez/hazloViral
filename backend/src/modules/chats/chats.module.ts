@@ -10,10 +10,11 @@ import { ChatsController } from './chats.controller';
 import { ChatGateway } from './chats.gateway';
 import { CreditsModule } from '../credits/credits.module';
 import { AuthModule } from '../auth/auth.module';
+import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Chat, Message, CompanyProfile, InfluencerProfile, CampaignBrief]),
+    TypeOrmModule.forFeature([Chat, Message, CompanyProfile, InfluencerProfile, CampaignBrief, User]),
     CreditsModule,
     AuthModule, // exporta JwtModule para que Gateway use JwtService
   ],

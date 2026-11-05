@@ -7,16 +7,12 @@ const email       = ref('')
 const loading     = ref(false)
 const sent        = ref(false)
 const error       = ref('')
-const devResetUrl = ref<string | null>(null)
-const smtpError   = ref<string | null>(null)
 
 async function submit() {
   error.value   = ''
   loading.value = true
   try {
-    const res = await authApi.forgotPassword(email.value)
-    devResetUrl.value = res?.dev_reset_url ?? null
-    smtpError.value   = (res as any)?.smtp_error ?? null
+    await authApi.forgotPassword(email.value)
     sent.value = true
   } catch {
     error.value = 'Ocurrió un error. Inténtalo de nuevo.'
@@ -55,16 +51,6 @@ async function submit() {
             </p>
             <p class="text-ink-muted text-xs mt-3">¿No llegó? Revisa la carpeta de spam.</p>
 
-            <!-- Solo visible en desarrollo -->
-            <div v-if="devResetUrl" class="mt-5 p-3 bg-warning-tint border border-amber-200 rounded-lg text-left">
-              <p class="text-xs font-semibold text-warning mb-1 flex items-center gap-1.5">
-                <i :class="['pi', smtpError ? 'pi-times-circle' : 'pi-exclamation-triangle']" aria-hidden="true" />
-                {{ smtpError ? 'Error SMTP — usa el enlace directo' : 'Modo desarrollo' }}
-              </p>
-              <p v-if="smtpError" class="text-xs text-red-600 mb-2 font-mono">{{ smtpError }}</p>
-              <p class="text-xs text-warning mb-2">Enlace para restablecer tu contraseña:</p>
-              <a :href="devResetUrl" class="text-xs text-violet break-all underline">{{ devResetUrl }}</a>
-            </div>
           </div>
         </template>
 

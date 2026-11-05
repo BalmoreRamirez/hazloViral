@@ -79,8 +79,8 @@ test('no consulta recursos cuando el rol está prohibido', async () => {
   await state.guard(route({ roles: ['empresa'] }, { id: '1' }, 'contrato'))
   assert.equal(state.reads(), 0)
 })
-test('ignora usuario local manipulado, restaura rol del servidor y cierra sesión expirada', async () => {
-  const storage = new Map([['hv_token', 'test-token'], ['hv_user', '{invalid admin JSON']])
+test('ignora identidad local, valida cookie en servidor y cierra sesión expirada', async () => {
+  const storage = new Map([['hv_token', 'legacy-token'], ['hv_session_present', '1'], ['hv_user', '{invalid admin JSON']])
   globalThis.localStorage = {
     getItem: (key) => storage.get(key) ?? null,
     setItem: (key, value) => storage.set(key, value),
@@ -97,6 +97,7 @@ test('ignora usuario local manipulado, restaura rol del servidor y cierra sesió
     '@/socket': { disconnectSocket() {} },
   })
   const auth = useAuthStore()
+  assert.equal(storage.has('hv_token'), false)
   assert.equal(auth.user, null)
   assert.equal(auth.isAuthenticated, false)
   assert.equal(await auth.validateSession(), true)
@@ -105,5 +106,5 @@ test('ignora usuario local manipulado, restaura rol del servidor y cierra sesió
   assert.equal(await auth.validateSession(), false)
   assert.equal(auth.user, null)
   assert.equal(auth.token, null)
-  assert.equal(storage.has('hv_token'), false)
+  assert.equal(storage.has('hv_session_present'), false)
 })

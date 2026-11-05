@@ -17,12 +17,18 @@ import { UserRole } from '../../common/enums';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { getAllowedCorsOrigins } from '../../common/config/cors-origins';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../users/entities/user.entity';
+import { ConfigService } from '@nestjs/config';
+import { getAuthIdleTimeoutMs } from '../auth/session-policy';
 
 interface AuthSocket extends Socket {
   data: {
     userId: number;
     email: string;
     role: UserRole;
+    sessionVersion: number;
   };
 }
 
@@ -44,13 +50,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly chatsService: ChatsService,
     private readonly creditsService: CreditsService,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    private readonly config: ConfigService,
   ) {}
 
   // ─── Autenticación en la conexión ─────────────────────────────────────────────
   async handleConnection(socket: AuthSocket) {
-    const token =
-      socket.handshake.auth?.token ||
-      (socket.handshake.headers?.authorization as string)?.split(' ')[1];
+    const cookieHeader = socket.handshake.headers?.cookie ?? '';
+    const sessionCookie = cookieHeader.split(';').map((part) => part.trim()).find((part) => part.startsWith('hv_session='));
+    let token: string | undefined;
+    try { token = sessionCookie ? decodeURIComponent(sessionCookie.slice('hv_session='.length)) : undefined; } catch { token = undefined; }
 
     if (!token) {
       socket.emit('error', { message: 'Token requerido.' });
@@ -59,10 +68,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const payload = this.jwtService.verify<{ sub: number; email: string; role: UserRole }>(token);
+      const payload = this.jwtService.verify<{ sub: number; email: string; role: UserRole; session_version: number }>(token);
+      if (!(await this.isSessionCurrent(payload.sub, payload.session_version))) throw new Error('Sesión revocada.');
       socket.data.userId = payload.sub;
       socket.data.email = payload.email;
       socket.data.role = payload.role;
+      socket.data.sessionVersion = payload.session_version;
       await socket.join(`user-${payload.sub}`);
 
       // Si es empresa, emitir estado de créditos inmediatamente
@@ -90,8 +101,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: AuthSocket,
     @MessageBody() data: { chat_id: number },
   ) {
-    if (!socket.data.userId) {
+    if (!socket.data.userId || !(await this.isSessionCurrent(socket.data.userId, socket.data.sessionVersion))) {
       socket.emit('error', { message: 'No autenticado.' });
+      socket.disconnect(true);
       return;
     }
 
@@ -123,8 +135,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: AuthSocket,
     @MessageBody() raw: unknown,
   ) {
-    if (!socket.data.userId) {
+    if (!socket.data.userId || !(await this.isSessionCurrent(socket.data.userId, socket.data.sessionVersion))) {
       socket.emit('error', { message: 'No autenticado.' });
+      socket.disconnect(true);
       return;
     }
 
@@ -172,6 +185,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: err?.message ?? 'Error al enviar el mensaje.',
       });
     }
+  }
+
+  private async isSessionCurrent(userId: number, sessionVersion: number): Promise<boolean> {
+    if (!Number.isInteger(sessionVersion)) return false;
+    const user = await this.usersRepo.createQueryBuilder('user')
+      .addSelect('user.session_version')
+      .where('user.id = :userId AND user.is_active = true', { userId })
+      .getOne();
+    if (!user || user.session_version !== sessionVersion) return false;
+    const idleTimeoutMs = getAuthIdleTimeoutMs(this.config);
+    if (!user.last_activity_at || Date.now() - user.last_activity_at.getTime() > idleTimeoutMs) return false;
+    await this.usersRepo.update({ id: userId }, { last_activity_at: new Date() });
+    return true;
   }
 
   // ─── Utilidad: notificar a todos los sockets de una empresa ──────────────────

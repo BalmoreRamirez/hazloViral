@@ -4,6 +4,24 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-11-05 — Remediación de hallazgos de autenticación de Kronos
+
+- Tipo: Seguridad.
+- Requerimientos relacionados: BE-016.
+- Cambio: límites por IP/cuenta para autenticación; claves comunes bloqueadas en alta/cambio/recuperación; respuestas de registro uniformes; recuperación sin enlace ni error SMTP y consumo del token bajo bloqueo en una transacción; validación TLS SMTP; endpoint de logout y revocación de JWT por versión; expiración por inactividad por defecto a 30 minutos, verificada en HTTP y WebSocket.
+- Persistencia: migración explícita para `users.session_version` y `users.last_activity_at`; no ejecutada al no seleccionar una base de datos destino.
+- Archivos: `src/modules/auth/`, `src/modules/users/entities/user.entity.ts`, `src/modules/chats/chats.gateway.ts`, `src/modules/notifications/notifications.service.ts`, `src/migrations/1793836800000-AddUserSessionVersion.ts`.
+- Validación: build NestJS y suite completa: 14 suites, 96 pruebas; verificación de tipos, 9 pruebas y build frontend. Ver `../security/PLAN-REMEDIACION-AUTH.md`.
+- Sesión web: JWT viaja en cookie HttpOnly, Secure configurable y SameSite; frontend y WebSocket usan credenciales de navegador. Métodos inseguros con origen ajeno a CORS se rechazan. JWTs existentes sin `session_version` pedirán autenticación nuevamente después de aplicar la migración.
+- Pendientes: aplicar migración y probar la sesión contra PostgreSQL autorizado; prueba de concurrencia, SMTP e infraestructura reales. El limitador es por proceso y necesita regla equivalente en proxy con varias instancias.
+
+## 2026-11-03 — Registro de influencer y token de verificación
+
+- Requerimiento: BE-001.
+- Hallazgo de QA: el alta guardaba el token de verificación mientras la transacción todavía no había confirmado el usuario; la clave foránea rechazaba el token y hacía rollback del registro.
+- Cambio: el registro confirma usuario y perfil antes de crear el token y enviar el correo de verificación; también se difirió la notificación al tutor hasta después del commit.
+- Validación: flujo real en Chrome desde `/register`, selección de influencer, aceptación de términos y privacidad, alta, sesión autenticada y navegación al inicio. La consulta de `/auth/me` confirmó rol `influencer`. Pruebas del módulo de consentimiento (14) y compilación de backend.
+
 ## 2026-10-28 — Efecto de los parámetros de administración
 
 - Requerimiento: BE-003.

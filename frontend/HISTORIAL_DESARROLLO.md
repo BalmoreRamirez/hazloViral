@@ -4,6 +4,15 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-11-05 — Respuestas seguras para registro, recuperación y logout
+
+- Tipo: Seguridad / Corrección.
+- Requerimientos relacionados: FE-022 y BE-016.
+- Cambio: se quitó la sesión automática al registrar y el texto evita confirmar si el correo ya existía; el botón lleva a iniciar sesión. La recuperación dejó de mostrar enlaces directos y errores SMTP. El cierre desde el menú llama al endpoint backend de revocación antes de limpiar el estado local.
+- Validación: `npm run type-check`, 9 pruebas frontend y `npm run build`, satisfactorios.
+- Sesión: el JWT dejó de guardarse en `localStorage`; Axios y Socket.IO usan la cookie HttpOnly del navegador.
+- Pendiente: validar flujo visual con servidor configurado y migración aplicada.
+
 ## 2026-10-28 — Efecto de Configuración en los roles
 
 - Requerimientos: FE-003, FE-016.

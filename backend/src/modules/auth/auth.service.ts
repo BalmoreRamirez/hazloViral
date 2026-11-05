@@ -3,7 +3,6 @@ import { RegistrationConsentDto } from './dto/registration-consent.dto';
 import { calculateAge } from '../../common/utils/date.util';
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -28,6 +27,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ConfigService } from '@nestjs/config';
 
 const SALT_ROUNDS = 10;
+const REGISTRATION_MESSAGE = 'Si la solicitud puede registrarse, recibirás un correo con los siguientes pasos.';
 
 @Injectable()
 export class AuthService {
@@ -73,13 +73,18 @@ export class AuthService {
   // ─── Registro Empresa ────────────────────────────────────────────────────────
   async registerEmpresa(dto: RegisterCompanyDto) {
     const consent = this.registrationConsent(dto);
-    await this.assertEmailFree(dto.email);
+    if (!(await this.isEmailFree(dto.email))) {
+      await bcrypt.hash(dto.password, SALT_ROUNDS);
+      return { message: REGISTRATION_MESSAGE };
+    }
     const [welcomeBonus, creditThreshold] = await Promise.all([
       this.getConfiguredNumber('welcome_bonus', 10),
       this.getConfiguredNumber('min_credit_threshold', 5),
     ]);
 
-    return this.dataSource.transaction(async (manager) => {
+    let result: { user: Pick<User, 'id' | 'email'> };
+    try {
+      result = await this.dataSource.transaction(async (manager) => {
       const hashed = await bcrypt.hash(dto.password, SALT_ROUNDS);
 
       const user = new User();
@@ -107,16 +112,26 @@ export class AuthService {
       profile.umbral_creditos = creditThreshold;
       await manager.save(profile);
 
-      const result = { user: this.sanitize(user), profile, token: this.sign(user) };
-      await this.sendVerificationEmail(user);
-      return result;
-    });
+      return { user: this.sanitize(user), profile };
+      });
+    } catch (error) {
+      if (this.isUniqueViolation(error)) return { message: REGISTRATION_MESSAGE };
+      throw error;
+    }
+
+    // The verification-token table references users, so create it only after
+    // the account transaction commits and the user is visible to the repository.
+    await this.sendVerificationEmail(result.user);
+    return { message: REGISTRATION_MESSAGE };
   }
 
   // ─── Registro Influencer ─────────────────────────────────────────────────────
   async registerInfluencer(dto: RegisterInfluencerDto) {
     const consent = this.registrationConsent(dto);
-    await this.assertEmailFree(dto.email);
+    if (!(await this.isEmailFree(dto.email))) {
+      await bcrypt.hash(dto.password, SALT_ROUNDS);
+      return { message: REGISTRATION_MESSAGE };
+    }
 
     const esMenor = this.calcularEsMenor(dto.fecha_nacimiento);
 
@@ -134,7 +149,9 @@ export class AuthService {
       }
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    let result: { user: Pick<User, 'id' | 'email'> };
+    try {
+      result = await this.dataSource.transaction(async (manager) => {
       const hashed = await bcrypt.hash(dto.password, SALT_ROUNDS);
 
       const user = new User();
@@ -165,35 +182,44 @@ export class AuthService {
       const result = {
         user: this.sanitize(user),
         profile: { ...profile, es_menor_edad: esMenor },
-        token: this.sign(user),
       };
 
-      if (esMenor) {
-        this.notifications
-          .sendTutorConfirmation({
-            tutorEmail:        dto.tutor_email!,
-            tutorNombre:       dto.tutor_nombre!,
-            influencerNombre:  dto.nombre_artistico,
-            influencerEmail:   dto.email,
-          })
-          .catch(() => undefined);
-      }
-
-      await this.sendVerificationEmail(user);
       return result;
-    });
+      });
+    } catch (error) {
+      if (this.isUniqueViolation(error)) return { message: REGISTRATION_MESSAGE };
+      throw error;
+    }
+
+    if (esMenor) {
+      this.notifications
+        .sendTutorConfirmation({
+          tutorEmail:        dto.tutor_email!,
+          tutorNombre:       dto.tutor_nombre!,
+          influencerNombre:  dto.nombre_artistico,
+          influencerEmail:   dto.email,
+        })
+        .catch(() => undefined);
+    }
+
+    // Keep external side effects outside the account transaction. The token
+    // repository must see the committed user to satisfy its foreign key.
+    await this.sendVerificationEmail(result.user);
+    return { message: REGISTRATION_MESSAGE };
   }
 
   // ─── Login ───────────────────────────────────────────────────────────────────
   async login(dto: LoginDto) {
     const user = await this.usersRepo.findOne({
       where: { email: dto.email, is_active: true },
-      select: { id: true, email: true, password: true, role: true, is_active: true },
+      select: { id: true, email: true, password: true, role: true, is_active: true, session_version: true },
     });
 
     if (!user || !(await bcrypt.compare(dto.password, user.password))) {
       throw new UnauthorizedException('Credenciales incorrectas.');
     }
+
+    await this.usersRepo.update({ id: user.id }, { last_activity_at: new Date() });
 
     return { user: this.sanitize(user), token: this.sign(user) };
   }
@@ -202,13 +228,19 @@ export class AuthService {
   async changePassword(userId: number, currentPwd: string, newPwd: string): Promise<void> {
     const user = await this.usersRepo.findOne({
       where: { id: userId },
-      select: { id: true, email: true, password: true, role: true, is_active: true },
+      select: { id: true, email: true, password: true, role: true, is_active: true, session_version: true },
     });
     if (!user) throw new NotFoundException('Usuario no encontrado.');
     const valid = await bcrypt.compare(currentPwd, user.password);
     if (!valid) throw new UnauthorizedException('La contraseña actual es incorrecta.');
-    user.password = await bcrypt.hash(newPwd, 10);
-    await this.usersRepo.save(user);
+    await this.usersRepo.update({ id: userId }, {
+      password: await bcrypt.hash(newPwd, SALT_ROUNDS),
+      session_version: user.session_version + 1,
+    });
+  }
+
+  async logout(userId: number): Promise<void> {
+    await this.usersRepo.increment({ id: userId, is_active: true }, 'session_version', 1);
   }
 
   // ─── Verificación de email ────────────────────────────────────────────────────
@@ -228,7 +260,7 @@ export class AuthService {
     return rawToken;
   }
 
-  private async sendVerificationEmail(user: User): Promise<void> {
+  private async sendVerificationEmail(user: Pick<User, 'id' | 'email'>): Promise<void> {
     const rawToken   = await this.createEmailVerificationToken(user.id);
     const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:5173');
     const verifyUrl  = `${frontendUrl}/verify-email?token=${rawToken}`;
@@ -269,10 +301,10 @@ export class AuthService {
   }
 
   // ─── Recuperación de contraseña ───────────────────────────────────────────────
-  async forgotPassword(email: string): Promise<{ dev_reset_url?: string }> {
+  async forgotPassword(email: string): Promise<{ message: string }> {
     const user = await this.usersRepo.findOne({ where: { email, is_active: true } });
     // Siempre responde OK para no revelar si el email existe
-    if (!user) return {};
+    if (!user) return { message: 'Si existe una cuenta con ese correo, recibirás instrucciones para recuperar el acceso.' };
 
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -292,44 +324,47 @@ export class AuthService {
     const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:5173');
     const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
 
-    let smtpError: string | undefined;
     try {
       await this.notifications.sendPasswordReset({ email, resetUrl });
-    } catch (err: any) {
-      smtpError = err?.message;
+    } catch {
+      // El cliente siempre recibe una respuesta uniforme; los detalles quedan en el log SMTP.
     }
-
-    // En desarrollo devuelve el URL y el error SMTP si hubo uno
-    if (this.config.get<string>('NODE_ENV') !== 'production') {
-      return { dev_reset_url: resetUrl, ...(smtpError ? { smtp_error: smtpError } : {}) };
-    }
-    return {};
+    return { message: 'Si existe una cuenta con ese correo, recibirás instrucciones para recuperar el acceso.' };
   }
 
   async resetPassword(rawToken: string, newPassword: string): Promise<void> {
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-    const record = await this.resetTokensRepo.findOne({ where: { token_hash: tokenHash, used: false } });
-    if (!record) throw new BadRequestException('El enlace de recuperación no es válido o ya fue usado.');
-    if (record.expires_at < new Date()) throw new BadRequestException('El enlace de recuperación ha expirado. Solicita uno nuevo.');
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await this.dataSource.transaction(async (manager) => {
+      const record = await manager.getRepository(PasswordResetToken)
+        .createQueryBuilder('token')
+        .setLock('pessimistic_write')
+        .where('token.token_hash = :tokenHash AND token.used = false', { tokenHash })
+        .getOne();
+      if (!record) throw new BadRequestException('El enlace de recuperación no es válido o ya fue usado.');
+      if (record.expires_at < new Date()) throw new BadRequestException('El enlace de recuperación ha expirado. Solicita uno nuevo.');
 
-    const user = await this.usersRepo.findOne({
-      where: { id: record.user_id },
-      select: { id: true, email: true, password: true, role: true, is_active: true },
+      const users = manager.getRepository(User);
+      const user = await users.findOne({ where: { id: record.user_id, is_active: true } });
+      if (!user) throw new NotFoundException('Usuario no encontrado.');
+
+      await manager.update(User, { id: user.id }, {
+        password: passwordHash,
+        session_version: () => '"session_version" + 1',
+      });
+      record.used = true;
+      await manager.save(record);
     });
-    if (!user) throw new NotFoundException('Usuario no encontrado.');
-
-    user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
-    record.used   = true;
-
-    await this.usersRepo.save(user);
-    await this.resetTokensRepo.save(record);
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
-  private async assertEmailFree(email: string): Promise<void> {
-    const exists = await this.usersRepo.existsBy({ email });
-    if (exists) throw new ConflictException('El email ya está registrado.');
+  private async isEmailFree(email: string): Promise<boolean> {
+    return !(await this.usersRepo.existsBy({ email }));
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505';
   }
 
   private calcularEsMenor(fechaNacimiento: string): boolean {
@@ -337,12 +372,12 @@ export class AuthService {
   }
 
   private sign(user: User): string {
-    const payload: JwtPayload = { sub: user.id, email: user.email, role: user.role };
+    const payload: JwtPayload = { sub: user.id, email: user.email, role: user.role, session_version: user.session_version ?? 0 };
     return this.jwtService.sign(payload);
   }
 
-  private sanitize(user: User): Omit<User, 'password' | 'registration_consent'> {
-    const { password: _p, registration_consent: _consent, ...safe } = user as User & { password: string };
+  private sanitize(user: User): Omit<User, 'password' | 'registration_consent' | 'session_version'> {
+    const { password: _p, registration_consent: _consent, session_version: _version, ...safe } = user as User & { password: string };
     return safe;
   }
 }
