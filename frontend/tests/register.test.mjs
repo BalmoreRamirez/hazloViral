@@ -19,9 +19,26 @@ function setup({ validFields = false, age = 17 } = {}) {
     '@/constants/rubros': { RUBROS: [] },
   }
   if (validFields) imports['@vuelidate/core'] = { useVuelidate: () => require('vue').ref({ $validate: async () => true, $reset() {} }) }
-  const state = new Function('exports', 'require', code + '\nreturn { submit, legalDocuments, acceptedTerms, acceptedPrivacy, nextStep, handleSubmit, step, role, email_, password, nombre_comercial, telefono, registered, loading, username, nombre_artistico, fecha_nacimiento, numero_identificacion, rubro, tipo_identificacion, tutor_nombre, tutor_documento_id, tutor_email, tutor_autorizacion };')({}, name => imports[name] ?? (name.startsWith('@/') ? {} : require(name)))
+  const state = new Function('exports', 'require', code + '\nreturn { submit, legalDocuments, acceptedTerms, acceptedPrivacy, nextStep, handleSubmit, step, role, email_, password, pwdStrength, pwdValid, nombre_comercial, telefono, registered, loading, username, nombre_artistico, fecha_nacimiento, numero_identificacion, rubro, tipo_identificacion, tutor_nombre, tutor_documento_id, tutor_email, tutor_autorizacion };')({}, name => imports[name] ?? (name.startsWith('@/') ? {} : require(name)))
   return { ...state, submitted: () => submitted, payload: () => payload }
 }
+test('la guía rechaza contraseñas comunes aunque cumplan complejidad', () => {
+  const form = setup()
+  form.password.value = 'Password123!'
+  const commonRule = form.pwdStrength.value.find(rule => rule.key === 'common')
+  assert.equal(commonRule.ok, false)
+  assert.equal(form.pwdValid.value, false)
+  form.password.value = 'VioletRiver2026!'
+  assert.equal(form.pwdStrength.value.find(rule => rule.key === 'common').ok, true)
+  assert.equal(form.pwdValid.value, true)
+})
+test('no permite avanzar con una contraseña común desde el primer paso', async () => {
+  const form = setup()
+  form.email_.value = 'test@example.com'
+  form.password.value = 'Password123!'
+  await form.nextStep()
+  assert.equal(form.step.value, 1)
+})
 test('no avanza sin credenciales válidas ni envía la cuenta antes de terminar', async () => {
   const form = setup()
   await form.nextStep()

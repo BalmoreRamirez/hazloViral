@@ -1,4 +1,5 @@
 import { IsString, Matches, MaxLength } from 'class-validator';
+import { IsNotCommonPassword } from '../password-policy';
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,128}$/;
 const PASSWORD_MSG   = 'La contraseña debe tener entre 8 y 128 caracteres, al menos una mayúscula, una minúscula, un número y un carácter especial.';
@@ -10,5 +11,6 @@ export class ChangePasswordDto {
   @IsString()
   @MaxLength(128)
   @Matches(PASSWORD_REGEX, { message: PASSWORD_MSG })
+  @IsNotCommonPassword({ message: 'Elige una contraseña que no sea común o fácil de adivinar.' })
   new_password: string;
 }

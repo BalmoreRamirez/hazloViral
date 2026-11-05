@@ -1,6 +1,7 @@
 import { RegistrationConsentDto } from './registration-consent.dto';
 import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, Matches, MaxLength, ValidateIf } from 'class-validator';
 import { NIT_REGEX, NRC_REGEX, TELEFONO_REGEX } from '../../companies/dto/update-company.dto';
+import { IsNotCommonPassword } from '../password-policy';
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,128}$/;
 const PASSWORD_MSG   = 'La contraseña debe tener entre 8 y 128 caracteres, al menos una mayúscula, una minúscula, un número y un carácter especial.';
@@ -14,6 +15,7 @@ export class RegisterCompanyDto extends RegistrationConsentDto {
   @IsString()
   @MaxLength(128)
   @Matches(PASSWORD_REGEX, { message: PASSWORD_MSG })
+  @IsNotCommonPassword({ message: 'Elige una contraseña que no sea común o fácil de adivinar.' })
   password: string;
 
   @IsString()

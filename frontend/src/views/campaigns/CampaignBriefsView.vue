@@ -9,6 +9,7 @@ import { campaignsApi, type CampaignBriefPayload } from '@/api/campaigns'
 import { PLATAFORMAS_BRIEF, DERECHOS_USO, formatPresupuesto } from '@/constants/brief'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
+import RequiredMark from '@/components/RequiredMark.vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 
@@ -292,7 +293,7 @@ function confirmDelete(id: number, titulo: string) {
           <section class="rounded-xl border border-border bg-slate/50 p-4 sm:p-5 space-y-4">
             <h3 class="font-display font-semibold text-navy">1. La campaña</h3>
             <div class="field">
-              <label class="label" for="brief-titulo-campana">Título de la campaña</label>
+              <label class="label" for="brief-titulo-campana">Título de la campaña<RequiredMark /></label>
               <input id="brief-titulo-campana" v-model="briefForm.titulo_campana" required maxlength="255" placeholder="Lanzamiento Producto X…"
                 :class="['input', { '!border-coral': bv$.titulo_campana.$error }]" />
               <p v-if="bv$.titulo_campana.$error" class="text-coral-text text-xs mt-1">
@@ -300,7 +301,7 @@ function confirmDelete(id: number, titulo: string) {
               </p>
             </div>
             <div class="field">
-              <label class="label" for="brief-objetivo-principal">Objetivo principal</label>
+              <label class="label" for="brief-objetivo-principal">Objetivo principal<RequiredMark /></label>
               <textarea id="brief-objetivo-principal" v-model="briefForm.objetivo_principal" rows="2" required
                 placeholder="Aumentar reconocimiento de marca, generar ventas con código de descuento…"
                 :class="['input', { '!border-coral': bv$.objetivo_principal.$error }]" />
@@ -324,7 +325,7 @@ function confirmDelete(id: number, titulo: string) {
           <section class="rounded-xl border border-border bg-slate/50 p-4 sm:p-5 space-y-4">
             <h3 class="font-display font-semibold text-navy">2. Entregables y calendario</h3>
             <div class="field">
-              <label class="label">Plataformas <span class="text-coral-text">*</span></label>
+              <label class="label">Plataformas<RequiredMark /></label>
               <div class="flex flex-wrap gap-2 rounded-lg" :class="{ 'ring-1 ring-coral p-1': bv$.plataformas.$error }">
                 <button v-for="pl in PLATAFORMAS_BRIEF" :key="pl" type="button" :aria-pressed="briefForm.plataformas.includes(pl)" @click="togglePlataforma(pl)"
                   class="px-3 py-1.5 rounded-full text-sm border transition-colors"

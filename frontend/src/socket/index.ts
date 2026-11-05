@@ -1,7 +1,7 @@
 import { io, type Socket } from 'socket.io-client'
 
 let _socket: Socket | null = null
-// Token con el que se creó el socket actual
+// Marcador de sesión (el JWT permanece en la cookie HttpOnly del navegador).
 let _socketToken: string | null = null
 
 /**
@@ -10,7 +10,7 @@ let _socketToken: string | null = null
  * uno nuevo con el token vigente. Así nunca se reutiliza un socket sin token o de otro usuario.
  */
 export function getSocket(): Socket {
-  const token = localStorage.getItem('hv_token')
+  const token = localStorage.getItem('hv_session_present') === '1' ? 'cookie-session' : null
   if (_socket && _socketToken !== token) {
     _socket.disconnect()
     _socket = null
@@ -18,7 +18,7 @@ export function getSocket(): Socket {
   if (!_socket) {
     _socketToken = token
     _socket = io(`${import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3009'}/chat`, {
-      auth: { token },
+      withCredentials: true,
       transports: ['websocket'],
       autoConnect: false,
     })
@@ -26,7 +26,7 @@ export function getSocket(): Socket {
   return _socket
 }
 
-/** Conecta el socket solo si hay sesión; sin token el servidor rechazaría la conexión. */
+/** Conecta el socket con la cookie HttpOnly de la sesión del navegador. */
 export function connectSocket() {
   const s = getSocket()
   if (!s.connected && _socketToken) s.connect()

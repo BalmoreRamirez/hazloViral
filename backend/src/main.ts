@@ -14,6 +14,18 @@ async function bootstrap() {
     origin: getAllowedCorsOrigins(),
     credentials: true,
   });
+  const allowedOrigins = getAllowedCorsOrigins();
+  app.use((request, response, next) => {
+    const method = request.method.toUpperCase();
+    const unsafeMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+    const hasSessionCookie = /(?:^|;\s*)hv_session=/.test(request.headers.cookie ?? '');
+    const origin = request.headers.origin;
+    if (unsafeMethod && ((origin && !allowedOrigins.includes(origin)) || (hasSessionCookie && !origin))) {
+      response.status(403).json({ message: 'Origen no autorizado para esta sesión.' });
+      return;
+    }
+    next();
+  });
 
   const port = process.env.APP_PORT ?? 3009;
   await app.listen(port, '0.0.0.0');

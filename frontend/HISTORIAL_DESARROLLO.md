@@ -4,6 +4,28 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-11-05 — Progreso y validación temprana del registro
+
+- Tipo: UX / Validación.
+- Requerimiento relacionado: FE-001.
+- Cambio: el indicador separa visualmente pasos activo, completado y pendiente. La validación de contraseña replica el bloqueo de claves comunes del backend y la muestra en el primer paso, evitando descubrir el rechazo al finalizar.
+- Validación: prueba frontend para `Password123!` y una clave segura; verificar tipos, suite y build.
+
+## 2026-11-05 — Marca única para campos obligatorios
+
+- Tipo: UI / Accesibilidad.
+- Cambio: se unificó la marca de requerido y se eliminó el asterisco CSS automático que duplicaba el del componente en registro. Cada etiqueta muestra un solo asterisco.
+- Validación: `npm run type-check`, 9 pruebas frontend y `npm run build`, satisfactorios.
+
+## 2026-11-05 — Respuestas seguras para registro, recuperación y logout
+
+- Tipo: Seguridad / Corrección.
+- Requerimientos relacionados: FE-022 y BE-016.
+- Cambio: se quitó la sesión automática al registrar y el texto evita confirmar si el correo ya existía; el botón lleva a iniciar sesión. La recuperación dejó de mostrar enlaces directos y errores SMTP. El cierre desde el menú llama al endpoint backend de revocación antes de limpiar el estado local.
+- Validación: `npm run type-check`, 9 pruebas frontend y `npm run build`, satisfactorios.
+- Sesión: el JWT dejó de guardarse en `localStorage`; Axios y Socket.IO usan la cookie HttpOnly del navegador.
+- Pendiente: validar flujo visual con servidor configurado y migración aplicada.
+
 ## 2026-10-28 — Efecto de Configuración en los roles
 
 - Requerimientos: FE-003, FE-016.

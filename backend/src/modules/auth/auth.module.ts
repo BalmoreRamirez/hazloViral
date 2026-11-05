@@ -13,6 +13,7 @@ import { InfluencerProfile } from '../influencers/entities/influencer-profile.en
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { GlobalSetting } from '../admin/entities/global-setting.entity';
+import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { GlobalSetting } from '../admin/entities/global-setting.entity';
     TypeOrmModule.forFeature([User, CompanyProfile, InfluencerProfile, PasswordResetToken, EmailVerificationToken, GlobalSetting]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, AuthRateLimitGuard],
   exports: [JwtModule, PassportModule],
 })
 export class AuthModule {}

@@ -33,6 +33,13 @@ describe('Registration legal consent', () => {
     await expect(service[method]({ email: 'new@example.com' } as any)).rejects.toThrow('Debes aceptar');
     expect(dataSource.transaction).not.toHaveBeenCalled();
   });
+  it('uses the same registration response for an email that already exists', async () => {
+    const { service, consent, dataSource } = setup();
+    (service as any).usersRepo.existsBy.mockResolvedValue(true);
+    const response = await service.registerEmpresa({ ...consent, email: 'existing@example.com', password: 'VioletStudio2026!', nombre_comercial: 'Marca' } as any);
+    expect(response).toEqual({ message: 'Si la solicitud puede registrarse, recibirás un correo con los siguientes pasos.' });
+    expect(dataSource.transaction).not.toHaveBeenCalled();
+  });
   it('rejects outdated or fabricated document versions', async () => {
     const { service, consent, dataSource } = setup();
     await expect(service.registerEmpresa({ ...consent, terms_version: 'old' } as any)).rejects.toThrow('han cambiado');
@@ -40,16 +47,38 @@ describe('Registration legal consent', () => {
   });
   it.each(['registerEmpresa', 'registerInfluencer'] as const)('stores the actual documents and server timestamp atomically: %s', async method => {
     const { service, consent, manager, docs } = setup();
-    const result = await service[method]({ ...consent, email: 'new@example.com', password: 'Password123!', fecha_nacimiento: '2000-01-01', nombre_comercial: 'Marca', nombre_artistico: 'Creador' } as any);
+    const result = await service[method]({ ...consent, email: 'new@example.com', password: 'VioletStudio2026!', fecha_nacimiento: '2000-01-01', nombre_comercial: 'Marca', nombre_artistico: 'Creador' } as any);
     const user = manager.save.mock.calls.map(([entity]) => entity).find(entity => entity instanceof User);
     expect(user.registration_consent).toMatchObject({ accepted_terms: true, accepted_privacy: true, source: 'registration', documents: docs });
     expect(Number.isNaN(Date.parse(user.registration_consent.accepted_at))).toBe(false);
-    expect(result.user).not.toHaveProperty('registration_consent');
-    expect(result.user).not.toHaveProperty('password');
+    expect(result).toEqual({ message: 'Si la solicitud puede registrarse, recibirás un correo con los siguientes pasos.' });
+  });
+  it('sends the influencer verification email only after the user transaction commits', async () => {
+    const { service, consent, manager, dataSource } = setup();
+    let committed = false;
+    dataSource.transaction = jest.fn(async callback => {
+      const result = await callback(manager);
+      committed = true;
+      return result;
+    }) as any;
+    jest.spyOn(service as any, 'sendVerificationEmail').mockImplementation(async () => {
+      expect(committed).toBe(true);
+    });
+
+    await service.registerInfluencer({
+      ...consent,
+      email: 'creator@example.com',
+      password: 'VioletStudio2026!',
+      username: 'creator_1',
+      nombre_artistico: 'Creator',
+      fecha_nacimiento: '2000-01-01',
+    } as any);
+
+    expect(committed).toBe(true);
   });
   it('applies the current welcome bonus and credit threshold to new companies', async () => {
     const { service, consent, manager } = setup();
-    await service.registerEmpresa({ ...consent, email: 'brand@example.com', password: 'Password123!', nombre_comercial: 'Marca' } as any);
+    await service.registerEmpresa({ ...consent, email: 'brand@example.com', password: 'VioletStudio2026!', nombre_comercial: 'Marca' } as any);
     const profile = manager.save.mock.calls.map(([entity]) => entity).find(entity => entity?.nombre_comercial === 'Marca');
     expect(profile.balance_creditos).toBe(25);
     expect(profile.umbral_creditos).toBe(8);
@@ -70,7 +99,7 @@ describe('Contrato de datos del registro de influencers', () => {
       terms_version: 'terms-v1',
       privacy_version: 'privacy-v1',
       email: 'creator@example.com',
-      password: 'Password123!',
+      password: 'VioletStudio2026!',
       username: 'creator_1',
       nombre_artistico: 'Creator',
       fecha_nacimiento: '2000-01-01',
@@ -90,7 +119,7 @@ describe('Contrato de datos del registro de influencers', () => {
     await service.registerInfluencer({
       ...consent,
       email: 'creator@example.com',
-      password: 'Password123!',
+      password: 'VioletStudio2026!',
       username: 'creator_1',
       nombre_artistico: 'Creator',
       fecha_nacimiento: '2000-01-01',

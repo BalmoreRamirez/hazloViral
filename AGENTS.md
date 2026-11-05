@@ -1,0 +1,10 @@
+# Instrucciones del repositorio
+
+- No hay comandos npm en la raíz: instala y ejecuta cada aplicación desde su directorio (`backend/` o `frontend/`), cada una con su propio `package-lock.json`.
+- Backend: `cd backend && npm ci`; desarrollo `npm run start:dev`, compilación `npm run build`, pruebas unitarias `npm test -- --runInBand` o una prueba `npm test -- --runInBand --runTestsByPath src/ruta/archivo.spec.ts`. Las pruebas Jest viven junto al código en `src/**/*.spec.ts`; las e2e están en `test/` y se ejecutan con `npm run test:e2e`.
+- Frontend: `cd frontend && npm ci`; desarrollo `npm run dev`, pruebas `npm test` (Node test runner sobre `tests/*.test.mjs`), tipos `npm run type-check`, compilación `npm run build` (tipos antes de Vite).
+- Los scripts `lint` de ambas aplicaciones usan `--fix`: pueden modificar archivos. Revisa el diff después de ejecutarlos; no los trates como verificaciones de solo lectura.
+- Backend: NestJS modular por funcionalidad en `src/modules/`; `src/main.ts` configura el prefijo `/api`, validación global y `rawBody` requerido para la firma de webhooks Wompi. Las migraciones PostgreSQL son explícitas (`npm run migration:show` / `npm run migration:run`); `synchronize` está desactivado. No ejecutes migraciones contra una base no prevista.
+- Backend necesita configuración `.env` (base de datos, JWT e integraciones). `docker compose up -d --build` inicia ambos servicios, pero PostgreSQL no está incluido: Compose apunta a `host.docker.internal` para alcanzar una base externa/local. Los puertos son backend `3009`, frontend `5173`.
+- Frontend: entrada `src/main.ts`, rutas y acceso en `src/router/`, estado compartido en `src/stores/`; usa Vue 3, Pinia y PrimeVue. Las rutas declaran requisitos de autenticación/rol, así que conserva las reglas tanto en guards como en backend al cambiar permisos.
+- Para trabajo de producto, consulta `claude.md` como especificación y `docs/README.md` para el proceso documental. Al cambiar requerimientos, actualiza el documento del área (`backend/` o `frontend/` `REQUERIMIENTOS.md` e `HISTORIAL_DESARROLLO.md`); no declares algo validado sin evidencia de criterios de aceptación.

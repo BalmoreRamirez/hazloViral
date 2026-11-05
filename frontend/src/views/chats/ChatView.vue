@@ -15,6 +15,7 @@ import type { ChatMessage } from '@/stores/chat'
 import { uploadContratoPdf } from '@/api/chats'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers } from '@vuelidate/validators'
+import RequiredMark from '@/components/RequiredMark.vue'
 
 const route          = useRoute()
 const router         = useRouter()
@@ -510,13 +511,13 @@ function formatTime(dt: string) {
         <p class="font-semibold text-navy text-sm">Nueva propuesta de contrato</p>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="label">Tarifa total (USD)</label>
+            <label class="label">Tarifa total (USD)<RequiredMark /></label>
             <input v-model.number="propTarifa" type="number" min="1" required
               :class="['input', { '!border-coral': pv$.tarifa.$error }]" />
             <p v-if="pv$.tarifa.$error" class="text-coral-text text-xs mt-1">{{ pv$.tarifa.$errors[0]?.$message }}</p>
           </div>
           <div>
-            <label class="label">Fecha límite</label>
+            <label class="label">Fecha límite<RequiredMark /></label>
             <input v-model="propPlazo" type="date" required :min="todayIso"
               :class="['input', { '!border-coral': pv$.plazo.$error }]" />
             <p v-if="pv$.plazo.$error" class="text-coral-text text-xs mt-1">{{ pv$.plazo.$errors[0]?.$message }}</p>
@@ -525,7 +526,7 @@ function formatTime(dt: string) {
 
         <!-- Entregables: uno por plataforma/pieza -->
         <div class="space-y-2">
-          <label class="label">Entregables <span class="text-coral-text">*</span></label>
+          <label class="label">Entregables<RequiredMark /></label>
           <div v-for="(e, i) in propEntregables" :key="i" class="flex items-start gap-2">
             <select v-model="e.tipo" class="input w-32 shrink-0">
               <option v-for="pl in PLATAFORMAS_PROPUESTA" :key="pl">{{ pl }}</option>

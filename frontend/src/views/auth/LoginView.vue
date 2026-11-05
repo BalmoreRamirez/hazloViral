@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { viewPath } from '@/router/paths'
 import BrandName from '@/components/BrandName.vue'
+import RequiredMark from '@/components/RequiredMark.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -50,17 +51,17 @@ async function submit() {
 
         <form @submit.prevent="submit" class="space-y-4">
           <div>
-            <label class="label">Correo electrónico</label>
+            <label class="label">Correo electrónico<RequiredMark /></label>
             <InputText v-model="email" placeholder="tu@correo.com" fluid required />
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="label mb-0">Contraseña</label>
+              <label class="label mb-0">Contraseña<RequiredMark /></label>
               <RouterLink to="/forgot-password" class="text-xs text-violet ui-hover-link">
                 ¿Olvidaste tu contraseña?
               </RouterLink>
             </div>
-            <Password v-model="password" toggleMask fluid :feedback="false" />
+            <Password v-model="password" toggleMask fluid :feedback="false" required />
           </div>
 
           <div v-if="error" class="bg-coral/10 text-coral-text text-sm p-3 rounded-lg">{{ error }}</div>
