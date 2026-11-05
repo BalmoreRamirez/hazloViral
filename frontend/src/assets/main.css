@@ -173,14 +173,6 @@
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  /* Asterisco automático en labels de campos obligatorios */
-  .label:has(+ input[required])::after,
-  .label:has(+ textarea[required])::after,
-  .label:has(+ select[required])::after,
-  .label:has(+ .p-inputtext[required])::after {
-    content: ' *';
-    @apply text-coral-text font-semibold;
-  }
   .field  { @apply flex flex-col gap-1; }
 
   .badge-active  { @apply inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-success-tint text-success; }

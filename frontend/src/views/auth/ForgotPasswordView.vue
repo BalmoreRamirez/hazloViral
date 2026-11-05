@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BrandName from '@/components/BrandName.vue'
+import RequiredMark from '@/components/RequiredMark.vue'
 import { ref } from 'vue'
 import { authApi } from '@/api/auth'
 
@@ -63,7 +64,7 @@ async function submit() {
 
           <form @submit.prevent="submit" class="space-y-4">
             <div>
-              <label class="label">Correo electrónico</label>
+              <label class="label">Correo electrónico<RequiredMark /></label>
               <InputText v-model="email" type="email" placeholder="tu@correo.com" fluid required />
             </div>
 

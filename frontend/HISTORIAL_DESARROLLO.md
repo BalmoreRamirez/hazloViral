@@ -4,6 +4,19 @@
 
 Registrar cambios en orden cronológico inverso. Esta bitácora comienza el 2026-10-27; no reconstruye fechas ni autoría de desarrollos previos.
 
+## 2026-11-05 — Progreso y validación temprana del registro
+
+- Tipo: UX / Validación.
+- Requerimiento relacionado: FE-001.
+- Cambio: el indicador separa visualmente pasos activo, completado y pendiente. La validación de contraseña replica el bloqueo de claves comunes del backend y la muestra en el primer paso, evitando descubrir el rechazo al finalizar.
+- Validación: prueba frontend para `Password123!` y una clave segura; verificar tipos, suite y build.
+
+## 2026-11-05 — Marca única para campos obligatorios
+
+- Tipo: UI / Accesibilidad.
+- Cambio: se unificó la marca de requerido y se eliminó el asterisco CSS automático que duplicaba el del componente en registro. Cada etiqueta muestra un solo asterisco.
+- Validación: `npm run type-check`, 9 pruebas frontend y `npm run build`, satisfactorios.
+
 ## 2026-11-05 — Respuestas seguras para registro, recuperación y logout
 
 - Tipo: Seguridad / Corrección.

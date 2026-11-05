@@ -1,0 +1,21 @@
+
+# Agente de seguridad `kronos`
+
+El agente personalizado `kronos` revisa la seguridad de los flujos de autenticación de InfluSmart: inicio de sesión, registro de empresas e influencers, recuperación y cambio de contraseña, y gestión de sesiones.
+
+Evalúa estas cuatro áreas:
+
+1. Autenticación y sesiones: intentos de acceso, políticas de contraseñas, JWT/cookies, expiración, cierre de sesión y enumeración de cuentas.
+2. Inyección y manipulación: SQLi, XSS y validación de entradas.
+3. Lógica de negocio: recuperación de contraseña, bypass de autenticación, controles por rol y seguridad del registro.
+4. Cifrado y transporte/API: HTTPS, protección de credenciales y validación de firma, algoritmo, claims y expiración de JWT.
+
+## Cómo llamarlo
+
+En una sesión de Codex con este proyecto abierto y confiado, solicita:
+
+> Usa `kronos` para auditar el flujo de autenticación y crear el reporte de hallazgos.
+
+El agente documenta cobertura, evidencias, severidad, reproducción segura, impacto, recomendaciones y pruebas pendientes en `security/reports/authentication/`, con un reporte fechado. No modifica código; las pruebas dinámicas se limitan a entornos locales o de prueba autorizados y evita acciones destructivas o de alto volumen.
+
+La definición del agente está en [`.codex/agents/kronos.toml`](.codex/agents/kronos.toml).

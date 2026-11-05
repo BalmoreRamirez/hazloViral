@@ -138,8 +138,21 @@ const PWD_RULES = [
   { key: 'number',  label: 'Al menos un número',         test: (v: string) => /\d/.test(v) },
   { key: 'special', label: 'Al menos un carácter especial (!@#$…)', test: (v: string) => /[^A-Za-z\d]/.test(v) },
 ]
-const pwdStrength = computed(() => PWD_RULES.map(r => ({ ...r, ok: r.test(password.value) })))
-const pwdValid    = computed(() => pwdStrength.value.every(r => r.ok))
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password123', 'password1234', 'qwerty', 'qwerty123',
+  '123456', '12345678', '123456789', '1234567890', 'admin123', 'letmein',
+  'welcome1', 'iloveyou', 'abc123', 'zaq12wsx', 'influsmart',
+])
+const isCommonPassword = computed(() => {
+  const normalized = password.value.trim().toLowerCase()
+  const compact = normalized.replace(/[^a-z0-9]/g, '')
+  return COMMON_PASSWORDS.has(normalized) || COMMON_PASSWORDS.has(compact)
+})
+const pwdStrength = computed(() => [
+  ...PWD_RULES.map(r => ({ ...r, ok: r.test(password.value) })),
+  { key: 'common', label: 'No uses una contraseña común o fácil de adivinar', ok: password.value.length > 0 && !isCommonPassword.value },
+])
+const pwdValid = computed(() => pwdStrength.value.every(r => r.ok))
 
 // ── Validadores custom ────────────────────────────────────────────────────────
 const urlValida = helpers.withMessage(
@@ -160,7 +173,7 @@ const rules = computed(() => {
     },
     password: {
       required:  helpers.withMessage('La contraseña es obligatoria', required),
-      segura:    helpers.withMessage('La contraseña no cumple los requisitos de seguridad', () => !password.value || pwdValid.value),
+      segura:    helpers.withMessage('La contraseña debe cumplir los requisitos y no ser común.', () => !password.value || pwdValid.value),
     },
   }
 
@@ -325,7 +338,7 @@ async function submit() {
         </aside>
         <section class="card p-5 sm:p-8 min-w-0">
           <fieldset :disabled="loading || advancing" class="mb-6"><legend class="font-semibold text-navy text-sm mb-3">¿Cómo usarás InfluSmart?</legend><div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><label v-for="option in [{ value: 'empresa', title: 'Empresa / marca', description: 'Quiero contratar creadores', icon: 'pi-building' }, { value: 'influencer', title: 'Influencer', description: 'Quiero colaborar con marcas', icon: 'pi-star' }]" :key="option.value" class="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors" :class="role === option.value ? 'border-violet bg-violet-tint' : 'border-border ui-hover'"><input v-model="role" type="radio" name="register-role" :value="option.value" class="accent-violet" /><span class="flex-1"><span class="block text-sm font-semibold text-navy">{{ option.title }}</span><span class="block text-xs text-ink-muted mt-1">{{ option.description }}</span></span><i :class="['pi text-violet', option.icon]" aria-hidden="true" /></label></div></fieldset>
-          <ol class="grid grid-cols-3 gap-2 border-y border-border py-4 mb-6" aria-label="Pasos del registro"><li v-for="(label, index) in steps" :key="label" :aria-current="step === index + 1 ? 'step' : undefined" class="flex items-center gap-2 text-xs sm:text-sm" :class="step === index + 1 ? 'text-violet font-semibold' : 'text-ink-muted'"><span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs" :class="step >= index + 1 ? 'bg-violet text-white' : 'bg-slate-dark text-navy'">{{ index + 1 }}</span>{{ label }}</li></ol>
+          <ol class="grid grid-cols-3 gap-2 border-y border-border py-4 mb-6" aria-label="Pasos del registro"><li v-for="(label, index) in steps" :key="label" :aria-current="step === index + 1 ? 'step' : undefined" class="flex items-center gap-2 text-xs sm:text-sm" :class="step === index + 1 ? 'text-violet font-semibold' : step > index + 1 ? 'text-success font-medium' : 'text-ink-muted'"><span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs transition-colors" :class="step === index + 1 ? 'bg-violet text-white ring-4 ring-violet/15' : step > index + 1 ? 'bg-success-tint text-success' : 'bg-slate-dark text-ink-muted'">{{ index + 1 }}</span>{{ label }}</li></ol>
           <h2 ref="stepHeading" tabindex="-1" class="font-display text-xl font-semibold text-navy outline-none">{{ steps[step - 1] }}</h2>
           <p class="text-xs text-ink-muted mt-2 mb-5">{{ step === 1 ? 'Usa un correo al que tengas acceso y una contraseña segura.' : step === 2 ? 'Cuéntanos cómo quieres presentarte en la plataforma.' : 'Completa tus datos de identidad. Los campos opcionales están indicados.' }}</p>
           <p class="text-xs text-ink-muted mb-4"><span class="text-coral-text font-semibold">*</span> Campo obligatorio. Los campos opcionales se indican en su etiqueta.</p>
@@ -354,7 +367,7 @@ async function submit() {
               <!-- Checklist de seguridad -->
               <div v-if="password" class="mt-2 space-y-1">
                 <p v-for="r in pwdStrength" :key="r.key"
-                  :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-success' : 'text-ink-muted']">
+                  :class="['text-xs flex items-center gap-1.5', r.ok ? 'text-success' : r.key === 'common' && isCommonPassword ? 'text-coral-text' : 'text-ink-muted']">
                   <i :class="r.ok ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true" /> {{ r.label }}
                 </p>
               </div>
